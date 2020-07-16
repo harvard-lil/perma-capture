@@ -1,0 +1,19 @@
+pip-tools
+fabric3
+tqdm
+
+django
+django-extensions
+djangorestframework
+whitenoise          # static file serving
+
+# database
+psycopg2            # postgres connector
+
+# Testing
+flake8
+pytest
+pytest-django
+pytest-cov
+pytest-mock
+factory-boy         # create django model fixtures on demand

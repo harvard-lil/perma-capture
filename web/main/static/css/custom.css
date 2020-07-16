@@ -1,0 +1,166 @@
+/* a11y helpers */
+/* from https://github.com/twbs/bootstrap-sass/blob/5d6b2ebba0c2a5885ce2f0e01e9218db3d3b5e47/assets/stylesheets/bootstrap/_scaffolding.scss*/
+
+/* Only display content to screen readers
+  See: http://a11yproject.com/posts/how-to-hide-content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  border: 0;
+}
+
+/*Use in conjunction with .sr-only to only display content when it's focused.
+Useful for "Skip to main content" links; see http://www.w3.org/TR/2013/NOTE-WCAG20-TECHS-20130905/G1
+Credit: HTML5 Boilerplate*/
+.sr-only-focusable {
+  &:active,
+  &:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+  }
+}
+
+/* fonts */
+
+/* Courtesy of https://google-webfonts-helper.herokuapp.com/fonts/roboto?subsets=latin */
+/* roboto-300 - latin */
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 300;
+  src: local('Roboto Light'), local('Roboto-Light'),
+       url('../fonts/roboto-v16-latin-300.woff2') format('woff2'),
+       url('../fonts/roboto-v16-latin-300.woff') format('woff');
+}
+/* roboto-regular - latin */
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Roboto'), local('Roboto-Regular'),
+       url('../fonts/roboto-v16-latin-regular.woff2') format('woff2'),
+       url('../fonts/roboto-v16-latin-regular.woff') format('woff');
+}
+/* roboto-900 - latin */
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 900;
+  src: local('Roboto Black'), local('Roboto-Black'),
+       url('../fonts/roboto-v16-latin-900.woff2') format('woff2'),
+       url('../fonts/roboto-v16-latin-900.woff') format('woff');
+}
+
+/* styles */
+
+html, body {
+  height: 100%;
+  background-color: #F6F8F1;
+  font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: #2D76EE;
+}
+
+
+.wrapper {
+  height:100%;
+  text-align: center;
+}
+
+.wrapper-flex {
+  display: -webkit-flex;
+  display: flex;
+  flex-direction: column;
+  -webkit-justify-content: center;
+  justify-content:center;
+}
+
+header {
+  background-color: white;
+  padding: 20px 0;
+  width: 100%;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  font-size: 24px;
+}
+
+main {
+  flex-grow: 1;
+}
+
+main a {
+  color: #2D76EE;
+  text-decoration: underline !important;
+  text-weight: 900;
+}
+
+main a:hover,
+main a:focus {
+  color: #DD671A;
+}
+
+h1 {
+  font-weight: 700;
+  color: black;
+}
+
+p {
+  font-size: 2em;
+  line-height: 1.6;
+  font-weight: 100;
+}
+
+a {
+  text-decoration: none;
+}
+
+.logo a {
+  font-weight: 900;
+  color: #222;
+  padding-left: 36px;
+  min-width: 7em;
+}
+
+img.infinity-logo {
+  height: 15px;
+  margin-left: 5px;
+}
+
+.a11y-policy {
+  padding-right: 36px;
+}
+
+.btn-link {
+  color: #2D76EE;;
+  font-weight: normal;
+  font-size: 1.3em;
+  border-radius: 0;
+  text-transform: none;
+  text-decoration: underline;
+}
+.btn-link,
+.btn-link:active,
+.btn-link.active,
+.btn-link[disabled] {
+  background-color: transparent;
+}
+.btn-link,
+.btn-link:hover,
+.btn-link:focus,
+.btn-link:active {
+  border-color: transparent;
+}
+.btn-link:hover,
+.btn-link:focus {
+  color: #DD671A;
+  background-color: transparent;
+}

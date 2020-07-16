@@ -1,0 +1,9 @@
+*.pyc
+__pycache__
+
+# custom Django settings
+settings.py
+
+# pytest
+.cache
+.pytest_cache

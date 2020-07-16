@@ -1,0 +1,19 @@
+{% if USE_ANALYTICS %}
+  {% verbatim %}
+    <script>
+      alert("Analytics not configured: add the siteId to the script.");
+      var _gaq = [];
+      var _paq = _paq || [];
+      /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+      _paq.push(['trackPageView']);
+      _paq.push(['enableLinkTracking']);
+      (function() {
+      var u="//analytics.lil.tools/";
+      _paq.push(['setTrackerUrl', u+'piwik.php']);
+      _paq.push(['setSiteId', '']); /* set me before use */
+      var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+      g.type='text/javascript'; g.async=true; g.defer=true; g.src=u+'piwik.js'; s.parentNode.insertBefore(g,s);
+      })();
+    </script>
+  {% endverbatim %}
+{% endif %}
