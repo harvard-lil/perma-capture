@@ -11,7 +11,7 @@ import django
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 _django_setup = False
-def setup_django(func):
+def setup_django(func):  # pragma: no cover
     """
         For speed, avoid setting up django until we need it. Attach @setup_django to any tasks that rely on importing django packages.
     """
@@ -27,7 +27,7 @@ def setup_django(func):
 
 
 @task(alias='run')
-def run_django(port=None):
+def run_django(port=None):  # pragma: no cover
     if port is None:
         port = "0.0.0.0:8000" if os.environ.get('DOCKERIZED') else "127.0.0.1:8000"
     local('python manage.py runserver %s' % port)

@@ -89,7 +89,7 @@ class EditTrackedModel(models.Model):
         >>> u2.is_active = False
         >>> assert u2.has_changed('is_active')            # assign to deferred field: has_changed == True (may not be correct!)
         """
-        if field_name not in self.tracked_fields:
+        if field_name not in self.tracked_fields:  # pragma: no cover
             raise ValueError("%s is not in tracked_fields" % field_name)
         if not self.pk:
             # if model hasn't been saved yet, report all fields as changed

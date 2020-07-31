@@ -87,7 +87,7 @@ def test_permissions(
     run this function four separate times.
     """
     # all routes are required to have tests
-    if not has_tests:
+    if not has_tests:  # pragma: no cover
         raise Exception(
             "View function or method for path %s is missing a @perms_test decorator. "
             "Use @no_perms_test if you are sure your view doesn't need tests." % path)
@@ -103,7 +103,7 @@ def test_permissions(
             if fixture_name not in context:
                 try:
                     context[fixture_name] = request.getfixturevalue(fixture_name)
-                except FixtureLookupError:
+                except FixtureLookupError:  # pragma: no cover
                     pass  # path may not be a fixture name, like '"some string"'
             context[path] = Variable(path).resolve(context)
         return context[path]

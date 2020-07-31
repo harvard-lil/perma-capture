@@ -10,7 +10,7 @@ def raise_403(request):
 
 @requires_csrf_token
 def raise_403_csrf(request):
-    pass
+    pass   # pragma: no cover
 
 def raise_404(request):
     raise Http404('Does not exist')
