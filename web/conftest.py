@@ -21,7 +21,7 @@ from django.db.backends import utils as django_db_utils
 
 def pytest_addoption(parser):
     """
-        Custom command line options.
+    Custom command line options.
     """
     parser.addoption(
         "--write-files",
@@ -37,12 +37,12 @@ def pytest_addoption(parser):
 
 def register_factory(cls):
     """
-        Decorator to take a factory class and inject test fixtures. For example,
-            @register_factory
-            class UserFactory
-        will inject the fixtures "user_factory" (equivalent to UserFactory) and "user" (equivalent to UserFactory()).
-        This is basically the same as the @register decorator provided by the pytest_factoryboy package,
-        but because it's simpler it seems to work better with RelatedFactory and SubFactory.
+    Decorator to take a factory class and inject test fixtures. For example,
+        @register_factory
+        class UserFactory
+    will inject the fixtures "user_factory" (equivalent to UserFactory) and "user" (equivalent to UserFactory()).
+    This is basically the same as the @register decorator provided by the pytest_factoryboy package,
+    but because it's simpler it seems to work better with RelatedFactory and SubFactory.
     """
     camel_case_name = re.sub('((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))', r'_\1', cls.__name__).lower()
 
@@ -65,17 +65,17 @@ def register_factory(cls):
 @pytest.fixture(scope='function')
 def assert_num_queries(pytestconfig, monkeypatch):
     """
-        Fixture based on django_assert_num_queries, but modified to specify query type and print the line of code
-        that triggered the query.
-        Provide a context manager to assert which queries will be run by a block of code. Example:
-            def test_foo(assert_num_queries):
-                with assert_num_queries(select=1, update=2):
-                    # run one select and two updates
-        Suggestions for adding this to existing tests: start by running with counts empty:
-            with assert_num_queries():
-        Run the test as:
-            pytest -k test_foo -v
-        Ensure that the queries run are as expected, then insert the correct counts based on the error message.
+    Fixture based on django_assert_num_queries, but modified to specify query type and print the line of code
+    that triggered the query.
+    Provide a context manager to assert which queries will be run by a block of code. Example:
+        def test_foo(assert_num_queries):
+            with assert_num_queries(select=1, update=2):
+                # run one select and two updates
+    Suggestions for adding this to existing tests: start by running with counts empty:
+        with assert_num_queries():
+    Run the test as:
+        pytest -k test_foo -v
+    Ensure that the queries run are as expected, then insert the correct counts based on the error message.
     """
     python_lib_path = get_python_lib()
 
@@ -148,8 +148,8 @@ def assert_num_queries(pytestconfig, monkeypatch):
 @pytest.fixture
 def reset_sequences(django_db_reset_sequences):
     """
-        Reset database IDs and Factory sequence IDs. Use this if you need to have predictable IDs between runs.
-        This fixture must be included first (before other fixtures that use the db).
+    Reset database IDs and Factory sequence IDs. Use this if you need to have predictable IDs between runs.
+    This fixture must be included first (before other fixtures that use the db).
     """
     for factory_class in globals().values():
         if inspect.isclass(factory_class) and issubclass(factory_class, factory.Factory):
@@ -159,8 +159,8 @@ def reset_sequences(django_db_reset_sequences):
 @pytest.fixture
 def client():
     """
-        A version of the Django test client that allows us to specify a user login for a particular request with an
-        `as_user` parameter, like `client.get(url, as_user=user).
+    A version of the Django test client that allows us to specify a user login for a particular request with an
+    `as_user` parameter, like `client.get(url, as_user=user).
     """
     from django.test.client import Client
     session_key = settings.SESSION_COOKIE_NAME

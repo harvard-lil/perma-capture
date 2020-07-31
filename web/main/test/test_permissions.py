@@ -38,8 +38,8 @@ from test.test_helpers import check_response
 
 def get_permissions_tests():
     """
-        This function runs during test collection time. It inspects each route in main.urls, and generates parameters
-        for the test_permissions() test below.
+    This function runs during test collection time. It inspects each route in main.urls, and generates parameters
+    for the test_permissions() test below.
     """
     for path in urlpatterns:
         # don't run tests on built-in includes
@@ -83,8 +83,8 @@ def test_permissions(
         path, has_tests, view_func, url_args, request_method, status_code, user_string
 ):
     """
-        This test function runs a single request on behalf of a single user. The example at the top of this file would
-        run this function four separate times.
+    This test function runs a single request on behalf of a single user. The example at the top of this file would
+    run this function four separate times.
     """
     # all routes are required to have tests
     if not has_tests:
