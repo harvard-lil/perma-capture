@@ -1,7 +1,9 @@
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import PasswordResetView
-from django.http import HttpResponseRedirect
+from django.http import (HttpResponseRedirect,  HttpResponseForbidden,
+    HttpResponseServerError, HttpResponseBadRequest
+)
 from django.shortcuts import render
 from django.urls import reverse
 
@@ -35,6 +37,41 @@ def index(request):
         'message': "A Witness Server & Suite of Tools for Journalists and Fact Checkers"
     })
 
+
+#
+# Error Handlers
+#
+
+def bad_request(request, exception):
+    '''
+    Custom view for 400 failures, required for proper rendering of
+    our custom template, which uses injected context variables.
+    https://github.com/django/django/blob/master/django/views/defaults.py#L97
+    '''
+    return HttpResponseBadRequest(render(request, '400.html'))
+
+
+def csrf_failure(request, reason="CSRF Failure."):
+    '''
+    Custom view for CSRF failures, required for proper rendering of
+    our custom template, which uses injected context variables.
+    https://github.com/django/django/blob/master/django/views/defaults.py#L146
+    '''
+    return HttpResponseForbidden(render(request, '403_csrf.html'))
+
+
+def server_error(request):
+    '''
+    Custom view for 500 failures, required for proper rendering of
+    our custom template, which uses injected context variables.
+    https://github.com/django/django/blob/master/django/views/defaults.py#L97
+    '''
+    return HttpResponseServerError(render(request, '500.html'))
+
+
+#
+# User Management
+#
 
 @no_perms_test
 def sign_up(request):

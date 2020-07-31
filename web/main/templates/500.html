@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+
+{% block title %}500 Internal Server Error{% endblock %}
+{% block heading %}Internal Server Error{% endblock %}
+
+{% block content %}
+  <p>Oops. There was an error preparing this page, but don't worry, we'll fix it. Please <a href="mailto:{{ CONTACT_EMAIL }}?subject=Internal%20Server%20Error">contact us</a> and let us know how you found yourself here. Thanks!</p>
+{% endblock %}

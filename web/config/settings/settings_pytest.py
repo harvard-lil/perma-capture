@@ -10,3 +10,5 @@ from .settings_dev import *
 # Don't use whitenoise for tests. Including whitenoise causes it to rescan static during each test, which greatly
 # increases test time.
 MIDDLEWARE.remove('whitenoise.middleware.WhiteNoiseMiddleware')
+
+TESTING = True

@@ -89,6 +89,7 @@ DATABASES = {
 AUTH_USER_MODEL = 'main.User'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'index'
+CSRF_FAILURE_VIEW = 'main.views.csrf_failure'
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
@@ -206,6 +207,7 @@ LOGGING['formatters'] = {
 # e.g. <a href="mailto:{{ CONTACT_EMAIL }}">Contact Us</a>
 TEMPLATE_VISIBLE_SETTINGS = (
     'APP_NAME',
+    'CONTACT_EMAIL',
     'USE_ANALYTICS',
     'ACCESSIBILITY_POLICY_URL'
 )
@@ -220,3 +222,5 @@ USE_ANALYTICS = False
 
 # Since we don't know yet...
 APP_NAME = 'Perma Eyes'
+
+TESTING = False
