@@ -1,0 +1,4 @@
+Welcome to {{ APP_NAME }}! Here's an email full of welcome and instruction.
+
+Onward!
+The {{ APP_NAME }} Team

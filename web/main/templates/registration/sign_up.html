@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Sign up{% endblock %}
+{% block heading %}Sign up{% endblock %}
+
+{% block flex %}no{% endblock %}
+{% block content %}
+  <p class="center"><a href="https://perma.cc">Perma.cc</a> is a service that prevents link rot, creating permanent, citable records of web content for authors. <a href="/">{{ APP_NAME }}</a> is powered by the same technology... but delivers the web archive straight to you.</p>
+  <div class="row">
+    <div class="six columns">
+      <h2>Sign up for {{ APP_NAME }}</h2>
+      <form method="POST" class="u-full-width">
+        {% csrf_token %}
+        {{ form }}
+        <p class="small">{{ APP_NAME }} is a service of <a href="https://perma.cc/">Perma.cc</a>. By signing up, you agree to the <a href="https://perma.cc/terms-of-service">Perma.cc Terms of Service</a>.</p>
+        <button class="button-primary" type="submit">Sign up</button>
+      </form>
+    </div>
+    <aside class="six columns">
+      <h2>Make an archive</h2>
+      <p>Use our state-of-the-art capture service and API to document what you see on the web.</p>
+      <h2>Store it where you please</h2>
+      <p>Keep it wherever you keep important files. Dropbox? Google Drive? Microsoft One-Drive? Your company's CMS? It's totally up to you.</p>
+      <h2>Play it back on demand</h2>
+      <p>Publish your archives on your website using a <a href="https://replayweb.page/docs/embedding">little javascript</a>. Or, review them using the <a href="https://github.com/webrecorder/replayweb.page/releases/latest">ReplayWeb.page App</a> or <a href="https://replayweb.page/">ReplayWeb.page service</a>.</p>
+    </aside>
+  </div>
+{% endblock %}

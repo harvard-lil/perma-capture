@@ -103,8 +103,15 @@ main a {
   text-weight: 900;
 }
 
+header a {
+  color: #2D76EE;
+}
+
 main a:hover,
-main a:focus {
+main a:focus,
+header a:hover,
+header a:focus
+ {
   color: #DD671A;
 }
 
@@ -117,6 +124,10 @@ p {
   font-size: 2em;
   line-height: 1.6;
   font-weight: 100;
+}
+
+p.small {
+  font-size: 1em;
 }
 
 a {
@@ -135,8 +146,70 @@ img.infinity-logo {
   margin-left: 5px;
 }
 
-.a11y-policy {
+.header-right {
   padding-right: 36px;
+  padding-left: 36px;
+  font-size: 18px;
+  margin-top: 6px;
+  font-weight: 300;
+}
+
+.header-right a {
+  padding-left: 12px;
+}
+
+.wrapper-noflex main {
+  padding: 54px 18px 0 0;
+  text-align: left;
+}
+
+.wrapper-noflex h1 {
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.wrapper-noflex h2 {
+  font-size: 1.5em;
+}
+
+.wrapper-noflex p {
+  font-size: 1em;
+}
+
+.wrapper-noflex main p.center {
+  font-size: 1.5em;
+}
+
+.wrapper-noflex aside {
+  padding-top: 25px;
+  border-top: 1px solid #E1E1E1;
+}
+
+@media (min-width: 550px) {
+  .wrapper-noflex main p.center {
+    text-align: center;
+    margin-bottom: 42px;
+    font-size: 2em;
+  }
+
+  .wrapper-noflex aside {
+    padding-top: 0;
+    padding-left: 50px;
+    border-left: 1px solid #E1E1E1;
+    border-top: none;
+  }
+}
+
+form.u-full-width label,
+form.u-full-width input {
+  width: 100%;
+}
+
+.a11y-policy {
+  position: fixed;
+  bottom: 0;
+  right: 12px;
+  font-size: 24px;
 }
 
 .btn-link {
@@ -163,4 +236,86 @@ img.infinity-logo {
 .btn-link:focus {
   color: #DD671A;
   background-color: transparent;
+}
+
+/* Override Skeleton's primary button colors*/
+
+.button.button-primary,
+button.button-primary,
+input[type="submit"].button-primary,
+input[type="reset"].button-primary,
+input[type="button"].button-primary {
+  background-color: #2D76EE;
+  border-color: #2D76EE;
+}
+
+.button.button-primary:hover,
+button.button-primary:hover,
+input[type="submit"].button-primary:hover,
+input[type="reset"].button-primary:hover,
+input[type="button"].button-primary:hover,
+.button.button-primary:focus,
+button.button-primary:focus,
+input[type="submit"].button-primary:focus,
+input[type="reset"].button-primary:focus,
+input[type="button"].button-primary:focus {
+    background-color: #DD671A;
+    border-color: #DD671A;
+}
+
+
+/* Nav */
+
+#toggle-nav {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin-top: 20px;
+  border: none;
+  z-index: 1000;
+  font-size: 18px;
+  font-weight: 300;
+}
+
+#toggle-nav[aria-expanded="true"] {
+  color: white;
+}
+
+#toggle-nav:hover,
+#toggle-nav:focus {
+  color: #DD671A;
+}
+
+#nav.hidden {
+  display: none;
+}
+
+#nav {
+    height: 100%;
+    position: fixed;
+    overflow-x: hidden;
+    z-index: 1;
+    top: 0;
+    right: 0;
+    border-left: 10px solid #1e1e1e;
+    padding: 70px 25px 25px 25px;
+    color: white;
+    background-color: #1e1e1e;
+}
+
+#nav a {
+  color: white;
+}
+
+#nav a:hover,
+#nav a:focus {
+  color: #DD671A;
+}
+
+#nav ul {
+  list-style: none;
+}
+
+#nav li {
+  line-height: 2.5;
 }

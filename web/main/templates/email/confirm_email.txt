@@ -1,0 +1,6 @@
+Thanks for signing up for {{ APP_NAME }}! In order to complete your account activation, please confirm your email address and set a password. It’s as simple as clicking the link below.
+
+{{ confirmation_link }}
+
+Thanks,
+The {{ APP_NAME }} Team

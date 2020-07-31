@@ -12,6 +12,8 @@ from django.db.backends.base.base import BaseDatabaseWrapper
 from django.test.utils import CaptureQueriesContext
 from django.db.backends import utils as django_db_utils
 
+from main.models import User
+
 
 # This file defines test fixtures available to all tests.
 # To see available fixtures run pytest --fixtures
@@ -162,7 +164,7 @@ def client():
     A version of the Django test client that allows us to specify a user login for a particular request with an
     `as_user` parameter, like `client.get(url, as_user=user).
     """
-    from django.test.client import Client
+    from django.test import Client
     session_key = settings.SESSION_COOKIE_NAME
     class UserClient(Client):
         def request(self, *args, **kwargs):
@@ -184,14 +186,34 @@ def client():
     return UserClient()
 
 
-
 ### model factories ###
 
+@register_factory
+class UserFactory(factory.DjangoModelFactory):
+    class Meta:
+        model = User
 
-# @register_factory
-# class UserFactory(factory.DjangoModelFactory):
-#     class Meta:
-#         model = User
+    first_name = factory.Faker('first_name')
+    last_name = factory.Faker('last_name')
+    email = factory.Sequence(lambda n: 'user%s@example.com' % n)
+    is_active = True
+    email_confirmed=True
 
-#     email_address = factory.Sequence(lambda n: 'user%s@example.com' % n)
-#     is_active = True
+    password = factory.PostGenerationMethodCall('set_password', 'pass')
+
+
+@register_factory
+class UnconfirmedUserFactory(UserFactory):
+    email_confirmed=False
+
+
+@register_factory
+class DeactivatedUserFactory(UserFactory):
+    is_active = False
+
+
+@register_factory
+class AdminUserFactory(UserFactory):
+    is_staff = True
+    is_superuser = True
+

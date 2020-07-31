@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     # third party
     'django_extensions',
     'rest_framework',
+    'rest_framework.authtoken',
 
     # built-in
     'django.contrib.admin',
@@ -85,6 +86,10 @@ DATABASES = {
 }
 
 
+AUTH_USER_MODEL = 'main.User'
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'index'
+
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
 
@@ -103,10 +108,16 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTHENTICATION_BACKENDS = ('main.auth.ConfirmedUserSessionBackend',)
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
+        'main.auth.ConfirmedUserTokenBackend',
         'rest_framework.authentication.SessionAuthentication',  # authenticate with Django login
     ),
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ]
 }
 
 
@@ -194,6 +205,7 @@ LOGGING['formatters'] = {
 # Make these settings available for use in Django's templates.
 # e.g. <a href="mailto:{{ CONTACT_EMAIL }}">Contact Us</a>
 TEMPLATE_VISIBLE_SETTINGS = (
+    'APP_NAME',
     'USE_ANALYTICS',
     'ACCESSIBILITY_POLICY_URL'
 )
@@ -205,3 +217,6 @@ ACCESSIBILITY_POLICY_URL = 'https://accessibility.huit.harvard.edu/digital-acces
 
 # LIL's analytics JS
 USE_ANALYTICS = False
+
+# Since we don't know yet...
+APP_NAME = 'Perma Eyes'
