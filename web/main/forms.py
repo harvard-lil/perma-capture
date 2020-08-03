@@ -22,7 +22,7 @@ class PasswordResetForm(auth_forms.PasswordResetForm):
 
         email_message = auth_forms.EmailMultiAlternatives(subject, body, from_email, [to_email])
         if html_email_template_name is not None:
-            html_email = loader.render_to_string(html_email_template_name, context, context['request'])
+            html_email = auth_forms.loader.render_to_string(html_email_template_name, context, context['request'])
             email_message.attach_alternative(html_email, 'text/html')
 
         email_message.send()
