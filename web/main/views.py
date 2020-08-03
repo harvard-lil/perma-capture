@@ -96,7 +96,7 @@ def sign_up(request):
     >>> check_response(client.post(new_password_form_response.redirect_chain[0][0], {'new_password1': 'anewpass', 'new_password2': 'anewpass'}, follow=True), content_includes=['Your password has been set'])
 
     Can log in with the new account:
-    >>> check_response(client.post(reverse('login'), {'username': 'user@example.edu', 'password': 'anewpass'}, follow=True), content_includes=[''])
+    >>> check_response(client.post(reverse('login'), {'username': 'user@example.edu', 'password': 'anewpass'}, follow=True), content_includes=['A Witness Server'])
 
     Received the welcome email after setting password:
     >>> assert len(mailoutbox) == 2
@@ -121,7 +121,7 @@ def reset_password(request):
     >>> url = reverse('password_reset')
 
     Confirmed users receive the password reset email as usual:
-    >>> user_response =client.post(url, {"email": user.email}, follow=True)
+    >>> user_response = client.post(url, {"email": user.email}, follow=True)
     >>> assert len(mailoutbox) == 1
     >>> assert f'{settings.APP_NAME}' in  mailoutbox[0].subject
     >>> assert 'Password Reset' in  mailoutbox[0].subject
