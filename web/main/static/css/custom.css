@@ -168,31 +168,33 @@ img.infinity-logo {
   text-align: center;
 }
 
-.wrapper-noflex h2 {
+#first-column h2,
+#second-column h2 {
   font-size: 1.5em;
 }
 
-.wrapper-noflex p {
+#first-column p,
+#second-column p {
   font-size: 1em;
 }
 
-.wrapper-noflex main p.center {
+#header-paragraph {
   font-size: 1.5em;
 }
 
-.wrapper-noflex aside {
+#second-column {
   padding-top: 25px;
   border-top: 1px solid #E1E1E1;
 }
 
 @media (min-width: 550px) {
-  .wrapper-noflex main p.center {
+  #header-paragraph  {
     text-align: center;
     margin-bottom: 42px;
     font-size: 2em;
   }
 
-  .wrapper-noflex aside {
+  #second-column {
     padding-top: 0;
     padding-left: 50px;
     border-left: 1px solid #E1E1E1;

@@ -1,40 +1,35 @@
-{% extends "base.html" %}
+{% extends "base-two-column.html" %}
 
 {% block title %}My Account{% endblock %}
 {% block heading %}My Account{% endblock %}
 
-{% block flex %}no{% endblock %}
-{% block content %}
-  <div class="row">
-    <div class="six columns">
-      <h2>Profile</h2>
-      <form method="POST" class="u-full-width">
-        {% csrf_token %}
-        <div class="row">
-          {{ form }}
-        </div>
-        <button type="submit" class="button-primary">Save changes</button>
-      </form>
-
-      <h2>Password</h2>
-      <p><a href="{% url 'password_change' %}" class="button button-primary">Change my password</a></p>
-
+{% block column_first %}
+  <h2>Profile</h2>
+  <form method="POST" class="u-full-width">
+    {% csrf_token %}
+    <div class="row">
+      {{ form }}
     </div>
-    <aside class="six columns">
-      <h2>API</h2>
-      <p>
-        <label for="api-key">Your API key</label>
-        <input id="api-key" type="text" value="{{ request.user.auth_token.key }}" readonly class="u-full-width">
-        <button id="api-key-button" type="button" class="button-primary">Get a new key</button>
-      </p>
-      <h2>Usage Plan</h2>
-      <p>This is what you can do! <a href="">Change your plan</a>.</p>
-      <h2>Membership</h2>
-      <p>You are an administrator for AFP. <a href="">Manage Users</a>.<br>
-         (You are a member of AFP. <a href="">Contact your administrator</a>.)
-      </p>
-    </aside>
-  </div>
+    <button type="submit" class="button-primary">Save changes</button>
+  </form>
+
+  <h2>Password</h2>
+  <p><a href="{% url 'password_change' %}" class="button button-primary">Change my password</a></p>
+{% endblock %}
+
+{% block column_second %}
+  <h2>API</h2>
+  <p>
+    <label for="api-key">Your API key</label>
+    <input id="api-key" type="text" value="{{ request.user.auth_token.key }}" readonly class="u-full-width">
+    <button id="api-key-button" type="button" class="button-primary">Get a new key</button>
+  </p>
+  <h2>Usage Plan</h2>
+  <p>This is what you can do! <a href="">Change your plan</a>.</p>
+  <h2>Membership</h2>
+  <p>You are an administrator for AFP. <a href="">Manage Users</a>.<br>
+     (You are a member of AFP. <a href="">Contact your administrator</a>.)
+  </p>
 {% endblock %}
 
 {% block scripts %}

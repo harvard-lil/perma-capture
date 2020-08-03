@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block flex %}no{% endblock %}
+{% block content %}
+  <p id="header-paragraph" class="center">{% block header_paragraph %}{% endblock %}</p>
+  <div class="row">
+    <div id="first-column" class="six columns">
+      {% block column_first %}
+      {% endblock %}
+    </div>
+    <div id="second-column" class="six columns">
+      {% block column_second %}
+      {% endblock %}
+    </aside>
+  </div>
+{% endblock %}
