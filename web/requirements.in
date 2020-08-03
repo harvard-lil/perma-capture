@@ -10,6 +10,9 @@ whitenoise          # static file serving
 # database
 psycopg2            # postgres connector
 
+# Features
+ua-parser           # user-agent parsing
+
 # Testing
 flake8
 pytest

@@ -10,7 +10,7 @@ from django.urls import reverse
 from rest_framework.decorators import api_view
 from rest_framework.response import Response as ApiResponse
 
-from .forms import SignupForm, UserForm
+from .forms import SignupForm, UserForm, PasswordResetForm
 from .models import User
 
 from test.test_helpers import check_response
@@ -123,7 +123,8 @@ def reset_password(request):
     Confirmed users receive the password reset email as usual:
     >>> user_response =client.post(url, {"email": user.email}, follow=True)
     >>> assert len(mailoutbox) == 1
-    >>> assert 'Password reset' in  mailoutbox[0].subject
+    >>> assert 'Password Reset' in  mailoutbox[0].subject
+    >>> assert f'{settings.APP_NAME}' in  mailoutbox[0].body
 
     Unconfirmed users receive the confirmation email:
     >>> unconfirmed_response = client.post(url, {"email": unconfirmed_user.email}, follow=True)
@@ -146,7 +147,22 @@ def reset_password(request):
             if not target_user.email_confirmed:
                 target_user.send_confirmation_email(request)
                 return HttpResponseRedirect(PasswordResetView.success_url)
-    return PasswordResetView.as_view()(request)
+
+    class OurPasswordResetView(PasswordResetView):
+
+        def form_valid(self, form):
+            """
+            Add the request to the email's extra context dict, so that it,
+            and context variables added by context processors, are available
+            when rendering the reset email text.
+
+            See forms.PasswordResetForm.
+            """
+            self.extra_email_context = self.extra_email_context or {}
+            self.extra_email_context.update({'request': self.request})
+            return super().form_valid(form)
+
+    return OurPasswordResetView.as_view(form_class=PasswordResetForm)(request)
 
 
 @perms_test(

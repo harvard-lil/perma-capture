@@ -121,6 +121,8 @@ REST_FRAMEWORK = {
     ]
 }
 
+PASSWORD_RESET_TIMEOUT_DAYS = 1
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
@@ -209,7 +211,8 @@ TEMPLATE_VISIBLE_SETTINGS = (
     'APP_NAME',
     'CONTACT_EMAIL',
     'USE_ANALYTICS',
-    'ACCESSIBILITY_POLICY_URL'
+    'ACCESSIBILITY_POLICY_URL',
+    'PASSWORD_RESET_TIMEOUT_DAYS'
 )
 
 DEFAULT_FROM_EMAIL = 'info@perma.cc'
