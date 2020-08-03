@@ -123,13 +123,15 @@ def reset_password(request):
     Confirmed users receive the password reset email as usual:
     >>> user_response =client.post(url, {"email": user.email}, follow=True)
     >>> assert len(mailoutbox) == 1
+    >>> assert f'{settings.APP_NAME}' in  mailoutbox[0].subject
     >>> assert 'Password Reset' in  mailoutbox[0].subject
     >>> assert f'{settings.APP_NAME}' in  mailoutbox[0].body
 
     Unconfirmed users receive the confirmation email:
     >>> unconfirmed_response = client.post(url, {"email": unconfirmed_user.email}, follow=True)
     >>> assert len(mailoutbox) == 2
-    >>> assert 'Confirm your email' in  mailoutbox[1].subject
+    >>> assert 'Please confirm your email' in  mailoutbox[1].subject
+    >>> assert f'{settings.APP_NAME}' in  mailoutbox[1].body
 
     If you enter an address we don't have, or the address of a deactivated user,
     we still show you the "success" page as normal, to avoid leaking any information.

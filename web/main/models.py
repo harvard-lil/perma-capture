@@ -286,7 +286,7 @@ class User(EditTrackedModel, TimestampedModel, PermissionsMixin, AbstractBaseUse
             default_token_generator.make_token(self),
         ]))
         send_template_email(
-            "Confirm your email",
+            'Please confirm your email address',
             'email/confirm_email.txt',
             {'confirmation_link': confirmation_link},
             settings.DEFAULT_FROM_EMAIL,
