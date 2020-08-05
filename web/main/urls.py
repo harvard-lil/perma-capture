@@ -19,6 +19,9 @@ urlpatterns = [
     path('user/password_reset/', no_perms_test(views.reset_password), name='password_reset'),
     path('user/reset/<uidb64>/<token>/', no_perms_test(auth_views.PasswordResetConfirmView.as_view(form_class=forms.SetPasswordForm)), name='password_reset_confirm'),
     path('user/', include('django.contrib.auth.urls')),
+
+    ### internal pages ###
+    path('manage/celery/', views.celery_queue_status, name='celery_queue_status'),
 ]
 
 # debugging routes to see error pages

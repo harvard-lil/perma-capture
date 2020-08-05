@@ -173,6 +173,16 @@ img.infinity-logo {
   font-size: 1.5em;
 }
 
+#first-column h3,
+#second-column h3 {
+  font-size: 1.3em;
+}
+
+#first-column h4,
+#second-column h4 {
+  font-size: 1.1em;
+}
+
 #first-column p,
 #second-column p {
   font-size: 1em;
@@ -200,6 +210,11 @@ img.infinity-logo {
     border-left: 1px solid #E1E1E1;
     border-top: none;
   }
+}
+
+.queue ~ .queue {
+  border-top: 1px solid #E1E1E1;
+  padding-top: 25px;
 }
 
 form.u-full-width label,
@@ -300,7 +315,7 @@ input[type="button"].button-primary:focus {
     top: 0;
     right: 0;
     border-left: 10px solid #1e1e1e;
-    padding: 70px 25px 25px 25px;
+    padding: 85px 35px 35px 35px;
     color: white;
     background-color: #1e1e1e;
 }
@@ -320,4 +335,13 @@ input[type="button"].button-primary:focus {
 
 #nav li {
   line-height: 2.5;
+  margin-bottom: 0;
+}
+
+nav #admin-only {
+  border-top: 1px solid #E1E1E1;
+  padding-top: 25px;
+  margin-top: 25px;
+  text-transform: uppercase;
+  font-size: 0.8em;
 }

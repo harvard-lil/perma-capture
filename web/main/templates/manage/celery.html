@@ -1,0 +1,57 @@
+{% extends "base-two-column.html" %}
+
+{% block title %}Celery Status{% endblock %}
+{% block heading %}Celery Status{% endblock %}
+
+{% block header_paragraph %}
+  <small>Snapshot from {% now "l, F j" %} at {% now "H:i:s e" %}.<br>
+  <a href="">refresh</a></small>
+{% endblock %}
+
+{% block column_first %}
+  <h2>Queues:</h2>
+  <div class="row">
+    <div class="six columns">Tasks in main queue:</div>
+    <div class="six columns">{{ total_main_queue }}</div>
+  </div>
+  <div class="row">
+    <div class="six columns">Tasks in background queue:</div>
+    <div class="six columns">{{ total_background_queue }}</div>
+  </div>
+{% endblock%}
+
+{% block column_second %}
+  <h2>Task data:</h2>
+    {% for queue in queues %}
+      <div class="queue">
+        <h3>{{ queue.name }}</h3>
+
+        <h4>Active jobs:</h4>
+        <p>{% for task in queue.active %}
+          {{ task.name }}{% if task.args or task.kwargs %}: {% for arg in task.args %}{{ arg }}{% endfor %} {% for kwarg in task.kwargs %}{{ kwarg }}{% endfor %}{% endif %}<br>
+        {% empty %}
+          None
+        {% endfor %}</p>
+
+        <h4>Next jobs (not a complete list):</h4>
+        <p>{% for task in queue.reserved %}
+          {{ task.name }}{% if task.args or task.kwargs %}: {% for arg in task.args %}{{ arg }}{% endfor %} {% for kwarg in task.kwargs %}{{ kwarg }}{% endfor %}{% endif %}<br>
+        {% empty %}
+          None
+        {% endfor %}</p>
+
+        <h4>Finished task count:</h4>
+        {% for task_name, task_count in queue.stats.total.items %}
+          <p class="finished">{{ task_name }}: {{ task_count }}</p>
+        {% empty %}
+          <p>None</p>
+        {% endfor %}
+      </div>
+    {% empty %}
+      (None)
+    {% endfor %}
+{% endblock %}
+
+
+
+

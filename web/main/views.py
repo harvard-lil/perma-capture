@@ -1,6 +1,11 @@
+from celery.task.control import inspect as celery_inspect
+from functools import wraps
+import redis
+
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import PasswordResetView
+from django.core.exceptions import PermissionDenied
 from django.http import (HttpResponseRedirect,  HttpResponseForbidden,
     HttpResponseServerError, HttpResponseBadRequest
 )
@@ -16,6 +21,32 @@ from .models import User
 from test.test_helpers import check_response
 from .test.test_permissions_helpers import no_perms_test, perms_test
 
+
+###
+### Helpers
+###
+
+def user_passes_test_or_403(test_func):
+    """
+    Decorator for views that checks that the user passes the given test,
+    raising PermissionDenied if not. Based on Django's user_passes_test.
+    The test should be a callable that takes the user object and
+    returns True if the user passes.
+    """
+    def decorator(view_func):
+        @login_required()
+        @wraps(view_func)
+        def _wrapped_view(request, *args, **kwargs):
+            if not test_func(request.user):
+                raise PermissionDenied
+            return view_func(request, *args, **kwargs)
+        return _wrapped_view
+    return decorator
+
+
+###
+### Views
+###
 
 @perms_test({'results': {200: ['user', None]}})
 def index(request):
@@ -248,3 +279,51 @@ def account(request):
         'form': form
     })
 
+
+#
+# Internal Use Only
+#
+
+@perms_test({'results': {403: ['user'], 200: ['admin_user'], 'login': [None]}})
+@user_passes_test_or_403(lambda user: user.is_staff)
+def celery_queue_status(request):
+    """
+    A simple report of how many tasks are in the main and background celery queues,
+    what tasks are being processed by which workers, and how many tasks each worker
+    has completed.
+
+    Given:
+    >>> from main.tasks import demo_scheduled_task
+    >>> client, admin_user, _ = [getfixture(i) for i in ['client', 'admin_user', 'celery_worker']]
+    >>> _ = demo_scheduled_task.apply_async()
+
+    The page returns and correctly reports the task was completed.
+    >>> check_response(client.get(reverse('celery_queue_status'), as_user=admin_user), content_includes=
+    ...     'class="finished">main.tasks.demo_scheduled_task:'
+    ... )
+    """
+    inspector = celery_inspect()
+    active = inspector.active()
+    reserved = inspector.reserved()
+    stats = inspector.stats()
+
+    queues = []
+    if active is not None:
+        for queue in sorted(active.keys()):
+            try:
+                queues.append({
+                    'name': queue,
+                    'active': active[queue],
+                    'reserved': reserved[queue],
+                    'stats': stats[queue],
+                })
+            except KeyError:
+                pass
+
+    r = redis.from_url(settings.CELERY_BROKER_URL)
+
+    return render(request, 'manage/celery.html', {
+        'queues': queues,
+        'total_main_queue': r.llen('celery'),
+        'total_background_queue': r.llen('background')
+    })
