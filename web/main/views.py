@@ -294,7 +294,7 @@ def celery_queue_status(request):
 
     Given:
     >>> from main.tasks import demo_scheduled_task
-    >>> client, admin_user, _ = [getfixture(i) for i in ['client', 'admin_user', 'celery_worker']]
+    >>> _, client, admin_user = [getfixture(i) for i in ['celery_worker', 'client', 'admin_user']]
     >>> _ = demo_scheduled_task.apply_async()
 
     The page returns and correctly reports the task was completed.

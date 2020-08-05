@@ -21,7 +21,7 @@ def celery_task_failure_email(**kwargs):
     From https://github.com/celery/celery/issues/3389
 
     Given:
-    >>> mocker, _ = [getfixture(i) for i in ['mocker', 'celery_worker']]
+    >>> _, mocker = [getfixture(i) for i in ['celery_worker', 'mocker']]
     >>> sleep = mocker.patch('main.tasks.sleep')
     >>> mailer = mocker.patch('main.tasks.mail_admins')
 

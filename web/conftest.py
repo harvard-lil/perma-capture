@@ -188,7 +188,12 @@ def client():
 
 @pytest.fixture(scope='session')
 def celery_config():
-    # NOTE: when the `celery_worker` fixture is included, peculiar
+    # NOTE:
+    #
+    # The fixture appears to like to be included first... otherwise
+    # DB-related weirdness happens during teardown.
+    #
+    # Also, when the `celery_worker` fixture is included, peculiar
     # (and seemingly spurious) DB-related warnings are sometimes
     # printed when tests fail... Very confusing when debugging!
     # Be sure to read all the way up, for the original assertion
