@@ -236,10 +236,9 @@ CELERY_RESOURCE_LIMITS = [
 # It remains to be determined whether they will prove appropriate here.
 #
 # If a task is running longer than five minutes, ask it to shut down
-# CELERY_TASK_SOFT_TIME_LIMIT=300
+CELERY_TASK_SOFT_TIME_LIMIT=300
 # If a task is running longer than seven minutes, kill it
-# CELERY_TASK_TIME_LIMIT = 420
-CELERY_TASK_TIME_LIMIT = 2
+CELERY_TASK_TIME_LIMIT = 420
 
 # Control whether Celery tasks should be run asynchronously in a background worker
 # process or synchronously in the main thread of the calling script / Django request.
@@ -248,9 +247,9 @@ CELERY_TASK_TIME_LIMIT = 2
 CELERY_TASK_ALWAYS_EAGER = False
 CELERY_TASK_EAGER_PROPAGATES = True  # propagate exceptions when CELERY_TASK_ALWAYS_EAGER=True
 
-CELERY_TASK_ROUTES = {
-    'main.tasks.sample_scheduled_task': {'queue': 'background'},
-}
+# Lets you route particular tasks to particular queues.
+# Mentioning a new queue creates it.
+CELERY_TASK_ROUTES = {}
 
 # from celery.schedules import crontab
 CELERY_BEAT_SCHEDULE = {}

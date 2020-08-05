@@ -15,6 +15,7 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(minute='*'),
     },
 }
+CELERY_TASK_ROUTES['main.tasks.demo_scheduled_task'] = {'queue': 'background'}
 
 # don't check password quality locally, since it's annoying
 AUTH_PASSWORD_VALIDATORS = []
