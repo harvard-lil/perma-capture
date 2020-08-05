@@ -190,8 +190,8 @@ def client():
 def celery_config():
     # NOTE:
     #
-    # The fixture appears to like to be included first... otherwise
-    # DB-related weirdness happens during teardown.
+    # The `celery_worker` fixture appears to like to be included first...
+    # otherwise DB-related weirdness happens during teardown.
     #
     # Also, when the `celery_worker` fixture is included, peculiar
     # (and seemingly spurious) DB-related warnings are sometimes
