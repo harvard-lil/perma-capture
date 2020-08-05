@@ -7,3 +7,5 @@ settings.py
 # pytest
 .cache
 .pytest_cache
+
+celerybeat-schedule

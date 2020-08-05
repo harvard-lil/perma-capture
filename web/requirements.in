@@ -1,14 +1,23 @@
+# Admin
 pip-tools
-fabric3
-tqdm
+fabric3             # project automation
+tqdm                # script progress bars
 
+# Celery
+celery[redis]       # task queue
+flower              # monitoring
+watchdog            # restart celery in dev (via 'watchmedo' command)
+argh                # needed by watchdog
+pyyaml              # needed by watchdog
+
+# Database
+psycopg2            # postgres connector
+
+# Django Stuff
 django
 django-extensions
 djangorestframework
 whitenoise          # static file serving
-
-# database
-psycopg2            # postgres connector
 
 # Features
 ua-parser           # user-agent parsing
@@ -17,6 +26,6 @@ ua-parser           # user-agent parsing
 flake8
 pytest
 pytest-django
-pytest-cov
-pytest-mock
+pytest-cov          # record code coverage
+pytest-mock         # mocking
 factory-boy         # create django model fixtures on demand

@@ -1,10 +1,10 @@
-import inspect
-import re
 from collections import defaultdict
 from contextlib import contextmanager
 from distutils.sysconfig import get_python_lib
-import pytest
 import factory
+import inspect
+import pytest
+import re
 
 from django.conf import settings
 from django.db import connections
@@ -184,6 +184,18 @@ def client():
             else:
                 return super().request(*args, **kwargs)
     return UserClient()
+
+
+@pytest.fixture(scope='session')
+def celery_config():
+    # NOTE: when the `celery_worker` fixture is included, peculiar
+    # (and seemingly spurious) DB-related warnings are sometimes
+    # printed when tests fail... Very confusing when debugging!
+    # Be sure to read all the way up, for the original assertion
+    # failure, before wasting time investigating fixtures' DB access.
+    return {
+        'broker_url': settings.CELERY_BROKER_URL
+    }
 
 
 ### model factories ###

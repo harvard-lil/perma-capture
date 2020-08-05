@@ -6,6 +6,15 @@ ALLOWED_HOSTS = ['*']
 SECRET_KEY = 'k2#@_q=1$(__n7#(zax6#46fu)x=3&^lz&bwb8ol-_097k_rj5'
 
 DEBUG = True
+CELERY_TASK_ALWAYS_EAGER = True
+
+from celery.schedules import crontab
+CELERY_BEAT_SCHEDULE = {
+    'demo-scheduled-task': {
+        'task': 'main.tasks.demo_scheduled_task',
+        'schedule': crontab(minute='*'),
+    },
+}
 
 # don't check password quality locally, since it's annoying
 AUTH_PASSWORD_VALIDATORS = []
