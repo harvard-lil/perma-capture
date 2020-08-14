@@ -1,7 +1,7 @@
 version: '3'
 services:
   redis:
-    image: redis:4.0.6
+    image: redis:5.0.6
     volumes:
       - redis_data:/data:delegated
   db:
