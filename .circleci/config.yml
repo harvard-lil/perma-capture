@@ -1,7 +1,8 @@
 version: 2.1
 jobs:
   build:
-    machine: true
+    machine:
+      image: ubuntu-1604:202007-01
     working_directory: ~/project
     steps:
 
@@ -13,6 +14,15 @@ jobs:
           command: |
             docker-compose --version
             docker version
+
+      # Quick tests to fail fast on common errors
+      - run:
+          name: "Flake8"
+          working_directory: web
+          command: |
+            export PYENV_VERSION=3.8.3  # use the version of python3 installed on circleci
+            pip install `egrep -o 'flake8==\S+' requirements.txt`  # install our version of flake8
+            flake8
 
       # Docker image building and caching
       # This block shaves a minute or two off of the test runtime by using cached docker images.
@@ -42,7 +52,6 @@ jobs:
             docker-compose up -d
             docker-compose exec web ./manage.py collectstatic --noinput   # collect static files
             mkdir -p junit/pytest                            # storage for circleci test info
-            docker-compose exec web flake8 .
             docker-compose exec web pytest \
               --junitxml=junit/pytest/test-results.xml       `# write test results so they can be displayed by circleci` \
               --cov --cov-config=setup.cfg --cov-report xml  `# write coverage data to .coverage for upload by codecov`
