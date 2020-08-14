@@ -5,7 +5,9 @@ services:
     volumes:
       - redis_data:/data:delegated
   db:
-    image: postgres:9.6.16
+    image: postgres:11.9
+    environment:
+      POSTGRES_PASSWORD: password
     volumes:
       - db_data:/var/lib/postgresql/data:delegated
   web:
