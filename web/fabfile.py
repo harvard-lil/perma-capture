@@ -43,6 +43,16 @@ def open_subprocess(command):  # pragma: no cover
 
 ### Tasks ###
 
+@task(alias='pip-compile')
+def pip_compile(args=''):
+    # run pip-compile
+    # Use --allow-unsafe because pip --require-hashes needs all requirements to be pinned, including those like
+    # setuptools that pip-compile leaves out by default.
+    command = ['pip-compile', '--generate-hashes', '--allow-unsafe']+args.split()
+    print("Calling %s" % " ".join(command))
+    subprocess.check_call(command, env=dict(os.environ, CUSTOM_COMPILE_COMMAND='fab pip-compile'))
+
+
 @task(alias='run')
 @setup_django
 def run_django(port=None):  # pragma: no cover
