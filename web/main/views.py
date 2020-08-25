@@ -91,11 +91,15 @@ def index(request):
     ...     f'href="{settings.ACCESSIBILITY_POLICY_URL}"'
     ... ])
     """
-    return render(request, 'index.html', {
-        'rwp_base_url': settings.RWP_BASE_URL,
-        'heading': "Perma Eyes",
-        'message': "A Witness Server & Suite of Tools for Journalists and Fact Checkers"
-    })
+    if request.user.is_authenticated:
+        return render(request, 'dashboard.html', {
+            'rwp_base_url': settings.RWP_BASE_URL,
+        })
+    else:
+        return render(request, 'generic.html', {
+            'heading': settings.APP_NAME,
+            'message': "A Witness Server & Suite of Tools for Journalists and Fact Checkers"
+        })
 
 
 def render_sw(request):

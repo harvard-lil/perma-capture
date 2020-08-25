@@ -212,6 +212,14 @@ img.infinity-logo {
   }
 }
 
+.subheading {
+  text-align: center;
+  margin-top: -32px;
+  color: #DD671A;
+  font-weight: bold;
+  font-size: 1.5em;
+}
+
 .queue ~ .queue {
   border-top: 1px solid #E1E1E1;
   padding-top: 25px;

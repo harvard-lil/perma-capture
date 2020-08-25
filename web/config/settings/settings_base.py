@@ -262,6 +262,7 @@ CELERY_BEAT_SCHEDULE = {}
 # e.g. <a href="mailto:{{ CONTACT_EMAIL }}">Contact Us</a>
 TEMPLATE_VISIBLE_SETTINGS = (
     'APP_NAME',
+    'API_PREFIX',
     'CONTACT_EMAIL',
     'USE_ANALYTICS',
     'ACCESSIBILITY_POLICY_URL',
@@ -281,7 +282,10 @@ APP_NAME = 'Perma Eyes'
 
 TESTING = False
 
-# Set to backend server URL
-BACKEND_API = "https://perma-fact.dev/"
+API_PREFIX = 'api'
 
+# Capture Service
+BACKEND_API = "http://capture-service/"
+
+# Playback
 RWP_BASE_URL = "https://replayweb.page/"

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block header_scripts %}
+  <script src="{% static 'js/app.js' %}"></script>
+  <script src="{{ rwp_base_url }}ui.js"></script>
+{% endblock header_scripts %}
+
+{% block flex %}no{% endblock %}
+
+{% block title %}Create a new archive{% endblock %}
+{% block heading %}Create a new archive{% endblock %}
+
+{% block content %}
+
+  <p class="subheading">Enter any URL to capture it in a downloadable archive.</p>
+
+  <witness-app apiPrefix="/{{ API_PREFIX }}" csrftoken="{{ csrf_token}}" csrftoken_name="csrfmiddlewaretoken">
+  </witness-app>
+
+{% endblock content %}
+
+
