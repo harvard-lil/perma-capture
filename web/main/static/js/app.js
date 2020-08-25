@@ -402,7 +402,7 @@ const oe=window.ShadowRoot&&(void 0===window.ShadyCSS||window.ShadyCSS.nativeSha
       <div class="preview">
         <replay-web-page
           source="${this.result.accessUrl}"
-          embed="replayonly"
+          embed="replay"
           url="${this.result.captureUrl}"></replay-web-page>
       </div>
       `:L``}
