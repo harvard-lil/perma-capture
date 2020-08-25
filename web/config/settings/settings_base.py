@@ -286,7 +286,6 @@ API_PREFIX = 'api'
 
 # Capture Service
 BACKEND_API = "http://capture-service"
-READY = False
 
 # Playback
 RWP_BASE_URL = "https://replayweb.page/"
