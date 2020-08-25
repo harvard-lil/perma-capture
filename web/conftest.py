@@ -4,6 +4,7 @@ from distutils.sysconfig import get_python_lib
 import factory
 import inspect
 import pytest
+import requests
 import re
 
 from django.conf import settings
@@ -201,6 +202,49 @@ def celery_config():
     return {
         'broker_url': settings.CELERY_BROKER_URL
     }
+
+
+### capture service mocks ###
+
+@pytest.fixture
+def mock_job():
+    return 'a1-_'
+
+
+@pytest.fixture
+def mock_job_index():
+    return 0
+
+
+class MockResponse:
+    """
+    Totally generic, and the same for every test.
+    TODO: customize per test, depending on expected response codes and data.
+    """
+
+    @staticmethod
+    def json():
+        return {"mock_key": "mock_response"}
+
+    @property
+    def status_code(self):
+        return 200
+
+
+@pytest.fixture(autouse=True)
+def mock_response(monkeypatch):
+    """
+    requests.get, requests.post, requests.patch, and requests.delete
+    are mocked to return {'mock_key':'mock_response'}
+    """
+
+    def mock_http_call(*args, **kwargs):
+        return MockResponse()
+
+    monkeypatch.setattr(requests, "get", mock_http_call)
+    monkeypatch.setattr(requests, "post", mock_http_call)
+    monkeypatch.setattr(requests, "patch", mock_http_call)
+    monkeypatch.setattr(requests, "delete", mock_http_call)
 
 
 ### model factories ###

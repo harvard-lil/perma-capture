@@ -10,8 +10,8 @@ from . import views, forms
 urlpatterns = [
     path('', views.index, name='index'),
 
-    path(f'{settings.API_PREFIX}/captures', views.CaptureAPIView.as_view(), name='captures'),
-    path(f'{settings.API_PREFIX}/capture/<jobid>/<index>', views.CaptureAPIView.as_view(), name='delete_capture'),
+    path(f'{settings.API_PREFIX}/captures', views.CaptureListView.as_view(), name='captures'),
+    path(f'{settings.API_PREFIX}/capture/<slug:jobid>/<int:index>', views.CaptureDetailView.as_view(), name='delete_capture'),
     path('replay/sw.js', views.render_sw, name='sw'),
 
     path('sign-up/', views.sign_up, name='sign_up'),

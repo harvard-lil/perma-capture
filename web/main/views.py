@@ -16,6 +16,7 @@ from django.utils.decorators import method_decorator
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response as ApiResponse
+from rest_framework import serializers
 from rest_framework.views import APIView
 
 from .forms import SignupForm, UserForm, PasswordResetForm
@@ -24,6 +25,8 @@ from .models import User
 from test.test_helpers import check_response
 from .test.test_permissions_helpers import no_perms_test, perms_test
 
+import logging
+logger = logging.getLogger(__name__)
 
 ###
 ### Helpers
@@ -51,43 +54,61 @@ def user_passes_test_or_403(test_func):
 ### Views
 ###
 
-class CaptureAPIView(APIView):
+class CaptureListView(APIView):
+
+    @method_decorator(perms_test({'results': {200: ['user'], 401: [None]}}))
     def get(self, request):
         """get list of captures
         """
-        params = {'userid': request.user.id}
-        res = requests.get(settings.BACKEND_API + "captures", params=params)
+        res = requests.get(f'{settings.BACKEND_API}/captures', params={'userid': request.user.id})
         return ApiResponse(res.json(), status=res.status_code)
 
+    @method_decorator(perms_test({'results': {400: ['user'], 401: [None]}}))
     def post(self, request):
         """ post capture
         """
-        data = request.data
-        data['userid'] = request.user.id
-        res = requests.post(settings.BACKEND_API + "captures", json=data)
+        try:
+            data = {
+                'userid': request.user.id,
+                'urls': request.data['urls'],
+                'tag': request.data['tag'],
+            }
+        except KeyError:
+            raise serializers.ValidationError("Keys 'urls' and 'tag' are required.")
+
+        res = requests.post(f'{settings.BACKEND_API}/captures', json=data)
         return ApiResponse(res.json(), status=res.status_code)
 
+
+class CaptureDetailView(APIView):
+
+    @method_decorator(perms_test({'args': ['mock_job', 'mock_job_index'], 'results': {200: ['user'], 401: [None]}}))
     def delete(self, request, jobid, index):
         """ delete capture
         """
-        print(jobid, index)
-        res = requests.delete(settings.BACKEND_API + "capture/{0}/{1}".format(jobid, index))
+        logger.info(f"Deleting job {jobid}, index {index}")
+        res = requests.delete(f"{settings.BACKEND_API}/capture/{jobid}/{index}")
         return ApiResponse(res.json(), status=res.status_code)
-
 
 
 @perms_test({'results': {200: ['user', None]}})
 def index(request):
     """
-    A placeholder landing page that reuses Perma Payment's design.
+    Our landing page.
 
     Given:
-    >>> client = getfixture('client')
+    >>> client, user = [getfixture(f) for f in ['client', 'user']]
     >>> url = reverse('index')
 
-    It includes some placeholder text and a link to Harvard's Accessibility Policy
+    Anonymous users see our placeholder text and the mandatory link to Harvard's Accessibility Policy
     >>> check_response(client.get(url), content_includes=[
     ...     'A Witness Server',
+    ...     f'href="{settings.ACCESSIBILITY_POLICY_URL}"'
+    ... ])
+
+    Logged in users see their dashboard.
+    >>> check_response(client.get(url, as_user=user), content_includes=[
+    ...     'Create a new archive',
     ...     f'href="{settings.ACCESSIBILITY_POLICY_URL}"'
     ... ])
     """
@@ -102,6 +123,7 @@ def index(request):
         })
 
 
+@no_perms_test
 def render_sw(request):
     """
     Render the SW in the root replay /replay/ path
@@ -169,7 +191,7 @@ def sign_up(request):
     >>> check_response(client.post(new_password_form_response.redirect_chain[0][0], {'new_password1': 'anewpass', 'new_password2': 'anewpass'}, follow=True), content_includes=['Your password has been set'])
 
     Can log in with the new account:
-    >>> check_response(client.post(reverse('login'), {'username': 'user@example.edu', 'password': 'anewpass'}, follow=True), content_includes=['A Witness Server'])
+    >>> check_response(client.post(reverse('login'), {'username': 'user@example.edu', 'password': 'anewpass'}, follow=True), content_includes='Create a new archive')
 
     Received the welcome email after setting password:
     >>> assert len(mailoutbox) == 2
