@@ -218,6 +218,7 @@ img.infinity-logo {
   color: #DD671A;
   font-weight: bold;
   font-size: 1.5em;
+  line-height: 1.3;
 }
 
 .queue ~ .queue {
@@ -353,3 +354,26 @@ nav #admin-only {
   text-transform: uppercase;
   font-size: 0.8em;
 }
+
+
+/* Capture service UI customizations */
+
+/* Since THAT css framework and OUR css framework both use rems... */
+/* ... but our framework wants html base size at 62.5% and that one doesn't */
+/* ... and at least for now, we have better control over this code */
+
+/* N.B. you cannot target any selectors particular to the shadow dom element */
+
+html.dashboard, html.dashboard body {
+  font-size: 100%;
+}
+
+html.dashboard h1 {
+  font-size: 50px;
+}
+
+html.dashboard .subheading {
+  font-size: 20px;
+}
+
+

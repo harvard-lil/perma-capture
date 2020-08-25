@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block html-class%}dashboard{% endblock %}
+
 {% block header_scripts %}
   <script src="{% static 'js/app.js' %}"></script>
   <script src="{{ rwp_base_url }}ui.js"></script>
