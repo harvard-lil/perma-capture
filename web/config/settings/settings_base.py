@@ -145,6 +145,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
+
 # avoid the need for collectstatic in production (see http://whitenoise.evans.io/en/stable/django.html#WHITENOISE_USE_FINDERS )
 WHITENOISE_USE_FINDERS = True
 
@@ -279,3 +280,8 @@ USE_ANALYTICS = False
 APP_NAME = 'Perma Eyes'
 
 TESTING = False
+
+# Set to backend server URL
+BACKEND_API = "https://perma-fact.dev/"
+
+RWP_BASE_URL = "https://replayweb.page/"

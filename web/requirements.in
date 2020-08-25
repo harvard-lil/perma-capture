@@ -22,6 +22,9 @@ whitenoise          # static file serving
 # Features
 ua-parser           # user-agent parsing
 
+# API
+requests            # need for contacting api server
+
 # Testing
 flake8
 pytest

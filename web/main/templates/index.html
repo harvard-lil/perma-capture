@@ -1,0 +1,15 @@
+{% extends "index_base.html" %}
+
+{% block content %}
+  <main class="container u-full-width" style="overflow-y: auto; max-width: unset">
+    {% if user.is_authenticated %}
+    <witness-app apiPrefix="/api" csrftoken="{{ csrf_token}}" csrftoken_name="csrfmiddlewaretoken">
+    </witness-app>
+    {% else %}
+    <p>{{ message | safe }}</p>
+    <span style="color: black">Please <a href="/login/">log in</a> to use Perma Witness</span>
+    {% endif %}
+  </main>
+{% endblock content %}
+
+

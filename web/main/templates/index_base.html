@@ -1,0 +1,59 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% if heading and heading == APP_NAME %}{{ heading }}{% else %}{% block title %}{{ heading }}{% endblock title %} | {{ APP_NAME }}{% endif %}</title>
+    <link rel="shortcut icon" type="image/x-icon" href="{% static 'img/favicon.png' %}">
+
+    <style>
+      html, body {
+        font-size: initial !important;
+      }
+    </style>
+
+    <script src="{% static 'js/app.js' %}"></script>
+    <script src="{{ rwp_base_url }}ui.js"></script>
+ 
+    {% block css %}
+    <link rel="stylesheet" href="{% static 'css/normalize.css' %}">
+    <link rel="stylesheet" href="{% static 'css/skeleton.css' %}">
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+    {% endblock css %}
+  </head>
+  <body>
+    {% block body %}
+    <div id="nav" class="hidden">
+      {% include 'includes/nav.html' %}
+    </div>
+    <div class="wrapper wrapper-{% block flex %}{% endblock %}flex">
+      <header>
+        <div class="navbar-brand logo">
+          <a href="/">{{ APP_NAME }} <img alt="" class="infinity-logo" src="{% static 'img/eyes.svg' %}"></a>
+        </div>
+        {% if not request.user.is_authenticated %}
+          <div class="header-right">
+            <a href="{% url 'sign_up' %}">Sign up</a>
+            <a href="{% url 'login' %}">Log in</a>
+          </div>
+        {% endif %}
+      </header>
+      {% if request.user.is_authenticated %}
+        <button tabindex=1 id="toggle-nav" type="button" aria-label="Navigation" aria-controls="nav" aria-expanded="false"><span aria-hidden="true">&lt;&lt;</span></button>
+      {% endif %}
+      {% block content %}
+      {% endblock content %}
+    </div>
+    <a class="a11y-policy" href="{{ ACCESSIBILITY_POLICY_URL }}"><span aria-hidden="true">♿</span><span class="sr-only">Accessibility policy</span></a>
+    <div id="sr-announcements-intro" class="sr-only">Notifications:</div>
+    <div id="sr-announcements" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+    {% endblock body %}
+    {% block scripts %}
+      <script src="{% static 'js/main.js' %}"></script>
+    {% endblock scripts %}
+    {% include 'includes/analytics.html' %}
+  </body>
+</html>

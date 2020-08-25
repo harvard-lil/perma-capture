@@ -10,6 +10,10 @@ from . import views, forms
 urlpatterns = [
     path('', views.index, name='index'),
 
+    path('api/captures', views.CaptureAPIView.as_view(), name='captures'),
+    path('api/capture/<jobid>/<index>', views.CaptureAPIView.as_view(), name='delete_capture'),
+    path('replay/sw.js', views.render_sw, name='sw'),
+
     path('sign-up/', views.sign_up, name='sign_up'),
 
     ### user account pages ###

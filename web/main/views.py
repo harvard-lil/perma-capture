@@ -1,6 +1,7 @@
 from celery.task.control import inspect as celery_inspect
 from functools import wraps
 import redis
+import requests
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -11,9 +12,11 @@ from django.http import (HttpResponseRedirect,  HttpResponseForbidden,
 )
 from django.shortcuts import render
 from django.urls import reverse
+from django.utils.decorators import method_decorator
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response as ApiResponse
+from rest_framework.views import APIView
 
 from .forms import SignupForm, UserForm, PasswordResetForm
 from .models import User
@@ -48,6 +51,31 @@ def user_passes_test_or_403(test_func):
 ### Views
 ###
 
+class CaptureAPIView(APIView):
+    def get(self, request):
+        """get list of captures
+        """
+        params = {'userid': request.user.id}
+        res = requests.get(settings.BACKEND_API + "captures", params=params)
+        return ApiResponse(res.json(), status=res.status_code)
+
+    def post(self, request):
+        """ post capture
+        """
+        data = request.data
+        data['userid'] = request.user.id
+        res = requests.post(settings.BACKEND_API + "captures", json=data)
+        return ApiResponse(res.json(), status=res.status_code)
+
+    def delete(self, request, jobid, index):
+        """ delete capture
+        """
+        print(jobid, index)
+        res = requests.delete(settings.BACKEND_API + "capture/{0}/{1}".format(jobid, index))
+        return ApiResponse(res.json(), status=res.status_code)
+
+
+
 @perms_test({'results': {200: ['user', None]}})
 def index(request):
     """
@@ -63,10 +91,20 @@ def index(request):
     ...     f'href="{settings.ACCESSIBILITY_POLICY_URL}"'
     ... ])
     """
-    return render(request, 'generic.html', {
+    return render(request, 'index.html', {
+        'rwp_base_url': settings.RWP_BASE_URL,
         'heading': "Perma Eyes",
         'message': "A Witness Server & Suite of Tools for Journalists and Fact Checkers"
     })
+
+
+def render_sw(request):
+    """
+    Render the SW in the root replay /replay/ path
+    """
+    return render(request, 'sw.js', {
+        'rwp_base_url': settings.RWP_BASE_URL
+    }, content_type='application/javascript')
 
 
 #
