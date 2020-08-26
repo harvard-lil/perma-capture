@@ -114,7 +114,7 @@ def index(request):
     ... ])
     """
     if request.user.is_authenticated:
-        return render(request, 'dashboard.html', {
+        return render(request, 'main/dashboard.html', {
             'rwp_base_url': settings.RWP_BASE_URL,
         })
     else:
@@ -124,12 +124,12 @@ def index(request):
         })
 
 
-@no_perms_test
+@perms_test({'results': {200: ['user', None]}})
 def render_sw(request):
     """
-    Render the SW in the root replay /replay/ path
+    Render the service worker in the root replay /replay/ path
     """
-    return render(request, 'sw.js', {
+    return render(request, 'main/sw.js', {
         'rwp_base_url': settings.RWP_BASE_URL
     }, content_type='application/javascript')
 
@@ -311,7 +311,7 @@ def account(request):
     if request.method == "POST":
         if form.is_valid():
             form.save()
-    return render(request, 'account.html', {
+    return render(request, 'main/account.html', {
         'form': form
     })
 
