@@ -70,7 +70,7 @@ jobs:
             sudo pip install codecov
             codecov
 
-      # Deploy via Salt reactor
+      # Deploy via Salt
       - run:
           name: "Deploy"
           command: |
