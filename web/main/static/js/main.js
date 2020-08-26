@@ -57,27 +57,31 @@ function getCsrfToken(){
   return getCookie('csrftoken');
 }
 
-const apiKey = document.getElementById('api-key');
-const apiKeyButton = document.getElementById('api-key-button');
+if (!(typeof RESET_TOKEN_BUTTON === 'undefined') && RESET_TOKEN_BUTTON) {
 
-function getNewApiToken(){
-  fetch(RESET_TOKEN_URL, {
-      method: 'POST',
-      headers: {
-        'X-CSRFToken': getCsrfToken(),
-        'Accept': 'application/json'
-      },
-  }).then(response => response.json())
-    .then(data => {
-      apiKey.value = data.token;
-      say('Success: API token reset');
-    })
-    .catch((error) => {
-      console.error('Token reset failed:', error);
-      alert('There was a problem getting your token. Please try again.')
-    });
+  const apiKey = document.getElementById('api-key');
+  const apiKeyButton = document.getElementById('api-key-button');
+
+  function getNewApiToken(){
+    fetch(RESET_TOKEN_URL, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCsrfToken(),
+          'Accept': 'application/json'
+        },
+    }).then(response => response.json())
+      .then(data => {
+        apiKey.value = data.token;
+        say('Success: API token reset');
+      })
+      .catch((error) => {
+        console.error('Token reset failed:', error);
+        alert('There was a problem getting your token. Please try again.')
+      });
+  }
+
+  apiKeyButton.addEventListener('click', function(event){
+    getNewApiToken()
+  });
+
 }
-
-apiKeyButton.addEventListener('click', function(event){
-  getNewApiToken()
-});

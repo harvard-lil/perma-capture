@@ -33,8 +33,9 @@
 {% endblock %}
 
 {% block scripts %}
-  {{ block.super }}
   <script>
-    const RESET_TOKEN_URL = "{% url 'token_reset' %}"
+    const RESET_TOKEN_BUTTON = true;
+    const RESET_TOKEN_URL = "{% url 'token_reset' %}";
   </script>
+  {{ block.super }}
 {% endblock scripts %}
