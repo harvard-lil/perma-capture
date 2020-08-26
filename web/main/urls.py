@@ -13,6 +13,7 @@ urlpatterns = [
     path(f'{settings.API_PREFIX}/captures', views.CaptureListView.as_view(), name='captures'),
     path(f'{settings.API_PREFIX}/capture/<slug:jobid>/<int:index>', views.CaptureDetailView.as_view(), name='delete_capture'),
     path('replay/sw.js', views.render_sw, name='sw'),
+    path('replay/', views.replay_error, name='replay_error'),
 
     path('sign-up/', views.sign_up, name='sign_up'),
 

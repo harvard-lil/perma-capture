@@ -13,6 +13,7 @@ from django.http import (HttpResponseRedirect,  HttpResponseForbidden,
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils.decorators import method_decorator
+from django.views.decorators.clickjacking import xframe_options_exempt
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response as ApiResponse
@@ -134,6 +135,15 @@ def render_sw(request):
     }, content_type='application/javascript')
 
 
+@perms_test({'results': {200: ['user', None]}})
+@xframe_options_exempt
+def replay_error(request):
+    """
+    The service worker should be installed and handle all requests to /replay?foo=bar,
+    but this route serves to catch any requests that fall through by accident
+    and communicate debugging suggestions to the user.
+    """
+    return render(request, 'main/replay-error.html')
 
 
 #
