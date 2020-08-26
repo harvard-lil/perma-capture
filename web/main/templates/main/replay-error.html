@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}No Service Worker{% endblock %}
+{% block heading %}Trying to view a web archive?{% endblock %}
+
+{% block content %}
+  <p>
+    The web archive player didn't load properly: please <a href="#" onclick="event.preventDefault(); window.location.reload(true)">try again</a>.
+  </p>
+  <p class="small">
+    This usually happens when you "force" or "hard" refresh the page, e.g., by including your shift key, which disables the service worker used for playback. If you did not force-refresh, or if you continue to have trouble, <a href="mailto:{{ CONTACT_EMAIL }}?subject=Replay%20Attempt%20Not%20Reaching%20Service%20Worker">let us know</a>.
+  </p>
+{% endblock content %}
