@@ -28,6 +28,7 @@ from .test.test_permissions_helpers import no_perms_test, perms_test
 import logging
 logger = logging.getLogger(__name__)
 
+
 ###
 ### Helpers
 ###
@@ -133,35 +134,6 @@ def render_sw(request):
     }, content_type='application/javascript')
 
 
-#
-# Error Handlers
-#
-
-def bad_request(request, exception):
-    '''
-    Custom view for 400 failures, required for proper rendering of
-    our custom template, which uses injected context variables.
-    https://github.com/django/django/blob/master/django/views/defaults.py#L97
-    '''
-    return HttpResponseBadRequest(render(request, '400.html'))
-
-
-def csrf_failure(request, reason="CSRF Failure."):
-    '''
-    Custom view for CSRF failures, required for proper rendering of
-    our custom template, which uses injected context variables.
-    https://github.com/django/django/blob/master/django/views/defaults.py#L146
-    '''
-    return HttpResponseForbidden(render(request, '403_csrf.html'))
-
-
-def server_error(request):
-    '''
-    Custom view for 500 failures, required for proper rendering of
-    our custom template, which uses injected context variables.
-    https://github.com/django/django/blob/master/django/views/defaults.py#L97
-    '''
-    return HttpResponseServerError(render(request, '500.html'))
 
 
 #
@@ -391,3 +363,34 @@ def celery_queue_status(request):
         'total_main_queue': r.llen('celery'),
         'total_background_queue': r.llen('background')
     })
+
+
+#
+# Error Handlers
+#
+
+def bad_request(request, exception):
+    '''
+    Custom view for 400 failures, required for proper rendering of
+    our custom template, which uses injected context variables.
+    https://github.com/django/django/blob/master/django/views/defaults.py#L97
+    '''
+    return HttpResponseBadRequest(render(request, '400.html'))
+
+
+def csrf_failure(request, reason="CSRF Failure."):
+    '''
+    Custom view for CSRF failures, required for proper rendering of
+    our custom template, which uses injected context variables.
+    https://github.com/django/django/blob/master/django/views/defaults.py#L146
+    '''
+    return HttpResponseForbidden(render(request, '403_csrf.html'))
+
+
+def server_error(request):
+    '''
+    Custom view for 500 failures, required for proper rendering of
+    our custom template, which uses injected context variables.
+    https://github.com/django/django/blob/master/django/views/defaults.py#L97
+    '''
+    return HttpResponseServerError(render(request, '500.html'))
