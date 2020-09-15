@@ -74,6 +74,7 @@ class CaptureListView(APIView):
                 'userid': request.user.id,
                 'urls': request.data['urls'],
                 'tag': request.data['tag'],
+                'embeds': request.data.get('embeds') or False
             }
         except KeyError:
             raise serializers.ValidationError("Keys 'urls' and 'tag' are required.")
@@ -84,12 +85,12 @@ class CaptureListView(APIView):
 
 class CaptureDetailView(APIView):
 
-    @method_decorator(perms_test({'args': ['mock_job', 'mock_job_index'], 'results': {200: ['user'], 401: [None]}}))
-    def delete(self, request, jobid, index):
+    @method_decorator(perms_test({'args': ['mock_job'], 'results': {200: ['user'], 401: [None]}}))
+    def delete(self, request, jobid):
         """ delete capture
         """
-        logger.info(f"Deleting job {jobid}, index {index}")
-        res = requests.delete(f"{settings.BACKEND_API}/capture/{jobid}/{index}")
+        logger.info(f"Deleting job {jobid}")
+        res = requests.delete(f"{settings.BACKEND_API}/capture/{jobid}")
         return ApiResponse(res.json(), status=res.status_code)
 
 
