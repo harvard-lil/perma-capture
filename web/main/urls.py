@@ -12,6 +12,8 @@ urlpatterns = [
 
     path(f'{settings.API_PREFIX}/captures', views.CaptureListView.as_view(), name='captures'),
     path(f'{settings.API_PREFIX}/capture/<slug:jobid>', views.CaptureDetailView.as_view(), name='delete_capture'),
+    path('webhooks', views.WebhookSubscriptionListView.as_view(), name='webhooks'),
+    path('webhooks/<int:pk>', views.WebhookSubscriptionDetailView.as_view(), name='webhook'),
     path('replay/sw.js', views.render_sw, name='sw'),
     path('replay/', views.replay_error, name='replay_error'),
 

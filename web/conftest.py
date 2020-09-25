@@ -13,7 +13,7 @@ from django.db.backends.base.base import BaseDatabaseWrapper
 from django.test.utils import CaptureQueriesContext
 from django.db.backends import utils as django_db_utils
 
-from main.models import User
+from main.models import User, WebhookSubscription
 
 
 # This file defines test fixtures available to all tests.
@@ -207,13 +207,17 @@ def celery_config():
 ### capture service mocks ###
 
 @pytest.fixture
-def mock_job():
+def jobid():
     return 'a1-_'
 
 
 @pytest.fixture
-def mock_job_index():
-    return 0
+def job(jobid, user):
+    return {
+        'jobid': jobid,
+        'userid': user.id,
+        'url': factory.Faker('url').generate()
+    }
 
 
 class MockResponse:
@@ -278,3 +282,11 @@ class AdminUserFactory(UserFactory):
     is_staff = True
     is_superuser = True
 
+
+@register_factory
+class WebhookSubscriptionFactory(factory.DjangoModelFactory):
+    class Meta:
+        model = WebhookSubscription
+
+    user = factory.SubFactory(UserFactory)
+    callback_url = factory.Faker('url')

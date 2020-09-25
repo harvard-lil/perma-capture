@@ -17,11 +17,13 @@ from django.views.decorators.clickjacking import xframe_options_exempt
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response as ApiResponse
-from rest_framework import serializers
+from rest_framework import serializers, status
 from rest_framework.views import APIView
 
 from .forms import SignupForm, UserForm, PasswordResetForm
-from .models import User
+from .models import User, WebhookSubscription
+from .serializers import WebhookSubscriptionSerializer
+from .utils import generate_hmac_signing_key, sign_data, is_valid_signature
 
 from test.test_helpers import check_response
 from .test.test_permissions_helpers import no_perms_test, perms_test
@@ -85,13 +87,185 @@ class CaptureListView(APIView):
 
 class CaptureDetailView(APIView):
 
-    @method_decorator(perms_test({'args': ['mock_job'], 'results': {200: ['user'], 401: [None]}}))
+    @method_decorator(perms_test({'args': ['jobid'], 'results': {200: ['user'], 401: [None]}}))
     def delete(self, request, jobid):
         """ delete capture
         """
         logger.info(f"Deleting job {jobid}")
         res = requests.delete(f"{settings.BACKEND_API}/capture/{jobid}")
         return ApiResponse(res.json(), status=res.status_code)
+
+
+class WebhookSubscriptionListView(APIView):
+
+    @method_decorator(perms_test({'results': {200: ['user'], 401: [None]}}))
+    def get(self, request):
+        """
+        List the authenticated user's webhook subscriptions.
+
+        Given:
+        >>> client, webhook_subscription = [getfixture(f) for f in ['client', 'webhook_subscription']]
+
+        Simple get:
+        >>> response = client.get(reverse('webhooks'), as_user=webhook_subscription.user)
+        >>> check_response(response)
+
+        Sample response:
+        [{
+            "id": 1,
+            "created_at": "2020-09-25T20:41:15.774373Z",
+            "updated_at": "2020-09-25T20:41:15.774414Z",
+            "event_type": "ARCHIVE_CREATED",
+            "callback_url": "https://webhookservice.com?hookid=1234",
+            "signing_key": "128-byte-key",
+            "signing_key_algorithm": "sha256",
+            "user": 1
+        }]
+        >>> [subscription] = response.data
+        >>> assert subscription['id'] == webhook_subscription.id
+        >>> assert subscription['user'] == webhook_subscription.user.id
+        >>> assert subscription['event_type'] == webhook_subscription.event_type == WebhookSubscription.EventType.ARCHIVE_CREATED
+        >>> assert subscription['callback_url'] == webhook_subscription.callback_url
+        >>> for key in ['created_at', 'updated_at', 'signing_key', 'signing_key_algorithm']:
+        ...     assert subscription[key]
+        """
+        items = WebhookSubscription.objects.filter(user=request.user)
+        return ApiResponse(WebhookSubscriptionSerializer(items, many=True).data)
+
+    @method_decorator(perms_test({'results': {400: ['user'], 401: [None]}}))
+    def post(self, request):
+        """
+        Subscribe to a webhook.
+
+        Given:
+        >>> client, user = [getfixture(f) for f in ['client', 'user']]
+        >>> assert user.webhook_subscriptions.count() == 0
+        >>> url = reverse('webhooks')
+        >>> data = {'id': -1, 'callback_url': 'https://webhookservice.com?hookid=1234', 'event_type': 'ARCHIVE_CREATED'}
+
+        Post the required data as JSON to subscribe:
+        >>> response = client.post(url, data, content_type="application/json",  as_user=user)
+        >>> check_response(response, status_code=201)
+        >>> user.refresh_from_db()
+        >>> assert user.webhook_subscriptions.count() == 1
+
+        Sample response:
+        {
+            "id": 1,
+            "created_at": "2020-09-25T20:41:15.774373Z",
+            "updated_at": "2020-09-25T20:41:15.774414Z",
+            "event_type": "ARCHIVE_CREATED",
+            "callback_url": "https://webhookservice.com?hookid=1234",
+            "signing_key": "128-byte-key",
+            "signing_key_algorithm": "sha256",
+            "user": 1
+        }
+        >>> assert (response.data['id'] != data['id']) and response.data['id'] > 0
+        >>> assert response.data['callback_url'] == data['callback_url']
+        >>> assert response.data['event_type'] == data['event_type']
+        >>> for key in ['created_at', 'updated_at','signing_key', 'signing_key_algorithm']:
+        ...     assert key in response.data
+
+        You can subscribe to the same event an arbitrary number of times, even with the same callback URL.
+        >>> response = client.post(url, data, content_type="application/json",  as_user=user)
+        >>> check_response(response, status_code=201)
+        >>> user.refresh_from_db()
+        >>> assert user.webhook_subscriptions.count() == 2
+
+        At present, the only available event type is 'ARCHIVE_CREATED':
+        >>> for invalid_event in ['archive_created', 'UNSUPPORTED_EVENT']:
+        ...     payload = {**data, **{'event_type': invalid_event}}
+        ...     response = client.post(url, payload, content_type="application/json", as_user=user)
+        ...     check_response(response, status_code=400, content_includes="not a valid choice")
+        >>> user.refresh_from_db()
+        >>> assert user.webhook_subscriptions.count() == 2
+
+        You may not specify `user`, `id`, `signing_key`, or `signing_key_algorithm`;
+        they are populated automatically:
+        >>> disallowed_keys = {'id': 1, 'user': 1000, 'signing_key': 'foo', 'signing_key_algorithm': 'bar'}
+        >>> response = client.post(url, {**data, **disallowed_keys}, content_type="application/json",  as_user=user)
+        >>> check_response(response, status_code=201)
+        >>> user.refresh_from_db()
+        >>> assert user.webhook_subscriptions.count() == 3
+        >>> assert response.data['id'] != disallowed_keys['id']
+        >>> assert response.data['user'] == user.id != disallowed_keys['user']
+        >>> assert response.data['signing_key'] != disallowed_keys['signing_key']
+        >>> assert response.data['signing_key_algorithm'] != disallowed_keys['signing_key_algorithm']
+
+        If you omit any required data, a subscription is not created:
+        >>> for key in ['callback_url', 'event_type']:
+        ...     payload = {k:v for k,v in data.items() if k != key}
+        ...     check_response(client.post(url, payload, content_type="application/json", as_user=user), status_code=400)
+        >>> user.refresh_from_db()
+        >>> assert user.webhook_subscriptions.count() == 3
+        """
+        serializer = WebhookSubscriptionSerializer(data={
+            'event_type': request.data.get('event_type'),
+            'callback_url': request.data.get('callback_url')
+        })
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return ApiResponse(serializer.data, status=status.HTTP_201_CREATED)
+        return ApiResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class WebhookSubscriptionDetailView(APIView):
+
+    def get_subscription_for_user(self, user, pk):
+        """
+        Get single subscription, making sure that returned object is accessible_to(user).
+        """
+        subscription = get_object_or_404(WebhookSubscription, pk=pk)
+        if subscription.user_id != user.id:
+            raise PermissionDenied()
+        return subscription
+
+    @method_decorator(perms_test({'args': ['webhook_subscription.id'], 'results': {200: ['webhook_subscription.user'], 401: [None], 403: ['user']}}))
+    def get(self, request, pk):
+        """
+        Retrieve details of a webhook subscription.
+
+        Given:
+        >>> client, webhook_subscription = [getfixture(f) for f in ['client', 'webhook_subscription']]
+
+        Simple get:
+        >>> response = client.get(reverse('webhook', args=[webhook_subscription.id]), as_user=webhook_subscription.user)
+        >>> check_response(response)
+
+        Sample response:
+        {'id': 1, 'created_at': '2020-09-24T19:16:36.238012Z', 'updated_at': '2020-09-24T19:16:36.238026Z', 'event_type': 'ARCHIVE_CREATED', 'callback_url': 'https://webhookservice.com?hookid=1234', 'user': 1}
+        >>> subscription = response.data
+        >>> assert subscription['id'] == webhook_subscription.id
+        >>> assert subscription['user'] == webhook_subscription.user.id
+        >>> assert subscription['event_type'] == webhook_subscription.event_type == WebhookSubscription.EventType.ARCHIVE_CREATED
+        >>> assert subscription['callback_url'] == webhook_subscription.callback_url
+        >>> for key in ['created_at', 'updated_at']:
+        ...     assert subscription[key]
+        """
+        target = self.get_subscription_for_user(request.user, pk)
+        serializer = WebhookSubscriptionSerializer(target)
+        return ApiResponse(serializer.data)
+
+
+    @method_decorator(perms_test({'args': ['webhook_subscription.id'], 'results': {204: ['webhook_subscription.user'], 401: [None], 403: ['user']}}))
+    def delete(self, request, pk):
+        """
+        Unsubscribe from a webhook.
+
+        Given:
+        >>> client, webhook_subscription = [getfixture(f) for f in ['client', 'webhook_subscription']]
+        >>> user = webhook_subscription.user
+        >>> assert user.webhook_subscriptions.count() == 1
+
+        Simple delete:
+        >>> response = client.delete(reverse('webhook', args=[webhook_subscription.id]), as_user=user)
+        >>> check_response(response, status_code=204)
+        >>> user.refresh_from_db()
+        >>> assert user.webhook_subscriptions.count() == 0
+        """
+        target = self.get_subscription_for_user(request.user, pk)
+        target.delete()
+        return ApiResponse(status=status.HTTP_204_NO_CONTENT)
 
 
 @perms_test({'results': {200: ['user', None]}})

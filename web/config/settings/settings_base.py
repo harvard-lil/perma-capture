@@ -119,7 +119,9 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
-    ]
+    ],
+    'NON_FIELD_ERRORS_KEY': 'error',
+    'TEST_REQUEST_DEFAULT_FORMAT': 'json'
 }
 
 PASSWORD_RESET_TIMEOUT_DAYS = 1
