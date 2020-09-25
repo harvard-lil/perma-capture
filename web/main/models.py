@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
-from .utils import send_template_email
+from .utils import send_template_email, generate_hmac_signing_key
 
 from pytest import raises as assert_raises
 
@@ -115,6 +115,63 @@ class TimestampedModel(models.Model):
 #
 # MODELS
 #
+
+class WebhookSubscription(TimestampedModel):
+
+    class EventType(models.TextChoices):
+        ARCHIVE_CREATED = 'ARCHIVE_CREATED', 'Archive Created'
+
+    user = models.ForeignKey(
+        'User',
+        on_delete=models.CASCADE,
+        related_name='webhook_subscriptions'
+    )
+    event_type = models.CharField(
+        max_length=32,
+        choices=EventType.choices,
+        default=EventType.ARCHIVE_CREATED
+    )
+    callback_url = models.URLField()
+    signing_key = models.CharField(max_length=512)
+    signing_key_algorithm = models.CharField(max_length=32)
+
+    def save(self, *args, **kwargs):
+        """
+        On creation, generate a signing key if not provided:
+        >>> user = getfixture('user')
+        >>> instance = WebhookSubscription(user=user, callback_url='https://webhookservice.com?hookid=1234')
+        >>> assert not instance.signing_key and not instance.signing_key_algorithm
+        >>> instance.save()
+        >>> assert instance.signing_key and instance.signing_key_algorithm
+
+        If a key and algorithm name are provided, they won't be overridden:
+        >>> instance = WebhookSubscription(signing_key='foo', signing_key_algorithm='bar', user=user, callback_url='https://webhookservice.com?hookid=1234')
+        >>> assert instance.signing_key and instance.signing_key_algorithm
+        >>> instance.save()
+        >>> instance.refresh_from_db()
+        >>> assert instance.signing_key == 'foo' and instance.signing_key_algorithm == 'bar'
+        """
+        if not self.pk:
+            if not self.signing_key or not self.signing_key_algorithm:
+                self.signing_key, self.signing_key_algorithm = generate_hmac_signing_key()
+
+        super().save(*args, **kwargs)
+
+
+
+class Archive(TimestampedModel):
+    """
+    Metadata about archives produced for a user.
+    """
+    jobid = models.CharField(max_length=32)
+    hash = models.CharField(max_length=256)
+    hash_algorithm = models.CharField(max_length=32)
+    user = models.ForeignKey(
+        'User',
+        on_delete=models.PROTECT,
+        related_name='archives'
+    )
+
 
 class UserManager(BaseUserManager):
     """

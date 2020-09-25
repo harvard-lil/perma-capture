@@ -1,3 +1,9 @@
+import hashlib
+import hmac
+import requests
+import secrets
+import urllib.parse
+
 from django.conf import settings
 from django.core.mail import send_mail
 from django.template import Context, RequestContext, engines
@@ -33,3 +39,58 @@ def send_template_email(subject, template, context, from_address, to_addresses):
         fail_silently=False
     )
     return success_count
+
+
+def get_file_hash(url, chunk_size=1024, algorithm='sha256'):
+    """
+    Download URL and calculate the file's hash.
+    """
+    hasher = getattr(hashlib, algorithm)()
+    r = requests.get(url, stream=True)
+    for chunk in r.iter_content(chunk_size=1024):
+        if chunk:
+            hasher.update(chunk)
+    return (hasher.hexdigest(), algorithm)
+
+
+#
+# Webhook signatures
+#
+
+def generate_hmac_signing_key(algorithm='sha256'):
+    """
+    Generate a key of the max recommended length as per https://tools.ietf.org/html/rfc2104.
+    Returns a hex-encoded python string.
+
+    See `is_valid_signature` for usage and tests.
+    """
+    hasher = getattr(hashlib, algorithm)()
+    return (secrets.token_hex(hasher.block_size), algorithm)
+
+
+def sign_data(data, key, algorithm):
+    """
+    Encode a dictionary as application/x-www-form-urlencoded), sign it
+    (HMAC, using the specified hashing algorithm), and return the
+    hex-encoded digest as a python string.
+
+    See `is_valid_signature` for usage and tests.
+    """
+    return hmac.new(
+        bytes(key, 'utf-8'),
+        bytes(urllib.parse.urlencode(data, doseq=True), 'utf-8'),
+        algorithm
+    ).hexdigest()
+
+
+def is_valid_signature(signature, data, key, algorithm):
+    """
+    Compute the HMAC for a dictionary of data, and return whether
+    the supplied signature matches the computed digest.
+
+    >>> key, algorithm = generate_hmac_signing_key()
+    >>> data = {"foo": "bar"}
+    >>> signature = sign_data(data, key, algorithm)
+    >>> assert is_valid_signature(signature, data, key, algorithm)
+    """
+    return hmac.compare_digest(signature, sign_data(data, key, algorithm))

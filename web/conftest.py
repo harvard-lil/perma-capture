@@ -3,7 +3,9 @@ from contextlib import contextmanager
 from distutils.sysconfig import get_python_lib
 import factory
 import inspect
+from io import BytesIO
 import pytest
+import random
 import requests
 import re
 
@@ -13,7 +15,7 @@ from django.db.backends.base.base import BaseDatabaseWrapper
 from django.test.utils import CaptureQueriesContext
 from django.db.backends import utils as django_db_utils
 
-from main.models import User
+from main.models import User, WebhookSubscription
 
 
 # This file defines test fixtures available to all tests.
@@ -207,13 +209,17 @@ def celery_config():
 ### capture service mocks ###
 
 @pytest.fixture
-def mock_job():
+def jobid():
     return 'a1-_'
 
 
 @pytest.fixture
-def mock_job_index():
-    return 0
+def job(jobid, user):
+    return {
+        'jobid': jobid,
+        'userid': user.id,
+        'url': factory.Faker('url').generate()
+    }
 
 
 class MockResponse:
@@ -229,6 +235,17 @@ class MockResponse:
     @property
     def status_code(self):
         return 200
+
+    def iter_content(self, chunk_size=1, decode_unicode=False):
+        """
+        Adapted from https://github.com/psf/requests/blob/8149e9fe54c36951290f198e90d83c8a0498289c/requests/models.py#L732
+        """
+        file = BytesIO(b'Some file')
+        while True:
+            chunk = file.read(chunk_size)
+            if not chunk:
+                break
+            yield chunk
 
 
 @pytest.fixture(autouse=True)
@@ -246,6 +263,10 @@ def mock_response(monkeypatch):
     monkeypatch.setattr(requests, "patch", mock_http_call)
     monkeypatch.setattr(requests, "delete", mock_http_call)
 
+
+@pytest.fixture
+def random_webhook_event():
+    return random.choice(list(WebhookSubscription.EventType))
 
 ### model factories ###
 
@@ -278,3 +299,11 @@ class AdminUserFactory(UserFactory):
     is_staff = True
     is_superuser = True
 
+
+@register_factory
+class WebhookSubscriptionFactory(factory.DjangoModelFactory):
+    class Meta:
+        model = WebhookSubscription
+
+    user = factory.SubFactory(UserFactory)
+    callback_url = factory.Faker('url')

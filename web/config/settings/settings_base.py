@@ -119,11 +119,18 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
-    ]
+    ],
+    'NON_FIELD_ERRORS_KEY': 'error',
+    'TEST_REQUEST_DEFAULT_FORMAT': 'json'
 }
 
 PASSWORD_RESET_TIMEOUT_DAYS = 1
 
+VERIFY_WEBHOOK_SIGNATURE = False
+CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY = ''
+CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM = ''
+
+EXPOSE_WEBHOOK_TEST_ROUTE = False
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/

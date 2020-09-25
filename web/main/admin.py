@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import Group
 
-from .models import User
+from .models import User, WebhookSubscription, Archive
 
 
 class UserAddForm(UserCreationForm):
@@ -54,6 +54,46 @@ class CustomUserAdmin(UserAdmin):
             'classes': ('wide',),
             'fields': ('first_name', 'last_name', 'email', 'password1', 'password2')}
         ),
+    )
+
+
+@admin.register(WebhookSubscription)
+class WebhookSubscriptionAdmin(admin.ModelAdmin):
+
+    list_display = (
+        'id',
+        'event_type',
+        'callback_url',
+        'signing_key_algorithm',
+        'created_at',
+        'updated_at'
+    )
+
+    readonly_fields = (
+        'created_at',
+        'updated_at',
+        'signing_key',
+        'signing_key_algorithm',
+    )
+
+
+@admin.register(Archive)
+class ArchiveAdmin(admin.ModelAdmin):
+
+    list_display = (
+        'id',
+        'user_id',
+        'hash_algorithm',
+        'created_at',
+        'updated_at'
+    )
+
+    readonly_fields = (
+        'created_at',
+        'updated_at',
+        'jobid',
+        'hash',
+        'hash_algorithm',
     )
 
 admin.site.unregister(Group)
