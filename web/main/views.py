@@ -142,7 +142,7 @@ class WebhookSubscriptionListView(APIView):
         >>> client, user = [getfixture(f) for f in ['client', 'user']]
         >>> assert user.webhook_subscriptions.count() == 0
         >>> url = reverse('webhooks')
-        >>> data = {'id': -1, 'callback_url': 'https://webhookservice.com?hookid=1234', 'event_type': 'ARCHIVE_CREATED'}
+        >>> data = {'callback_url': 'https://webhookservice.com?hookid=1234', 'event_type': 'ARCHIVE_CREATED'}
 
         Post the required data as JSON to subscribe:
         >>> response = client.post(url, data, content_type="application/json",  as_user=user)
@@ -161,7 +161,6 @@ class WebhookSubscriptionListView(APIView):
             "signing_key_algorithm": "sha256",
             "user": 1
         }
-        >>> assert (response.data['id'] != data['id']) and response.data['id'] > 0
         >>> assert response.data['callback_url'] == data['callback_url']
         >>> assert response.data['event_type'] == data['event_type']
         >>> for key in ['created_at', 'updated_at','signing_key', 'signing_key_algorithm']:
