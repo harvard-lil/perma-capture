@@ -130,6 +130,8 @@ VERIFY_WEBHOOK_SIGNATURE = False
 CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY = ''
 CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM = ''
 
+EXPOSE_WEBHOOK_TEST_ROUTE = False
+
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
 

@@ -44,3 +44,5 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # For testing error reporting
 ADMINS = [('John', 'john@example.com'), ('Mary', 'mary@example.com')]
+
+EXPOSE_WEBHOOK_TEST_ROUTE = True

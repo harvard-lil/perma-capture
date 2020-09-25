@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Webhook Tested{% endblock %}
+{% block heading %}Webhook Tested{% endblock %}
+
+{% block content %}
+  <p>
+    {{event}} triggered for User {{user.id}}:
+  </p>
+  {% if responses %}
+    <ul>
+    {% for response in responses %}
+      <li>({{ response.status_code }}) {{ response.url }}: {{ response.text }}</li>
+    {% endfor %}
+    </ul>
+  {% else %}
+    <p class="small">No matching subscriptions found</p>
+  {% endif%}
+{% endblock content %}

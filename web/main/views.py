@@ -1,5 +1,6 @@
 from celery.task.control import inspect as celery_inspect
 from functools import wraps
+import random
 import redis
 import requests
 
@@ -10,7 +11,7 @@ from django.core.exceptions import PermissionDenied
 from django.http import (HttpResponseRedirect,  HttpResponseForbidden,
     HttpResponseServerError, HttpResponseBadRequest
 )
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.clickjacking import xframe_options_exempt
@@ -582,6 +583,43 @@ def account(request):
 #
 # Internal Use Only
 #
+
+@perms_test({'args': ['user.id', 'random_webhook_event.name'], 'results': {403: ['user'], 200: ['admin_user'], 'login': [None]}})
+@user_passes_test_or_403(lambda user: user.is_staff)
+def webhooks_test(request, user_id, event):  # pragma: no cover
+    """
+    For development and testing only: trigger a webhook for a user.
+    """
+    user = get_object_or_404(User, pk=user_id)
+
+    payload = {}
+    if event == WebhookSubscription.EventType.ARCHIVE_CREATED:
+        payload = {
+            'userid': user.id,
+            'jobid': random.randint(0, 1000000000),
+            'url': request.GET.get('url')
+        }
+    else:
+        raise NotImplementedError()
+
+    subscriptions = user.webhook_subscriptions.filter(event_type=event)
+    responses = []
+    for subscription in subscriptions:
+        try:
+            responses.append(requests.post(
+                subscription.callback_url,
+                json=payload,
+                headers={'x-hook-signature': sign_data(payload, subscription.signing_key, subscription.signing_key_algorithm)}
+            ))
+        except requests.exceptions.RequestException as e:
+            responses.append({'status_code': None, 'url': subscription.callback_url, 'text': e})
+
+    return render(request, 'manage/webhook-test.html', {
+        'user': user,
+        'event': event,
+        'responses': responses
+    })
+
 
 @perms_test({'results': {403: ['user'], 200: ['admin_user'], 'login': [None]}})
 @user_passes_test_or_403(lambda user: user.is_staff)

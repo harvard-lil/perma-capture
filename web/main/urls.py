@@ -32,6 +32,11 @@ urlpatterns = [
     path('manage/celery/', views.celery_queue_status, name='celery_queue_status'),
 ]
 
+if settings.EXPOSE_WEBHOOK_TEST_ROUTE:
+    urlpatterns += [
+        path('manage/webhook-test/<int:user_id>/<event>/', views.webhooks_test, name='webhooks_test'),
+    ]
+
 # debugging routes to see error pages
 # for example, http://localhost:8000/404 triggers an actual 404
 # and http://localhost:8000/404.html shows the 404 template

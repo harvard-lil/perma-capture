@@ -5,6 +5,7 @@ import factory
 import inspect
 from io import BytesIO
 import pytest
+import random
 import requests
 import re
 
@@ -262,6 +263,10 @@ def mock_response(monkeypatch):
     monkeypatch.setattr(requests, "patch", mock_http_call)
     monkeypatch.setattr(requests, "delete", mock_http_call)
 
+
+@pytest.fixture
+def random_webhook_event():
+    return random.choice(list(WebhookSubscription.EventType))
 
 ### model factories ###
 
