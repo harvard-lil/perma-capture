@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from distutils.sysconfig import get_python_lib
 import factory
 import inspect
+from io import BytesIO
 import pytest
 import requests
 import re
@@ -233,6 +234,17 @@ class MockResponse:
     @property
     def status_code(self):
         return 200
+
+    def iter_content(self, chunk_size=1, decode_unicode=False):
+        """
+        Adapted from https://github.com/psf/requests/blob/8149e9fe54c36951290f198e90d83c8a0498289c/requests/models.py#L732
+        """
+        file = BytesIO(b'Some file')
+        while True:
+            chunk = file.read(chunk_size)
+            if not chunk:
+                break
+            yield chunk
 
 
 @pytest.fixture(autouse=True)

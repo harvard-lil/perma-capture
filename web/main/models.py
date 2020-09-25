@@ -159,6 +159,20 @@ class WebhookSubscription(TimestampedModel):
 
 
 
+class Archive(TimestampedModel):
+    """
+    Metadata about archives produced for a user.
+    """
+    jobid = models.CharField(max_length=32)
+    hash = models.CharField(max_length=256)
+    hash_algorithm = models.CharField(max_length=32)
+    user = models.ForeignKey(
+        'User',
+        on_delete=models.PROTECT,
+        related_name='archives'
+    )
+
+
 class UserManager(BaseUserManager):
     """
     Custom manager where email is the unique identifier for authentication instead of username.

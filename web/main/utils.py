@@ -39,6 +39,20 @@ def send_template_email(subject, template, context, from_address, to_addresses):
         fail_silently=False
     )
     return success_count
+
+
+def get_file_hash(url, chunk_size=1024, algorithm='sha256'):
+    """
+    Download URL and calculate the file's hash.
+    """
+    hasher = getattr(hashlib, algorithm)()
+    r = requests.get(url, stream=True)
+    for chunk in r.iter_content(chunk_size=1024):
+        if chunk:
+            hasher.update(chunk)
+    return (hasher.hexdigest(), algorithm)
+
+
 #
 # Webhook signatures
 #

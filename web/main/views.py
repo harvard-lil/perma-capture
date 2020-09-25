@@ -15,15 +15,15 @@ from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.clickjacking import xframe_options_exempt
 
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response as ApiResponse
 from rest_framework import serializers, status
 from rest_framework.views import APIView
 
 from .forms import SignupForm, UserForm, PasswordResetForm
 from .models import User, WebhookSubscription
-from .serializers import WebhookSubscriptionSerializer
-from .utils import generate_hmac_signing_key, sign_data, is_valid_signature
+from .serializers import WebhookSubscriptionSerializer, ArchiveSerializer
+from .utils import generate_hmac_signing_key, sign_data, is_valid_signature, get_file_hash
 
 from test.test_helpers import check_response
 from .test.test_permissions_helpers import no_perms_test, perms_test
@@ -266,6 +266,84 @@ class WebhookSubscriptionDetailView(APIView):
         target = self.get_subscription_for_user(request.user, pk)
         target.delete()
         return ApiResponse(status=status.HTTP_204_NO_CONTENT)
+
+
+@no_perms_test
+@api_view(['POST'])
+@permission_classes([])  # no auth required
+def archived_callback(request, format=None):
+    """
+    Respond upon receiving a notification from the capture service that an archive is complete.
+
+    Given:
+    >>> client, job, django_settings = [getfixture(f) for f in ['client', 'job', 'settings']]
+    >>> url = reverse('archived_callback')
+    >>> user = User.objects.get(id=job['userid'])
+    >>> assert user.archives.count() == 0
+
+    By default, we do not expect the data to be signed.
+    >>> response = client.post(url, job, content_type='application/json')
+    >>> check_response(response)
+    >>> user.refresh_from_db()
+    >>> assert user.archives.count() == 1
+
+    Signature verification can be enabled via Django settings.
+    >>> django_settings.VERIFY_WEBHOOK_SIGNATURE = True
+    >>> django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM = generate_hmac_signing_key()
+    >>> response = client.post(url, job, content_type='application/json')
+    >>> check_response(response, status_code=400, content_includes='Invalid signature')
+    >>> response = client.post(url, job, content_type='application/json',
+    ...     HTTP_X_HOOK_SIGNATURE='foo'
+    ... )
+    >>> check_response(response, status_code=400, content_includes='Invalid signature')
+    >>> response = client.post(url, job, content_type='application/json',
+    ...     HTTP_X_HOOK_SIGNATURE=sign_data(job, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
+    ... )
+    >>> check_response(response, content_includes='ok')
+    >>> user.refresh_from_db()
+    >>> assert user.archives.count() == 2
+
+    Hashes are calculated if not supplied by the POSTed data.
+    >>> assert all(key not in job for key in ['hash', 'hash_algorithm'])
+    >>> assert all(archive.hash and archive.hash_algorithm for archive in user.archives.all())
+
+    The POSTed `userid` must match the id of a registered user.
+    >>> job['userid'] = 1000
+    >>> response = client.post(url, job, content_type='application/json',
+    ...     HTTP_X_HOOK_SIGNATURE=sign_data(job, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
+    ... )
+    >>> check_response(response, status_code=400, content_includes=['user', 'Invalid', 'does not exist'])
+
+    Note: though jobid and hash should be unique, it is not enforced by this application
+    (as is clear from the examples above).
+    """
+    if settings.VERIFY_WEBHOOK_SIGNATURE:
+        if not is_valid_signature(
+            request.headers.get('x-hook-signature', ''),
+            request.data,
+            settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY,
+            settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM
+        ):
+            raise serializers.ValidationError('Invalid signature.')
+
+    # for now, calculate file hash, if not included in POST
+    # (hashing is not yet a feature of the capture service)
+    hash = request.data.get('hash')
+    hash_algorithm = request.data.get('hash_algorithm')
+    if request.data.get('url') and (not hash or not hash_algorithm):
+        hash, hash_algorithm = get_file_hash(request.data['url'])
+
+    # validate and save
+    serializer = ArchiveSerializer(data={
+        'user': request.data.get('userid'),
+        'jobid': request.data.get('jobid'),
+        'hash': hash,
+        'hash_algorithm': hash_algorithm
+    })
+    if serializer.is_valid():
+        serializer.save()
+        return ApiResponse({'status': 'ok'}, status=status.HTTP_200_OK)
+    return ApiResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @perms_test({'results': {200: ['user', None]}})
