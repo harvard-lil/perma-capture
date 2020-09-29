@@ -285,7 +285,7 @@ ACCESSIBILITY_POLICY_URL = 'https://accessibility.huit.harvard.edu/digital-acces
 USE_ANALYTICS = False
 
 # Since we don't know yet...
-APP_NAME = 'Perma Eyes'
+APP_NAME = 'Capture@Perma.cc'
 
 TESTING = False
 
