@@ -10,7 +10,170 @@
 {% block heading %}Using {{ APP_NAME }}{% endblock %}
 
 {% block content %}
+  <script src="https://cdn.jsdelivr.net/npm/replaywebpage@1.1.0/ui.js"></script>
+  <style>
+  p {
+    font-size: 1.2em;
+  }
+  replay-web-page {
+    height: 600px;
+    display: flex;
+  }
+  </style>
   <div class="row">
-      The user's API key can be printed using {{ request.user.auth_token.key | default:'your-api-key'}}.
-  </div>
+    <p>The Perma Captures system produces an automated browser-based capture of each URL to create a high-fidelity web archive.</p>
+    <p>A separate archive file is created for each submitted URL, and each archive can be embedded and displayed in any modern browser.</p>
+    <h3>Creating Captures</h3>
+    <p>Archival captures can be created using this app or via an API.</p>
+
+    <h4>Using this application</h4>
+    <p>After logging in, you can <a href="/">enter URLs to capture from the home page</a></p>
+    <p>Capture jobs will appear in the list. When each job is finished, you can click the <img style="width: 1.5em; height: 1.5em; vertical-align: top" alt="preview icon" title="preview icon" src="/static/img/preview.svg"/> to view the capture, and the <img style="width: 1.1em; height: 1.1em" alt="download icon" title="download icon" src="/static/img/download.svg"/> to download the web archive file.</p>
+
+    <h4>Using the API</h4>
+    {% if request.user.auth_token.key %}
+    <p><i>Note: Your API Key is  <code>{{ request.user.auth_token.key }}</code></i></p>
+    {% endif %}
+
+    <p>You can also create archives programmatically via a <code>POST /captures</code> API request using your API key.</p>
+
+    <p>Here’s an example of submitting a request for 2 URLs using <i>curl</i>:<p>
+
+    <pre><code>curl -X POST \
+-H "Content-Type: application/json" \
+-H "Authorization: Token {{ request.user.auth_token.key | default:'your-api-key'}}" \
+--data '{ \
+    "urls": [ \
+        "https://twitter.com/permacc", \
+        "https://example.com/" \
+    ], \
+    "tag": "my-capture", \
+    "embeds": false \
+}' \
+{{ request.scheme }}://{{ request.META.HTTP_HOST }}/api/captures
+</code></pre>
+
+<p>The response will be a JSON with jobid for each URL</p>
+
+<pre><code>{
+    "urls": 2,
+    "jobids": ["jobid-1", "jobid-2"]
+}
+</code></pre>
+
+<p>You can then query <code>{{ request.scheme }}://{{ request.META.HTTP_HOST }}/api/captures</code> with your API key to see all the jobs you have in the system:<p>
+
+<pre><code>curl -H "Authorization: Token {{ request.user.auth_token.key | default:'your-api-key'}}" {{ request.scheme }}://{{ request.META.HTTP_HOST }}/api/captures
+</code></pre>
+
+<p>Sample Response:</p>
+<pre><code>{
+    "jobs": [{
+        "jobid": "uuid-1",
+        "userid": "3",
+        "captureUrl": "https://twitter.com/permacc",
+        "userTag": "my-capture",
+        "startTime": "2020-09-28T23:54:19+00:00",
+        "elapsedTime": "2020-09-28T23:56:45+00:00",
+        "status": "In progress"
+    }, {
+        "jobid": "uuid-2",
+        "userid": "3",
+        "captureUrl": "https://example.com/",
+        "userTag": "my-capture",
+        "startTime": "2020-09-28T23:54:19+00:00",
+        "elapsedTime": "2020-09-28T23:54:39+00:00",
+        "status": "Complete",
+        "accessUrl": "https://permacaptures.example.com/path/to/download/mycapture.wacz"
+    }]
+}
+</code></pre>
+
+
+<p>The list will include all recent jobs created by your account. Each job will have a status field, set to either <code>In progress</code>, <code>Failed</code>, or <code>Complete</code></p>
+<p>A job that is in progress should be checked again later until it is complete, while a failed job indicates the job has failed to produce a capture.</p>
+<p>A job that is complete will have an <code>accessUrl</code> set to a downloadable URL. The download URL is valid for 4 hours after the job is completed.
+Currently, all info about the jobs is automatically removed after 4 hours.</p>
+
+
+  <h3>Viewing Web Captures</h3>
+
+  <p>The downloadable WACZ files can be embedded in your site using the <a href="https://replayweb.page">ReplayWeb.page</a> embed system, loaded directly from NPM.
+
+  <ol>
+    <li>The replay system requires a one-time setup of the service worker <code>sw.js</code> file to be used for loading all the captures. We recommend putting it in an empty directory, for example at <code>/replay/sw.js</code>. This file should contain the following:
+<pre><code>importScripts('https://cdn.jsdelivr.net/npm/replaywebpage@1.1.0/sw.js');
+</code></pre></li>
+
+    <li>Each page that will contain embed should include the following script and also set the height for the <code>replay-web-page</code> tag to ensure a minimum height.
+(700px is used as an example here).
+<pre><code>&lt;script src="https://cdn.jsdelivr.net/npm/replaywebpage@1.1.0/ui.js"&gt;&lt;/script&gt;
+&lt;style&gt;
+replay-web-page {
+  height: 700px;
+  display: flex;
+}
+&lt;/style&gt;
+</code></pre></li>
+
+    <li>For each archive WACZ that you want to show, simple add the following HTML snippet:
+
+<pre><code>&lt;replay-web-page
+  source="https://mysite.example.com/path/to/archives/mycapture.wacz"
+  url="https://example.com/"
+  replayBase="/replay/"
+/&gt;
+</code></pre>
+
+  </ol>
+
+<p>The <code>source</code> attribute should point to the URL of where the WACZ file is hosted, while the <code>url</code> is the URL captured.
+The <code>replayBase</code> is the path that contains the <code>sw.js</code> file (<code>/replay/</code> in this example and also the default).</p>
+
+<p>The web server hosting WACZ files must support HTTP/1.1 range requests and be able to read portions of a file. If the WACZ file is hosted on a different domain than your site, CORS rules will also need to be enabled on the hosting server.</p>
+
+<h2>Examples</h2>
+
+<p>The following examples demonstrate embedding of two captures created using this system and the corresponding embed codes</p>
+
+<script src="https://cdn.jsdelivr.net/npm/replaywebpage@1.1.0/ui.js"></script>
+<replay-web-page
+  source="https://permafact-demo.s3.amazonaws.com/twitter.com-2020-09-03.wacz"
+  url="https://twitter.com/dog_rates/status/1298052245209006086?s=20"
+></replay-web-page>
+
+<br/>
+<p>The embed code for this is:</p>
+
+<pre><code>&lt;replay-web-page
+  source="https://permafact-demo.s3.amazonaws.com/twitter.com-2020-09-03.wacz"
+  url="https://twitter.com/dog_rates/status/1298052245209006086?s=20"
+&gt;&lt;/replay-web-page&gt;
+</code></pre>
+
+<p>The service worker is loaded from <code>/replay/sw.js</code> on this server, and the <code>replayBase</code> can be omitted as that is the default path</p>
+
+<p>Here is another embed:</p>
+
+<replay-web-page
+  source="https://permafact-demo.s3.amazonaws.com/www.youtube.com-2020-09-03.wacz"
+  url="https://www.youtube.com/watch?v=dIUwVMDI7yE"
+></replay-web-page>
+
+<br/>
+<p>The embed code for this is:</p>
+
+<pre><code>&lt;replay-web-page
+  source="https://permafact-demo.s3.amazonaws.com/www.youtube.com-2020-09-03.wacz"
+  url="https://www.youtube.com/watch?v=dIUwVMDI7yE"
+&gt;&lt;/replay-web-page&gt;
+</code></pre>
+
+<p>A fully standalone example of these embeds is also available on our <a href="https://permafact-demo.glitch.me/">Glitch Demo</a></p>
+
+
+</div>
+
+
+
 {% endblock %}
