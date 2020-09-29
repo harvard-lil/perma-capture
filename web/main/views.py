@@ -407,7 +407,8 @@ def replay_error(request):
 def sign_up(request):
     """
     Given:
-    >>> _, client, mailoutbox = [getfixture(f) for f in ['db', 'client', 'mailoutbox']]
+    >>> _, client, mailoutbox, django_settings = [getfixture(f) for f in ['db', 'client', 'mailoutbox', 'settings']]
+    >>> django_settings.ALLOW_SIGNUPS = True
 
     Signup flow -- can sign up:
     >>> check_response(client.get(reverse('sign_up')), content_includes=['Sign up'])
@@ -432,9 +433,22 @@ def sign_up(request):
     >>> assert len(mailoutbox) == 2
     >>> assert mailoutbox[1].subject == 'Welcome!'
     >>> assert "Here's an email full of welcome and instruction" in mailoutbox[1].body
+
+    While in beta, signup can be disallowed:
+    >>> django_settings.ALLOW_SIGNUPS = False
+    >>> check_response(client.get(reverse('sign_up')),
+    ...     content_includes=['we can send you an invitation'],
+    ...     content_excludes=['<form method="POST"']
+    ... )
+    >>> check_response(client.post(reverse('sign_up'), {
+    ...     'email': 'user2@example.edu',
+    ...     'first_name': 'Test',
+    ...     'last_name': 'User'
+    ... }), content_excludes=['Please check your email for a link'])
+    >>> assert len(mailoutbox) == 2
     """
     form = SignupForm(request.POST or None, request=request)
-    if request.method == 'POST':
+    if settings.ALLOW_SIGNUPS and request.method == 'POST':
         if form.is_valid():
             form.save()
             return render(request, 'registration/sign_up_success.html')
