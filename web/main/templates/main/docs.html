@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block header_scripts %}
+  {# scripts here #}
+{% endblock header_scripts %}
+
+{% block flex %}no{% endblock %}
+
+{% block title %}Docs{% endblock %}
+{% block heading %}Using {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+  <div class="row">
+      The user's API key can be printed using {{ request.user.auth_token.key | default:'your-api-key'}}.
+  </div>
+{% endblock %}
