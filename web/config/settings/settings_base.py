@@ -297,4 +297,4 @@ API_PREFIX = 'api'
 BACKEND_API = "http://capture-service"
 
 # Playback
-RWP_BASE_URL = "https://replayweb.page/"
+RWP_BASE_URL = "https://cdn.jsdelivr.net/npm/replaywebpage@1.1.1/"
