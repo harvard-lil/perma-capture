@@ -1,5 +1,6 @@
 <nav aria-label="Main">
   <ul>
+    <li><a href="{% url 'docs' %}">User Guide</a></li>
     <li><a href="{% url 'account' %}">My Account</a></li>
     <li><a href="{% url 'logout' %}">Log Out</a></li>
     {% if request.user.is_staff %}
