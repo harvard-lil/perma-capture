@@ -20,7 +20,7 @@ urlpatterns = [
 
     path('sign-up/', views.sign_up, name='sign_up'),
 
-    path('docs/', no_perms_test(TemplateView.as_view(template_name='main/docs.html')), name='docs'),
+    path('docs/', views.docs, name='docs'),
 
     ### user account pages ###
     path('user/account/', views.account, name='account'),

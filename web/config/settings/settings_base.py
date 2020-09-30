@@ -275,7 +275,7 @@ TEMPLATE_VISIBLE_SETTINGS = (
     'CONTACT_EMAIL',
     'USE_ANALYTICS',
     'ACCESSIBILITY_POLICY_URL',
-    'PASSWORD_RESET_TIMEOUT_DAYS'
+    'PASSWORD_RESET_TIMEOUT_DAYS',
 )
 
 DEFAULT_FROM_EMAIL = 'info@perma.cc'
@@ -287,7 +287,7 @@ ACCESSIBILITY_POLICY_URL = 'https://accessibility.huit.harvard.edu/digital-acces
 USE_ANALYTICS = False
 
 # Since we don't know yet...
-APP_NAME = 'Capture@Perma.cc'
+APP_NAME = 'capture.perma.cc'
 
 TESTING = False
 
