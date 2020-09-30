@@ -13,7 +13,7 @@
 {% block heading %}User Guide{% endblock %}
 
 {% block content %}
-{% with base_url=request.scheme|add:"://"|add:request.META.HTTP_HOST %}
+{% with base_url=request.scheme|add:"://"|add:request.get_host %}
   <div class="row">
     <div id="first-column" class="three columns">
       <h2>Table of Contents</h2>
