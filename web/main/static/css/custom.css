@@ -158,6 +158,15 @@ img.infinity-logo {
   padding-left: 12px;
 }
 
+@media (max-width: 550px) {
+  .logo a {
+    font-size: 18px;
+  }
+  .header-right a {
+    font-size: 16px;
+  }
+}
+
 .wrapper-noflex main {
   padding: 54px 18px 0 0;
   text-align: left;
@@ -377,3 +386,22 @@ html.dashboard .subheading {
 }
 
 
+/* Docs page customizations */
+
+pre {
+  overflow: hidden;
+}
+
+code {
+  overflow: auto;
+}
+
+html.docs #second-column {
+  font-size: 1.2em;
+}
+
+html.docs replay-web-page {
+  height: 600px;
+  display: flex;
+  margin-bottom: 1.75em;
+}

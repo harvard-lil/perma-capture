@@ -76,11 +76,11 @@ class CaptureListView(APIView):
             data = {
                 'userid': request.user.id,
                 'urls': request.data['urls'],
-                'tag': request.data['tag'],
+                'tag': request.data.get('tag') or '' ,
                 'embeds': request.data.get('embeds') or False
             }
         except KeyError:
-            raise serializers.ValidationError("Keys 'urls' and 'tag' are required.")
+            raise serializers.ValidationError("Key 'urls' is required.")
 
         res = requests.post(f'{settings.BACKEND_API}/captures', json=data)
         return ApiResponse(res.json(), status=res.status_code)
@@ -376,6 +376,13 @@ def index(request):
             'heading': settings.APP_NAME,
             'message': "A Witness Server & Suite of Tools for Journalists and Fact Checkers"
         })
+
+
+@perms_test({'results': {200: ['user', None]}})
+def docs(request):
+    return render(request, 'main/docs.html', {
+        'rwp_base_url': settings.RWP_BASE_URL
+    })
 
 
 @perms_test({'results': {200: ['user', None]}})
