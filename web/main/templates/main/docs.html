@@ -198,7 +198,7 @@
 
     <p>We will include the signature in the <code>X-Hook-Signature</code> header.</p>
 
-    <p>If you want to verify the signature before acting, here's how you can in Python:</p>
+    <p>If you want to verify the signature before acting, here's how to do it in Python:</p>
 
 <pre><code>def is_valid_signature(signature, data, signing_key, signing_key_algorithm):
     return hmac.compare_digest(
@@ -211,7 +211,7 @@
     )
 </code></pre>
 
-    <p>...or Javascript:</p>
+    <p>...and JavaScript:</p>
 
 <pre><code>function is_valid_signature(signature, data, signing_key, signing_key_algorithm){
   const posted_signature = Buffer.from(signature, 'utf-8');
@@ -247,7 +247,7 @@
 
     <p>We plan to maintain a <code>sha-256</code> hash of every web archive file produced by the service, along with the timestamp of its production and the user id of the requesting user. We don't intend to store any other metadata about capture jobs, including the target URL.</p>
 
-    <p>We selected <code>sha256</code>, despite its known limitations, because we wanted the algorithm to be <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest">supported in javascript</a>, and we weren't sure it was reasonable to expect users attempting to verify file hashes to manually calculate <code>sha512/256</code>.
+    <p>We selected <code>sha256</code>, despite its known limitations, because we wanted the algorithm to be <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest">supported in JavaScript</a>, and we weren't sure it was reasonable to expect users attempting to verify file hashes to manually calculate <code>sha512/256</code>.
 
     <p>Let us know if that sounds correct to you!</p>
 
@@ -261,7 +261,7 @@
     <h3 id="embed-instructions">How to embed</h3>
 
     <ol>
-      <li>The replay system requires you to host a single javascript file on your server, which visitors browsers will use to install the service worker that handles playbacks. We recommend putting it in an empty directory, for example at <code>/replay/sw.js</code>. This file must be named <code>sw.js</code>, and it should contain the following:
+      <li>The replay system requires you to host a single JavaScript file on your server, which visitors browsers will use to install the service worker that handles playbacks. We recommend putting it in an empty directory, for example at <code>/replay/sw.js</code>. This file must be named <code>sw.js</code>, and it should contain the following:
 <pre><code>importScripts('https://cdn.jsdelivr.net/npm/replaywebpage@1.1.0/sw.js');
 </code></pre></li>
 
