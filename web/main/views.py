@@ -583,13 +583,6 @@ def account(request):
     ...     f'value="{user.auth_token.key}"',
     ...     "Get a new key</button>"
     ... ])
-
-    We'll need some information about usage limits/paid plans/memberships,
-    but we haven't decided how that's going to work yet.
-    >>> check_response(response, content_includes=[
-    ...     "Usage Plan</h2>",
-    ...     "Membership</h2>",
-    ... ])
     """
     form = UserForm(request.POST or None, instance=request.user)
     if request.method == "POST":
