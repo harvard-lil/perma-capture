@@ -20,7 +20,7 @@
       <ul>
         <li><a href="#capturing-urls">Capturing URLs</a>
           <ul>
-            <li><a href="#capturing-ui">Using the web interface</a></li>
+            <li><a href="#capturing-ui">Using the Web Interface</a></li>
             <li><a href="#capturing-api">Using the API</a>
               <ul>
                 <li>Authorization</li>
@@ -32,7 +32,7 @@
                 <li>oEmbed Captures</li>
               </ul>
             </li>
-            <li><a href="#capturing-under-development">Features in development</a>
+            <li><a href="#capturing-under-development">Features in Development</a>
               <ul>
                 <li>Webhooks</li>
                 <li>Zapier Integration</li>
@@ -62,7 +62,7 @@
 
     <h2 id="capturing-urls">Capturing URLs</h2>
 
-    <h3 id="capturing-ui">Using the web interface</h3>
+    <h3 id="capturing-ui">Using the Web Interface</h3>
     <p>After logging in, simply <a href="{% url 'index' %}">enter the URLs</a> you'd like to preserve and click "Capture." A capture job will be launched for each submitted URL.</p>
     <p>A list of all your active capture jobs will appear beneath the form. When each job is finished, you can click <img style="width: 1.5em; height: 1.5em; vertical-align: top" alt="the preview button" title="Preview Capture" src="{% static 'img/preview.svg' %}"> to preview the capture, and <img style="width: 1.1em; height: 1.1em" alt="the download button" title="Download Capture" src="{% static 'img/download.svg' %}"> to download the web archive file.</p>
     <p><img style="max-width: 100%;" src="{% static 'img/dashboard-screenshot.png' %}" alt="Screenshot of the dashboard. The 'create a new archive' form is above a list of 2 capture jobs, with their download and preview buttons circled."></p>
@@ -268,7 +268,7 @@
     <p>The downloadable WACZ files can be embedded in your site using the <a href="https://replayweb.page">ReplayWeb.page</a> embed system, loaded directly from NPM.</p>
 
 
-    <h3 id="embed-instructions">How to embed</h3>
+    <h3 id="embed-instructions">How to Embed</h3>
 
     <ol>
       <li>The replay system requires you to host a single JavaScript file on your server, which visitors browsers will use to install the service worker that handles playbacks. We recommend putting it in an empty directory, for example at <code>/replay/sw.js</code>. This file must be named <code>sw.js</code>, and it should contain the following:
