@@ -218,7 +218,8 @@ def job(jobid, user):
     return {
         'jobid': jobid,
         'userid': user.id,
-        'url': factory.Faker('url').generate()
+        'url': factory.Faker('url').generate(),
+        'user_data_field': factory.Faker('unix_time').generate()
     }
 
 
