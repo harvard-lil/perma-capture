@@ -27,9 +27,13 @@
                 <li>Endpoints</li>
               </ul>
             </li>
-            <li><a href="#capturing-under-development">Features in development</a>
+            <li><a href="#capturing-advanced-features">Advanced Features</a>
               <ul>
                 <li>oEmbed Captures</li>
+              </ul>
+            </li>
+            <li><a href="#capturing-under-development">Features in development</a>
+              <ul>
                 <li>Webhooks</li>
                 <li>Zapier Integration</li>
                 <li>Archive Hashes</li>
@@ -63,6 +67,7 @@
     <p>A list of all your active capture jobs will appear beneath the form. When each job is finished, you can click <img style="width: 1.5em; height: 1.5em; vertical-align: top" alt="the preview button" title="Preview Capture" src="{% static 'img/preview.svg' %}"> to preview the capture, and <img style="width: 1.1em; height: 1.1em" alt="the download button" title="Download Capture" src="{% static 'img/download.svg' %}"> to download the web archive file.</p>
     <p><img style="max-width: 100%;" src="{% static 'img/dashboard-screenshot.png' %}" alt="Screenshot of the dashboard. The 'create a new archive' form is above a list of 2 capture jobs, with their download and preview buttons circled."></p>
     <p>Capture jobs are retained for 4 hours and then are automatically deleted. Deleted capture jobs cannot be recovered from the service.</p>
+    <p>Read more about other options under <a href="#capturing-advanced-features">advanced features</a> and <a href="#capturing-under-development">features in development</a>.</p>
 
 
     <h3 id="capturing-api">Using the API</h3>
@@ -143,8 +148,10 @@
 
     <p>All information about a capture job is automatically deleted after 4 hours. (Learn more about the <a href="#archive-hashes">information we retain</a>.)</p>
 
+    <p>Read more about other options under <a href="#capturing-advanced-features">advanced features</a> and <a href="#capturing-under-development">features in development</a>.</p>
 
-    <h3 id="capturing-under-development">Features in Development</h3>
+
+    <h3 id="capturing-advanced-features">Advanced Features</h3>
 
     <h4>Capture of "Embeddable" Views</h4>
 
@@ -156,7 +163,10 @@
 
     <p>Using the web interface: check the "Archive Embedded Version" box. Using the API: include <code>"embeds": true</code> in your <code>POST</code> data.</p>
 
-    <p>Capture via oEmbed is currently supported for Twitter and a limited number of other domains; watch this space for updates!</p>
+    <p>Capture via oEmbed is currently supported for Twitter, Instagram, Facebook, YouTube, and SlideShare. Additional domains may be supported in the future; an up-to-date list of <a href="https://github.com/ikreymer/permafact-backend/blob/master/driver/embeds.json">supported domains and URL patterns</a> is available on Github.</p>
+
+
+    <h3 id="capturing-under-development">Features in Development</h3>
 
     <h4 id="webhook-notifications">Webhook Notifications</h4>
 
