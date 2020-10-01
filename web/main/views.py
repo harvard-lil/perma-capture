@@ -1,5 +1,7 @@
 from celery.task.control import inspect as celery_inspect
+import datetime
 from functools import wraps
+from pytz import timezone as tz
 import random
 import redis
 import requests
@@ -13,6 +15,7 @@ from django.http import (HttpResponseRedirect,  HttpResponseForbidden,
 )
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.clickjacking import xframe_options_exempt
 
@@ -72,6 +75,7 @@ class CaptureListView(APIView):
     def post(self, request):
         """ post capture
         """
+
         try:
             data = {
                 'userid': request.user.id,
@@ -81,6 +85,28 @@ class CaptureListView(APIView):
             }
         except KeyError:
             raise serializers.ValidationError("Key 'urls' is required.")
+
+        if settings.SEND_WEBHOOK_DATA_TO_CAPTURE_SERVICE:
+            # our callback
+            data['webhooks'] = [{
+                'callback_url': reverse('archived_callback'),
+                'signing_key': settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY,
+                'signing_key_algorithm': settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM,
+                'user_data_field': timezone.now().timestamp()
+            }]
+            # user callbacks
+            webhook_subscriptions = WebhookSubscription.objects.filter(
+                user=request.user,
+                event_type=WebhookSubscription.EventType.ARCHIVE_CREATED
+            )
+            if webhook_subscriptions:
+                for subscription in webhook_subscriptions:
+                    data['webhooks'].append({
+                        'callback_url': subscription.callback_url,
+                        'signing_key': subscription.signing_key,
+                        'signing_key_algorithm': subscription.signing_key_algorithm,
+                        'user_data_field': request.data.get('user_data_field')
+                    })
 
         res = requests.post(f'{settings.BACKEND_API}/captures', json=data)
         return ApiResponse(res.json(), status=res.status_code)
@@ -307,6 +333,19 @@ def archived_callback(request, format=None):
     >>> assert all(key not in job for key in ['hash', 'hash_algorithm'])
     >>> assert all(archive.hash and archive.hash_algorithm for archive in user.archives.all())
 
+    If we send a timestamp with our initial request and receive it back, we store that value:
+    >>> assert user.archives.last().requested_at.timestamp() == job['user_data_field']
+
+    If we do not send a timestamp with our initial request, or if the webhook
+    payload does not include it, we default to 00:00:00 UTC 1 January 1970.
+    >>> del job['user_data_field']
+    >>> response = client.post(url, job, content_type='application/json',
+    ...     HTTP_X_HOOK_SIGNATURE=sign_data(job, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
+    ... )
+    >>> check_response(response)
+    >>> assert 'user_data_field' not in job and 'user_data_field' not in response.data
+    >>> assert user.archives.last().requested_at.timestamp() == 0
+
     The POSTed `userid` must match the id of a registered user.
     >>> job['userid'] = 1000
     >>> response = client.post(url, job, content_type='application/json',
@@ -333,15 +372,22 @@ def archived_callback(request, format=None):
     if request.data.get('url') and (not hash or not hash_algorithm):
         hash, hash_algorithm = get_file_hash(request.data['url'])
 
+    # retrieve the datetime from our user_data_field
+    ts = request.data.get('user_data_field', 0)
+    requested_at = datetime.datetime.fromtimestamp(ts, tz(settings.TIME_ZONE))
+
     # validate and save
     serializer = ArchiveSerializer(data={
         'user': request.data.get('userid'),
         'jobid': request.data.get('jobid'),
+        'requested_at': requested_at,
         'hash': hash,
         'hash_algorithm': hash_algorithm
     })
     if serializer.is_valid():
         serializer.save()
+        if not ts:
+            logger.warning(f'No requested_at timestamp received for archive {serializer.instance.id}; defaulting to Unix Epoch.')
         return ApiResponse({'status': 'ok'}, status=status.HTTP_200_OK)
     return ApiResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -610,7 +656,8 @@ def webhooks_test(request, user_id, event):  # pragma: no cover
         payload = {
             'userid': user.id,
             'jobid': random.randint(0, 1000000000),
-            'url': request.GET.get('url')
+            'url': request.GET.get('url'),
+            'user_data_field': timezone.now().timestamp()
         }
     else:
         raise NotImplementedError()
