@@ -89,7 +89,7 @@ class CaptureListView(APIView):
         if settings.SEND_WEBHOOK_DATA_TO_CAPTURE_SERVICE:
             # our callback
             data['webhooks'] = [{
-                'callback_url': reverse('archived_callback'),
+                'callback_url': request.build_absolute_uri(reverse('archived_callback')),
                 'signing_key': settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY,
                 'signing_key_algorithm': settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM,
                 'user_data_field': timezone.now().timestamp()
