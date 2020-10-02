@@ -225,17 +225,19 @@ def is_valid_signature(signature, data, signing_key, signing_key_algorithm):
 
     <p>...and JavaScript:</p>
 
-<pre><code>function is_valid_signature(signature, data, signing_key, signing_key_algorithm){
-  const posted_signature = Buffer.from(signature, 'utf-8');
-  const generated_signature = Buffer.from(
+<pre><code>const crypto = require('crypto');
+const querystring = require('querystring');
+function isValidSignature(signature, data, signingKey, signingKeyAlgorithm){
+  const postedSignature = Buffer.from(signature, 'utf-8');
+  const generatedSignature = Buffer.from(
     crypto
-    .createHmac(signing_key_algorithm, signing_key)
-    .update(querystring.stringify(data)))
+    .createHmac(signingKeyAlgorithm, signingKey)
+    .update(querystring.stringify(data))
     .digest('hex'),
     'utf-8'
   );
   try {
-    return crypto.timingSafeEqual(posted_signature, generated_signature);
+    return crypto.timingSafeEqual(postedSignature, generatedSignature);
   } catch (e) {
     return false;
   }
