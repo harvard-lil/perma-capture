@@ -163,7 +163,7 @@ class Archive(TimestampedModel):
     """
     Metadata about archives produced for a user.
     """
-    jobid = models.CharField(max_length=32)
+    jobid = models.UUIDField()
     requested_at = models.DateTimeField()
     delivered_at = models.DateTimeField(auto_now_add=True)
     hash = models.CharField(max_length=256)

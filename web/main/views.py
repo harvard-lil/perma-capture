@@ -5,6 +5,7 @@ from pytz import timezone as tz
 import random
 import redis
 import requests
+import uuid
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -659,7 +660,7 @@ def webhooks_test(request, user_id, event):  # pragma: no cover
     if event == WebhookSubscription.EventType.ARCHIVE_CREATED:
         payload = {
             'userid': user.id,
-            'jobid': random.randint(0, 1000000000),
+            'jobid': str(uuid.uuid4()),
             'url': request.GET.get('url'),
             'user_data_field': timezone.now().timestamp()
         }

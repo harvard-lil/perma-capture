@@ -210,7 +210,7 @@ def celery_config():
 
 @pytest.fixture
 def jobid():
-    return 'a1-_'
+    return factory.Faker('uuid4').generate()
 
 
 @pytest.fixture
