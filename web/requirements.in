@@ -17,6 +17,8 @@ psycopg2            # postgres connector
 django
 django-extensions
 djangorestframework
+djangorestframework-camel-case  # conform to capture service's JSON convention
+pyhumps             # a helper for dealing with the fallout of the above
 whitenoise          # static file serving
 
 # Features

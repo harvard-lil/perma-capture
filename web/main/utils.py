@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import humps
 import requests
 import secrets
 import urllib.parse
@@ -51,6 +52,51 @@ def get_file_hash(url, chunk_size=1024, algorithm='sha256'):
         if chunk:
             hasher.update(chunk)
     return (hasher.hexdigest(), algorithm)
+
+
+#
+# Communicate with the Browserkube/Kubecaptures capture service
+#
+
+class CaptureServiceException(Exception):
+    pass
+
+
+def safe_get_response_json(response):
+    """
+    Return the response's JSON data, or, if absent, an empty dict.
+    """
+    try:
+        data = response.json()
+    except ValueError:
+        data = {}
+    return data
+
+
+def query_capture_service(method, path, valid_if, params=None, json=None, data=None):
+
+    # Make the request
+    try:
+        response = requests.request(
+            method,
+            f"{settings.BACKEND_API}{path}",
+            params=params,
+            json=humps.camelize(json) if json else None,
+            data=humps.camelize(data) if data else None,
+            timeout=10,
+            allow_redirects=False
+        )
+    except requests.exceptions.RequestException as e:
+        raise CaptureServiceException(f"Communication with the capture service failed: {e}") from e
+
+    # Validate the response
+    try:
+        data = humps.decamelize(safe_get_response_json(response))
+        assert valid_if(response.status_code, data)
+    except AssertionError:
+        raise CaptureServiceException(f"{response.status_code}: {data}")
+
+    return response, data
 
 
 #

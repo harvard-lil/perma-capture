@@ -1,8 +1,8 @@
 from celery.task.control import inspect as celery_inspect
 import datetime
 from functools import wraps
+import humps
 from pytz import timezone as tz
-import random
 import redis
 import requests
 import uuid
@@ -28,7 +28,8 @@ from rest_framework.views import APIView
 from .forms import SignupForm, UserForm, PasswordResetForm
 from .models import User, WebhookSubscription
 from .serializers import WebhookSubscriptionSerializer, ArchiveSerializer
-from .utils import generate_hmac_signing_key, sign_data, is_valid_signature, get_file_hash
+from .utils import (generate_hmac_signing_key, sign_data, is_valid_signature,
+    get_file_hash, query_capture_service)
 
 from test.test_helpers import check_response
 from .test.test_permissions_helpers import no_perms_test, perms_test
@@ -65,16 +66,25 @@ def user_passes_test_or_403(test_func):
 
 class CaptureListView(APIView):
 
-    @method_decorator(perms_test({'results': {200: ['user'], 401: [None]}}))
+    @method_decorator(perms_test({'results': {200: ['user'], 401: [None]}, 'extra_fixtures': ['mock_list_captures']}))
     def get(self, request):
-        """get list of captures
         """
-        res = requests.get(f'{settings.BACKEND_API}/captures', params={'userid': request.user.id})
-        return ApiResponse(res.json(), status=res.status_code)
+        list capture jobs
+        >>> _ = [getfixture(f) for f in ['mock_list_captures']]
+        """
+        response, data = query_capture_service(
+            method='get',
+            path='/captures',
+            params={'userid': request.user.id},
+            valid_if=lambda code, data: code == 200 and 'jobs' in data
+        )
+        return ApiResponse(data)
 
-    @method_decorator(perms_test({'results': {400: ['user'], 401: [None]}}))
+    @method_decorator(perms_test({'results': {400: ['user'], 401: [None]}, 'extra_fixtures': ['mock_create_captures']}))
     def post(self, request):
-        """ post capture
+        """
+        create capture jobs
+        >>> _ = [getfixture(f) for f in ['mock_create_captures']]
         """
 
         try:
@@ -93,7 +103,7 @@ class CaptureListView(APIView):
                 'callback_url': request.build_absolute_uri(reverse('archived_callback')),
                 'signing_key': settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY,
                 'signing_key_algorithm': settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM,
-                'user_data_field': timezone.now().timestamp()
+                'user_data_field': str(timezone.now().timestamp())
             }]
             # user callbacks
             webhook_subscriptions = WebhookSubscription.objects.filter(
@@ -109,19 +119,30 @@ class CaptureListView(APIView):
                         'user_data_field': request.data.get('user_data_field')
                     })
 
-        res = requests.post(f'{settings.BACKEND_API}/captures', json=data)
-        return ApiResponse(res.json(), status=res.status_code)
+        response, data = query_capture_service(
+            method='post',
+            path='/captures',
+            json=data,
+            valid_if=lambda code, data: code == 201 and all(key in data for key in {'urls', 'jobids'})
+        )
+        return ApiResponse(data, status=response.status_code)
 
 
 class CaptureDetailView(APIView):
 
-    @method_decorator(perms_test({'args': ['jobid'], 'results': {200: ['user'], 401: [None]}}))
+    @method_decorator(perms_test({'args': ['capture_job_data.jobid'], 'results': {204: ['user'], 401: [None]}, 'extra_fixtures': ['mock_delete_capture']}))
     def delete(self, request, jobid):
-        """ delete capture
+        """
+        delete capture job
+        >>> _ = [getfixture(f) for f in ['mock_delete_capture']]
         """
         logger.info(f"Deleting job {jobid}")
-        res = requests.delete(f"{settings.BACKEND_API}/capture/{jobid}")
-        return ApiResponse(res.json(), status=res.status_code)
+        response, _ = query_capture_service(
+            method='delete',
+            path=f"/capture/{jobid}",
+            valid_if=lambda code, data: code == 204
+        )
+        return ApiResponse(status=response.status_code)
 
 
 class WebhookSubscriptionListView(APIView):
@@ -303,13 +324,13 @@ def archived_callback(request, format=None):
     Respond upon receiving a notification from the capture service that an archive is complete.
 
     Given:
-    >>> client, job, django_settings = [getfixture(f) for f in ['client', 'job', 'settings']]
+    >>> client, callback_data, django_settings, _ = [getfixture(f) for f in ['client', 'webhook_callback', 'settings', 'mock_download']]
     >>> url = reverse('archived_callback')
-    >>> user = User.objects.get(id=job['userid'])
+    >>> user = User.objects.get(id=callback_data['userid'])
     >>> assert user.archives.count() == 0
 
     By default, we do not expect the data to be signed.
-    >>> response = client.post(url, job, content_type='application/json')
+    >>> response = client.post(url, callback_data, content_type='application/json')
     >>> check_response(response)
     >>> user.refresh_from_db()
     >>> assert user.archives.count() == 1
@@ -317,50 +338,63 @@ def archived_callback(request, format=None):
     Signature verification can be enabled via Django settings.
     >>> django_settings.VERIFY_WEBHOOK_SIGNATURE = True
     >>> django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM = generate_hmac_signing_key()
-    >>> response = client.post(url, job, content_type='application/json')
+    >>> response = client.post(url, callback_data, content_type='application/json')
     >>> check_response(response, status_code=400, content_includes='Invalid signature')
-    >>> response = client.post(url, job, content_type='application/json',
+    >>> response = client.post(url, callback_data, content_type='application/json',
     ...     HTTP_X_HOOK_SIGNATURE='foo'
     ... )
     >>> check_response(response, status_code=400, content_includes='Invalid signature')
-    >>> response = client.post(url, job, content_type='application/json',
-    ...     HTTP_X_HOOK_SIGNATURE=sign_data(job, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
+    >>> response = client.post(url, callback_data, content_type='application/json',
+    ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
     ... )
     >>> check_response(response, content_includes='ok')
     >>> user.refresh_from_db()
     >>> assert user.archives.count() == 2
 
     Hashes are calculated if not supplied by the POSTed data.
-    >>> assert all(key not in job for key in ['hash', 'hash_algorithm'])
+    >>> assert all(key not in callback_data for key in ['hash', 'hash_algorithm'])
     >>> assert all(archive.hash and archive.hash_algorithm for archive in user.archives.all())
 
     If we send a timestamp with our initial request and receive it back, we store that value:
-    >>> assert user.archives.last().requested_at.timestamp() == job['user_data_field']
+    >>> assert str(user.archives.last().requested_at.timestamp()) == callback_data['user_data_field']
 
     If we do not send a timestamp with our initial request, or if the webhook
     payload does not include it, we default to 00:00:00 UTC 1 January 1970.
-    >>> del job['user_data_field']
-    >>> response = client.post(url, job, content_type='application/json',
-    ...     HTTP_X_HOOK_SIGNATURE=sign_data(job, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
+    >>> del callback_data['user_data_field']
+    >>> response = client.post(url, callback_data, content_type='application/json',
+    ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
     ... )
     >>> check_response(response)
-    >>> assert 'user_data_field' not in job and 'user_data_field' not in response.data
-    >>> assert user.archives.last().requested_at.timestamp() == 0
+    >>> assert user.archives.last().requested_at.timestamp() == 0.000000
 
     The POSTed `userid` must match the id of a registered user.
-    >>> job['userid'] = 1000
-    >>> response = client.post(url, job, content_type='application/json',
-    ...     HTTP_X_HOOK_SIGNATURE=sign_data(job, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
+    >>> callback_data['userid'] = User.objects.last().id + 1
+    >>> assert not User.objects.filter(id=callback_data['userid']).exists()
+    >>> response = client.post(url, callback_data, content_type='application/json',
+    ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
     ... )
     >>> check_response(response, status_code=400, content_includes=['user', 'Invalid', 'does not exist'])
 
     Note: though jobid and hash should be unique, it is not enforced by this application
     (as is clear from the examples above).
+
+    Finally: let's demonstrate that DRF is indeed handling camelcase conversion for us.
+    >>> response_from_snake_case_post = client.post(url, callback_data, content_type='application/json',
+    ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
+    ... )
+    >>> response_from_camel_case_post = client.post(url, humps.camelize(callback_data), content_type='application/json',
+    ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
+    ... )
+    >>> assert response_from_snake_case_post.data == response_from_camel_case_post.data
+    >>> assert humps.camelize(response_from_snake_case_post.data) == response_from_snake_case_post.data
     """
     if settings.VERIFY_WEBHOOK_SIGNATURE:
+        # DRF will have deserialized the request data and decamelized all the keys...
+        # which messes up the signature check. We recamelize here, just for that check.
+        camelcase_data = humps.camelize(request.data)
         if not is_valid_signature(
             request.headers.get('x-hook-signature', ''),
-            request.data,
+            camelcase_data,
             settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY,
             settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM
         ):
@@ -374,7 +408,7 @@ def archived_callback(request, format=None):
         hash, hash_algorithm = get_file_hash(request.data['url'])
 
     # retrieve the datetime from our user_data_field
-    ts = request.data.get('user_data_field', 0)
+    ts = float(request.data.get('user_data_field', '0.000000'))
     requested_at = datetime.datetime.fromtimestamp(ts, tz(settings.TIME_ZONE))
 
     # validate and save
@@ -667,14 +701,15 @@ def webhooks_test(request, user_id, event):  # pragma: no cover
     else:
         raise NotImplementedError()
 
+    camel_case_payload = humps.camelize(payload)
     subscriptions = user.webhook_subscriptions.filter(event_type=event)
     responses = []
     for subscription in subscriptions:
         try:
             responses.append(requests.post(
                 subscription.callback_url,
-                json=payload,
-                headers={'x-hook-signature': sign_data(payload, subscription.signing_key, subscription.signing_key_algorithm)}
+                json=camel_case_payload,
+                headers={'x-hook-signature': sign_data(camel_case_payload, subscription.signing_key, subscription.signing_key_algorithm)}
             ))
         except requests.exceptions.RequestException as e:
             responses.append({'status_code': None, 'url': subscription.callback_url, 'text': e})

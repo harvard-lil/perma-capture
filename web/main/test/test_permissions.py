@@ -65,22 +65,23 @@ def get_permissions_tests():
         # yield test_permissions parameters for each test config detected:
         for default_request_method, test_config in to_test:
             if test_config is None:
-                yield path, False, None, None, None, None, None
+                yield path, False, None, None, None, None, None, []
                 continue
             for test in test_config:
                 request_method = test.get('method', default_request_method)
                 url_args = test.get('args', [])
+                extra_fixtures = test.get('extra_fixtures', [])
                 for status_code, users in test['results'].items():
                     for user_string in users:
-                        yield path, True, view_func, url_args, request_method, status_code, user_string
+                        yield path, True, view_func, url_args, request_method, status_code, user_string, extra_fixtures
 
 
-@pytest.mark.parametrize("path, has_tests, view_func, url_args, request_method, status_code, user_string", get_permissions_tests())
+@pytest.mark.parametrize("path, has_tests, view_func, url_args, request_method, status_code, user_string, extra_fixtures", get_permissions_tests())
 def test_permissions(
         # regular test fixtures
         client, request,
         # parameters from get_permissions_tests()
-        path, has_tests, view_func, url_args, request_method, status_code, user_string
+        path, has_tests, view_func, url_args, request_method, status_code, user_string, extra_fixtures
 ):
     """
     This test function runs a single request on behalf of a single user. The example at the top of this file would
@@ -119,6 +120,8 @@ def test_permissions(
     context = {}
     url = reverse(view_func, args=[hydrate(context, arg) for arg in url_args])
     user = hydrate(context, user_string) if user_string else None
+    for fixture in extra_fixtures:
+        hydrate(context, fixture)
     response = getattr(client, request_method)(url, as_user=user)
 
     # check response
