@@ -98,6 +98,10 @@ def query_capture_service(method, path, valid_if, params=None, json=None, data=N
 
     return response, data
 
+def override_access_url_netloc(access_url, internal=False):
+    return urllib.parse.urlparse(access_url)._replace(
+        netloc=settings.OVERRIDE_ACCESS_URL_NETLOC['internal' if internal else 'external']
+    ).geturl()
 
 #
 # Webhook signatures

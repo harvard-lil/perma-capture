@@ -29,7 +29,7 @@ from .forms import SignupForm, UserForm, PasswordResetForm
 from .models import User, WebhookSubscription
 from .serializers import WebhookSubscriptionSerializer, ArchiveSerializer
 from .utils import (generate_hmac_signing_key, sign_data, is_valid_signature,
-    get_file_hash, query_capture_service)
+    get_file_hash, query_capture_service, override_access_url_netloc)
 
 from test.test_helpers import check_response
 from .test.test_permissions_helpers import no_perms_test, perms_test
@@ -78,6 +78,10 @@ class CaptureListView(APIView):
             params={'userid': request.user.id},
             valid_if=lambda code, data: code == 200 and 'jobs' in data
         )
+        if settings.OVERRIDE_ACCESS_URL_NETLOC:
+            for job in data['jobs']:
+                if job['access_url']:
+                    job['access_url'] = override_access_url_netloc(job['access_url'])
         return ApiResponse(data)
 
     @method_decorator(perms_test({'results': {400: ['user'], 401: [None]}, 'extra_fixtures': ['mock_create_captures']}))
@@ -99,8 +103,12 @@ class CaptureListView(APIView):
 
         if settings.SEND_WEBHOOK_DATA_TO_CAPTURE_SERVICE:
             # our callback
+            if settings.CALLBACK_PREFIX:
+                url = f"{settings.CALLBACK_PREFIX}{reverse('archived_callback')}"
+            else:
+                url = request.build_absolute_uri(reverse('archived_callback'))
             data['webhooks'] = [{
-                'callback_url': request.build_absolute_uri(reverse('archived_callback')),
+                'callback_url': url,
                 'signing_key': settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY,
                 'signing_key_algorithm': settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM,
                 'user_data_field': str(timezone.now().timestamp())
@@ -405,7 +413,11 @@ def archived_callback(request, format=None):
     hash = request.data.get('hash')
     hash_algorithm = request.data.get('hash_algorithm')
     if request.data.get('access_url') and (not hash or not hash_algorithm):
-        hash, hash_algorithm = get_file_hash(request.data['access_url'])
+        if settings.OVERRIDE_ACCESS_URL_NETLOC:
+            url = override_access_url_netloc(request.data['access_url'], internal=True)
+        else:
+            url = request.data['access_url']
+        hash, hash_algorithm = get_file_hash(url)
 
     # retrieve the datetime from our user_data_field
     ts = float(request.data.get('user_data_field', '0.000000'))
