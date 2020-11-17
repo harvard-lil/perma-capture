@@ -318,6 +318,7 @@ class WebhookCallbackFactory(factory.Factory):
     jobid = factory.LazyAttribute(lambda o: o.capture_job['jobid'])
     userid = factory.LazyAttribute(lambda o: str(o.user.id))
     url = factory.Faker('url')
+    access_url = factory.Faker('url')
     user_data_field = factory.LazyFunction(lambda: str(timezone.now().timestamp()))
 
 

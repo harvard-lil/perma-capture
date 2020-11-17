@@ -404,8 +404,8 @@ def archived_callback(request, format=None):
     # (hashing is not yet a feature of the capture service)
     hash = request.data.get('hash')
     hash_algorithm = request.data.get('hash_algorithm')
-    if request.data.get('url') and (not hash or not hash_algorithm):
-        hash, hash_algorithm = get_file_hash(request.data['url'])
+    if request.data.get('access_url') and (not hash or not hash_algorithm):
+        hash, hash_algorithm = get_file_hash(request.data['access_url'])
 
     # retrieve the datetime from our user_data_field
     ts = float(request.data.get('user_data_field', '0.000000'))
