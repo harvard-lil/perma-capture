@@ -5,6 +5,7 @@
     <li><a href="{% url 'logout' %}">Log Out</a></li>
     {% if request.user.is_staff %}
       <li id="admin-only">Admin Only</li>
+      <li><a href="{% url 'admin:index' %}">Django Admin</a></li>
       <li><a href="{% url 'celery_queue_status' %}">Celery Queue Status</a></li>
     {% endif %}
   </ul>
