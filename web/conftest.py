@@ -348,7 +348,7 @@ class MockResponse:
 
 
 @pytest.fixture()
-def mock_create_captures(monkeypatch):
+def mock_create_captures(mocker):
     def response(*args, **kwargs):
         return MockResponse(
             *args,
@@ -356,22 +356,26 @@ def mock_create_captures(monkeypatch):
             generate_data=CaptureRequestData,
             **kwargs
         )
-    monkeypatch.setattr(requests, 'request', response)
+    mock_request = mocker.patch('requests.request', auto_spec=True)
+    mock_request.side_effect = response
+    return mock_request
 
 
 @pytest.fixture()
-def mock_list_captures(monkeypatch):
+def mock_list_captures(mocker):
     def response(*args, **kwargs):
         return MockResponse(
             *args,
             generate_data=CaptureListData,
             **kwargs
         )
-    monkeypatch.setattr(requests, 'request', response)
+    mock_request = mocker.patch('requests.request', auto_spec=True)
+    mock_request.side_effect = response
+    return mock_request
 
 
 @pytest.fixture()
-def mock_delete_capture(monkeypatch):
+def mock_delete_capture(mocker):
     def raise_expected_json_exception():
         raise JSONDecodeError('Expected value', '', 0)
 
@@ -382,7 +386,9 @@ def mock_delete_capture(monkeypatch):
             generate_data=raise_expected_json_exception,
             **kwargs
         )
-    monkeypatch.setattr(requests, 'request', response)
+    mock_request = mocker.patch('requests.request', auto_spec=True)
+    mock_request.side_effect = response
+    return mock_request
 
 
 @pytest.fixture()
