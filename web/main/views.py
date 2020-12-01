@@ -414,9 +414,7 @@ def index(request):
     ... ])
     """
     if request.user.is_authenticated:
-        return render(request, 'main/dashboard.html', {
-            'rwp_base_url': settings.RWP_BASE_URL,
-        })
+        return render(request, 'main/dashboard.html')
     else:
         return render(request, 'generic.html', {
             'heading': settings.APP_NAME,
@@ -426,9 +424,7 @@ def index(request):
 
 @perms_test({'results': {200: ['user', None]}})
 def docs(request):
-    return render(request, 'main/docs.html', {
-        'rwp_base_url': settings.RWP_BASE_URL
-    })
+    return render(request, 'main/docs.html')
 
 
 @perms_test({'results': {200: ['user', None]}})
@@ -436,9 +432,7 @@ def render_sw(request):
     """
     Render the service worker in the root replay /replay/ path
     """
-    return render(request, 'main/sw.js', {
-        'rwp_base_url': settings.RWP_BASE_URL
-    }, content_type='application/javascript')
+    return render(request, 'main/sw.js', content_type='application/javascript')
 
 
 @perms_test({'results': {200: ['user', None]}})

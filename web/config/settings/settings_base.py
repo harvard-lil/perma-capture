@@ -277,6 +277,7 @@ TEMPLATE_VISIBLE_SETTINGS = (
     'USE_ANALYTICS',
     'ACCESSIBILITY_POLICY_URL',
     'PASSWORD_RESET_TIMEOUT_DAYS',
+    'RWP_BASE_URL'
 )
 
 DEFAULT_FROM_EMAIL = 'info@perma.cc'
@@ -298,4 +299,4 @@ API_PREFIX = 'api'
 BACKEND_API = "http://capture-service"
 
 # Playback
-RWP_BASE_URL = "https://cdn.jsdelivr.net/npm/replaywebpage@1.1.1/"
+RWP_BASE_URL = "https://cdn.jsdelivr.net/npm/replaywebpage@1.1.2"
