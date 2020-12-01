@@ -29,6 +29,44 @@ Spin up the development server:
 
     # fab run
 
+Create a test admin user (follow the prompts, then log in using those credentials):
+
+    # ./manage.py createsuperuser
+
+### Optional: wire up a capture service
+
+To capture websites and serve archives, this application must be configured to communicate with a running [capture service](https://github.com/webrecorder/kubecaptures-backend). You can run one locally at the same time as this application using Minikube (Docker driver).
+
+Follow the directions for the KubeCaptures "[Sample Development Flow](https://github.com/webrecorder/kubecaptures-backend#sample-development-workflow)." The capture service will be exposed to your `localhost` on a particular port by `minikube service --url browserkube`: make note of it. The minio storage service should also be available to your `localhost` on port 9000.
+
+In this application's `settings.py`, add the following stanzas:
+```
+# Tell the capture service to direct its webhook callbacks to this Django app,
+# using Docker's special hostname for internal routing.
+CALLBACK_PREFIX = "http://host.docker.internal:8000"
+
+# Tell this application where the capture service's WACZ files are hosted:
+# if accessed by a user, via curl or their browser, minio will be at localhost;
+# if accessed by the Django application, inside its container, minio will be at
+# Docker's special hostname for internal routing.
+OVERRIDE_ACCESS_URL_NETLOC = {'internal': 'host.docker.internal:9000', 'external': 'localhost:9000'}
+```
+
+Then, add the following, swapping in the port your capture service is exposed on ("49445" in this example):
+```
+BACKEND_API = "http://host.docker.internal:49445"
+```
+
+Remember, every time you start the capture service, it will be exposed on a different port, so you will have to update this setting regularly. The Django application will restart automatically when you make changes to `settings.py`.
+
+If everything is working, you should now be able to (while logged in as your test superuser):
+- request multiple captures of http://example.com
+- watch the capture jobs complete in your kubernetes dashboard
+- watch the capture service POST to our webhook callback; see the newly created 'Archive' objects at `http://localhost:8000/admin/main/archive/`; observe the hash of each file is different
+- watch the Django application poll continuously and eventually report the capture jobs are complete
+- download the WACZ files using the UI button or the API
+- view playbacks of the WACZ files using the UI button
+
 ### Stop
 
 When you are finished, spin down Docker containers by running:
