@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block column_first %}
-  {% if ALLOW_SIGNUPS %}
+  {% if allow_signups %}
     <h2>Sign up for {{ APP_NAME }}</h2>
     <form method="POST" class="u-full-width">
       {% csrf_token %}

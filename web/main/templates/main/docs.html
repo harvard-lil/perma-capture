@@ -4,7 +4,7 @@
 {% block html-class%}docs{% endblock %}
 
 {% block header_scripts %}
-  <script src="{{ RWP_BASE_URL }}/ui.js"></script>
+  <script src="{{ rwp_base_url }}/ui.js"></script>
 {% endblock header_scripts %}
 
 {% block flex %}no{% endblock %}
@@ -276,12 +276,12 @@ function isValidSignature(signature, data, signingKey, signingKeyAlgorithm){
 
     <ol>
       <li>The replay system requires you to host a single JavaScript file on your server, which visitors browsers will use to install the service worker that handles playbacks. We recommend putting it in an empty directory, for example at <code>/replay/sw.js</code>. This file must be named <code>sw.js</code>, and it should contain the following:
-<pre><code>importScripts("{{ RWP_BASE_URL }}/sw.js");
+<pre><code>importScripts("{{ rwp_base_url }}/sw.js");
 </code></pre></li>
 
     <li>Each page that will contain embedded archives should include the following script and should also set the height for the <code>replay-web-page</code> tag to ensure a minimum height.
     (600px is used as an example here).
-<pre><code>&lt;script src="{{ RWP_BASE_URL }}/ui.js"&gt;&lt;/script&gt;
+<pre><code>&lt;script src="{{ rwp_base_url }}/ui.js"&gt;&lt;/script&gt;
 &lt;style&gt;
   replay-web-page {
     height: 600px;

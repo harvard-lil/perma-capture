@@ -1,1 +1,1 @@
-importScripts("{{ RWP_BASE_URL }}/sw.js");
+importScripts("{{ rwp_base_url }}/sw.js");

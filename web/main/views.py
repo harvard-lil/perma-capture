@@ -414,7 +414,10 @@ def index(request):
     ... ])
     """
     if request.user.is_authenticated:
-        return render(request, 'main/dashboard.html')
+        return render(request, 'main/dashboard.html', {
+            'rwp_base_url': settings.RWP_BASE_URL,
+            'api_prefix': settings.API_PREFIX
+        })
     else:
         return render(request, 'generic.html', {
             'heading': settings.APP_NAME,
@@ -424,7 +427,9 @@ def index(request):
 
 @perms_test({'results': {200: ['user', None]}})
 def docs(request):
-    return render(request, 'main/docs.html')
+    return render(request, 'main/docs.html', {
+        'rwp_base_url': settings.RWP_BASE_URL
+    })
 
 
 @perms_test({'results': {200: ['user', None]}})
@@ -432,7 +437,9 @@ def render_sw(request):
     """
     Render the service worker in the root replay /replay/ path
     """
-    return render(request, 'main/sw.js', content_type='application/javascript')
+    return render(request, 'main/sw.js', content_type='application/javascript', context={
+        'rwp_base_url': settings.RWP_BASE_URL
+    })
 
 
 @perms_test({'results': {200: ['user', None]}})
@@ -499,7 +506,10 @@ def sign_up(request):
         if form.is_valid():
             form.save()
             return render(request, 'registration/sign_up_success.html')
-    return render(request, 'registration/sign_up.html', {'form': form})
+    return render(request, 'registration/sign_up.html', {
+        'form': form,
+        'allow_signups': settings.ALLOW_SIGNUPS
+    })
 
 
 def reset_password(request):
