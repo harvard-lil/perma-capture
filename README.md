@@ -1,7 +1,7 @@
 # Perma Eyes
 
-[![CircleCI](https://circleci.com/gh/harvard-lil/witness.svg?style=svg)](https://circleci.com/gh/harvard-lil/witness)
-[![codecov](https://codecov.io/gh/harvard-lil/witness/branch/develop/graph/badge.svg)](https://codecov.io/gh/harvard-lil/witness)
+[![CircleCI](https://circleci.com/gh/harvard-lil/perma-capture.svg?style=svg)](https://circleci.com/gh/harvard-lil/perma-capture)
+[![codecov](https://codecov.io/gh/harvard-lil/perma-capture/branch/develop/graph/badge.svg)](https://codecov.io/gh/harvard-lil/perma-capture)
 
 ## Development
 
