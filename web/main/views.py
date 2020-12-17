@@ -129,7 +129,10 @@ class CaptureListView(APIView):
 
         We request a callback when the capture is complete:
         >>> [hook] =  mock_create_captures.call_args[1]['json']['webhooks']
-        >>> assert all(isinstance(value, str) for value in hook.values())
+        >>> assert hook['signingKeyAlgorithm'] is None
+        >>> assert not hook['signingKey']
+        >>> assert hook['callbackUrl'] and hook['userDataField']
+        >>> assert isinstance(hook['signingKey'], str) and isinstance(hook['callbackUrl'], str) and isinstance(hook['userDataField'], str)
 
         and...include callback info for any user webhook subscriptions...
         >>> response = client.post(url, {'urls': ['http://example.com']}, content_type='application/json', as_user=webhook_subscription.user)
