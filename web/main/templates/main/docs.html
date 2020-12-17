@@ -108,7 +108,7 @@
 
 <pre><code>{
     "urls": 2,
-    "jobids": ["uuid-1", "uuid-2"]
+    "jobids": ["uuid4-1", "uuid4-2"]
 }
 </code></pre>
 
@@ -120,17 +120,20 @@
 <p>Sample Response:</p>
 <pre><code>{
     "jobs": [{
-        "jobid": "uuid-1",
+        "jobid": "uuid4-1",
         "userid": "3",
         "captureUrl": "https://twitter.com/permacc",
+        "useEmbeds": false,
         "userTag": "my-batch",
         "startTime": "2020-09-28T23:54:19+00:00",
         "elapsedTime": "2020-09-28T23:56:45+00:00",
+        "accessUrl": null,
         "status": "In progress"
     }, {
-        "jobid": "uuid-2",
+        "jobid": "uuid4-2",
         "userid": "3",
         "captureUrl": "https://example.com/",
+        "useEmbeds": false,
         "userTag": "my-batch",
         "startTime": "2020-09-28T23:54:19+00:00",
         "elapsedTime": "2020-09-28T23:54:39+00:00",
@@ -142,7 +145,7 @@
 
     <p>The response will list all active capture jobs created by your account. Each job will have a <code>"status"</code> field, set to either <code>In progress</code>, <code>Failed</code>, or <code>Complete</code>.</p>
 
-    <p>A job that is <code>In Progress</code> should be monitored until it is <code>Complete</code>. A <code>Failed</code> job indicates a permanent failure to produce a capture: you may wish to retry. (Coming soon: support for <a href="#webhook-notifications">webhook notifications</a>.)</p>
+    <p>A job that is <code>In progress</code> should be monitored until it is <code>Complete</code>. A <code>Failed</code> job indicates a permanent failure to produce a capture: you may wish to retry. (Coming soon: support for <a href="#webhook-notifications">webhook notifications</a>.)</p>
 
     <p>A job that is <code>Complete</code> will have an <code>accessUrl</code> set to a downloadable URL. The download URL is valid for 4 hours after the job is completed.</p>
 
@@ -178,8 +181,8 @@
 -H "Content-Type: application/json" \
 -H "Authorization: Token {{ request.user.auth_token.key | default:'your-api-key'}}" \
 --data '{ \
-    "callback_url": https://mysite.com/callback", \
-    "event_type": "ARCHIVE_CREATED"
+    "callbackUrl": https://mysite.com/callback", \
+    "eventType": "ARCHIVE_CREATED"
 }' \
 {{ base_url}}{% url 'webhooks' %}
 </code></pre>
@@ -189,9 +192,9 @@
 <pre><code>{
   "id": 53,
   "user": 3,
-  "event_type": "ARCHIVE_CREATED",
-  "signing_key": "a-128-character-key"
-  "signing_key_algorithm": "sha256"
+  "eventType": "ARCHIVE_CREATED",
+  "signingKey": "a-128-character-key"
+  "signingKeyAlgorithm": "sha256"
 }
 </code></pre>
 
@@ -201,7 +204,7 @@
 
 <pre><code>{
   "userid": 3,
-  "jobid": "uuid-1"
+  "jobid": "uuid4-1"
   "url": "https://permacaptures.example.com/path/to/download/mycapture.wacz"
 }
 </code></pre>

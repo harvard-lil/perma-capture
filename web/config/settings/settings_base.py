@@ -120,6 +120,15 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_RENDERER_CLASSES': (
+        'djangorestframework_camel_case.render.CamelCaseJSONRenderer',
+        'djangorestframework_camel_case.render.CamelCaseBrowsableAPIRenderer',
+    ),
+    'DEFAULT_PARSER_CLASSES': (
+        'djangorestframework_camel_case.parser.CamelCaseFormParser',
+        'djangorestframework_camel_case.parser.CamelCaseMultiPartParser',
+        'djangorestframework_camel_case.parser.CamelCaseJSONParser',
+    ),
     'NON_FIELD_ERRORS_KEY': 'error',
     'TEST_REQUEST_DEFAULT_FORMAT': 'json'
 }
@@ -294,6 +303,22 @@ API_PREFIX = 'api'
 
 # Capture Service
 BACKEND_API = "http://capture-service"
+# Right now, the capture service is sending incorrect access URLs locally.
+# Until that is fixed, use this setting to correct the netloc returned by the API.
+# Example:
+# {'internal': 'host.docker.internal:9000', 'external': 'localhost:9000'}
+OVERRIDE_ACCESS_URL_NETLOC = None
+# We have discussed the possibility that the capture service might communicate
+# with this application via a private network connection, rather than over
+# the public internet or using the service's public name. If that's the case,
+# use this setting to specify the netloc to which the capture service should POST
+# it's webhook callback, on completing an archive (since build_absolute_uri, which
+# we use otherwise, will return the public-facing address).
+# This can also be used in development, to direct the traffic to host.docker.internal
+# instead of localhost.
+# Example:
+# "http://host.docker.internal:8000"
+CALLBACK_PREFIX = None
 
 # Playback
 RWP_BASE_URL = "https://cdn.jsdelivr.net/npm/replaywebpage@1.1.2"

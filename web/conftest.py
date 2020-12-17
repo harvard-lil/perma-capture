@@ -1,9 +1,11 @@
 from collections import defaultdict
 from contextlib import contextmanager
+from datetime import timezone as tz
 from distutils.sysconfig import get_python_lib
 import factory
 import inspect
 from io import BytesIO
+from json.decoder import JSONDecodeError
 import pytest
 import random
 import requests
@@ -13,6 +15,7 @@ from django.conf import settings
 from django.db import connections
 from django.db.backends.base.base import BaseDatabaseWrapper
 from django.test.utils import CaptureQueriesContext
+from django.utils import timezone
 from django.db.backends import utils as django_db_utils
 
 from main.models import User, WebhookSubscription
@@ -206,69 +209,6 @@ def celery_config():
     }
 
 
-### capture service mocks ###
-
-@pytest.fixture
-def jobid():
-    return 'a1-_'
-
-
-@pytest.fixture
-def job(jobid, user):
-    return {
-        'jobid': jobid,
-        'userid': user.id,
-        'url': factory.Faker('url').generate(),
-        'user_data_field': factory.Faker('unix_time').generate()
-    }
-
-
-class MockResponse:
-    """
-    Totally generic, and the same for every test.
-    TODO: customize per test, depending on expected response codes and data.
-    """
-
-    @staticmethod
-    def json():
-        return {"mock_key": "mock_response"}
-
-    @property
-    def status_code(self):
-        return 200
-
-    def iter_content(self, chunk_size=1, decode_unicode=False):
-        """
-        Adapted from https://github.com/psf/requests/blob/8149e9fe54c36951290f198e90d83c8a0498289c/requests/models.py#L732
-        """
-        file = BytesIO(b'Some file')
-        while True:
-            chunk = file.read(chunk_size)
-            if not chunk:
-                break
-            yield chunk
-
-
-@pytest.fixture(autouse=True)
-def mock_response(monkeypatch):
-    """
-    requests.get, requests.post, requests.patch, and requests.delete
-    are mocked to return {'mock_key':'mock_response'}
-    """
-
-    def mock_http_call(*args, **kwargs):
-        return MockResponse()
-
-    monkeypatch.setattr(requests, "get", mock_http_call)
-    monkeypatch.setattr(requests, "post", mock_http_call)
-    monkeypatch.setattr(requests, "patch", mock_http_call)
-    monkeypatch.setattr(requests, "delete", mock_http_call)
-
-
-@pytest.fixture
-def random_webhook_event():
-    return random.choice(list(WebhookSubscription.EventType))
-
 ### model factories ###
 
 @register_factory
@@ -308,3 +248,151 @@ class WebhookSubscriptionFactory(factory.DjangoModelFactory):
 
     user = factory.SubFactory(UserFactory)
     callback_url = factory.Faker('url')
+
+
+@pytest.fixture
+def random_webhook_event():
+    return random.choice(list(WebhookSubscription.EventType))
+
+
+### capture service mocks ###
+
+@register_factory
+class CaptureJobData(factory.Factory):
+    class Meta:
+        model = dict
+        exclude = ('user',)
+
+    jobid = factory.Faker('uuid4')
+    user = factory.SubFactory(UserFactory)
+    userid = factory.LazyAttribute(lambda o: str(o.user.id))
+    capture_url = factory.Faker('url')
+    use_embeds = factory.Faker('boolean')
+    user_tag = factory.Faker('text', max_nb_chars=15)
+    start_time = factory.Faker('iso8601', tzinfo=tz.utc)
+    elapsed_time = factory.Faker('iso8601', tzinfo=tz.utc)
+    access_url = factory.LazyAttribute(
+        lambda o: factory.Faker('url').generate() if o.status == 'Complete' else None
+    )
+    status = factory.Faker('random_element', elements=('In progress', 'Failed', 'Complete', 'Unknown'))
+
+
+@register_factory
+class CaptureRequestData(factory.Factory):
+    class Meta:
+        model = dict
+        exclude = ('user',)
+
+    user = factory.SubFactory(UserFactory)
+    urls = factory.LazyAttribute(lambda o: len(o.jobids))
+    jobids = factory.LazyAttribute(lambda o: [job['jobid'] for job in CaptureJobData.create_batch(
+        factory.Faker('random_digit_not_null').generate(),
+        user=o.user
+    )])
+
+
+@register_factory
+class CaptureListData(factory.Factory):
+    class Meta:
+        model = dict
+        exclude = ('user',)
+
+    user = factory.SubFactory(UserFactory)
+    jobs = factory.LazyAttribute(lambda o: CaptureJobData.create_batch(
+        factory.Faker('random_digit_not_null').generate(),
+        user=o.user
+    ))
+
+
+@register_factory
+class WebhookCallbackFactory(factory.Factory):
+    class Meta:
+        model = dict
+        exclude = ('user', 'capture_job')
+
+    user = factory.SubFactory(UserFactory)
+    capture_job = factory.SubFactory(
+        CaptureJobData,
+        user=factory.SelfAttribute('..user')
+    )
+    jobid = factory.LazyAttribute(lambda o: o.capture_job['jobid'])
+    userid = factory.LazyAttribute(lambda o: str(o.user.id))
+    url = factory.Faker('url')
+    access_url = factory.Faker('url')
+    user_data_field = factory.LazyFunction(lambda: str(timezone.now().timestamp()))
+
+
+class MockResponse:
+
+    def __init__(self, *args, **kwargs):
+        self.code = kwargs.get('code', 200)
+        self.generate_data = kwargs.get('generate_data', lambda: {'key': 'value'})
+
+    @property
+    def status_code(self):
+        return self.code
+
+    def json(self):
+        return self.generate_data()
+
+    def iter_content(self, chunk_size=1, decode_unicode=False):
+        """
+        Adapted from https://github.com/psf/requests/blob/8149e9fe54c36951290f198e90d83c8a0498289c/requests/models.py#L732
+        """
+        file = BytesIO(b'Some file')
+        while True:
+            chunk = file.read(chunk_size)
+            if not chunk:
+                break
+            yield chunk
+
+
+@pytest.fixture()
+def mock_create_captures(mocker):
+    def response(*args, **kwargs):
+        return MockResponse(
+            *args,
+            code=201,
+            generate_data=CaptureRequestData,
+            **kwargs
+        )
+    mock_request = mocker.patch('requests.request', auto_spec=True)
+    mock_request.side_effect = response
+    return mock_request
+
+
+@pytest.fixture()
+def mock_list_captures(mocker):
+    def response(*args, **kwargs):
+        return MockResponse(
+            *args,
+            generate_data=CaptureListData,
+            **kwargs
+        )
+    mock_request = mocker.patch('requests.request', auto_spec=True)
+    mock_request.side_effect = response
+    return mock_request
+
+
+@pytest.fixture()
+def mock_delete_capture(mocker):
+    def raise_expected_json_exception():
+        raise JSONDecodeError('Expected value', '', 0)
+
+    def response(*args, **kwargs):
+        return MockResponse(
+            *args,
+            code=204,
+            generate_data=raise_expected_json_exception,
+            **kwargs
+        )
+    mock_request = mocker.patch('requests.request', auto_spec=True)
+    mock_request.side_effect = response
+    return mock_request
+
+
+@pytest.fixture()
+def mock_download(monkeypatch):
+    def response(*args, **kwargs):
+        return MockResponse(*args, **kwargs)
+    monkeypatch.setattr(requests, 'get', response)

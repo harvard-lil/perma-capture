@@ -11,7 +11,7 @@ urlpatterns = [
     path('', views.index, name='index'),
 
     path(f'{settings.API_PREFIX}/captures', views.CaptureListView.as_view(), name='captures'),
-    path(f'{settings.API_PREFIX}/capture/<slug:jobid>', views.CaptureDetailView.as_view(), name='delete_capture'),
+    path(f'{settings.API_PREFIX}/capture/<uuid:jobid>', views.CaptureDetailView.as_view(), name='delete_capture'),
     path('webhooks/', views.WebhookSubscriptionListView.as_view(), name='webhooks'),
     path('webhooks/<int:pk>', views.WebhookSubscriptionDetailView.as_view(), name='webhook'),
     path('callbacks/archived/', views.archived_callback, name='archived_callback'),

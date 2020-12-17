@@ -1,10 +1,12 @@
 from celery.task.control import inspect as celery_inspect
 import datetime
 from functools import wraps
+import humps
 from pytz import timezone as tz
-import random
+import re
 import redis
 import requests
+import uuid
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -27,7 +29,8 @@ from rest_framework.views import APIView
 from .forms import SignupForm, UserForm, PasswordResetForm
 from .models import User, WebhookSubscription
 from .serializers import WebhookSubscriptionSerializer, ArchiveSerializer
-from .utils import generate_hmac_signing_key, sign_data, is_valid_signature, get_file_hash
+from .utils import (generate_hmac_signing_key, sign_data, is_valid_signature,
+    get_file_hash, query_capture_service, override_access_url_netloc)
 
 from test.test_helpers import check_response
 from .test.test_permissions_helpers import no_perms_test, perms_test
@@ -64,35 +67,112 @@ def user_passes_test_or_403(test_func):
 
 class CaptureListView(APIView):
 
-    @method_decorator(perms_test({'results': {200: ['user'], 401: [None]}}))
+    @method_decorator(perms_test({'results': {200: ['user'], 401: [None]}, 'extra_fixtures': ['mock_list_captures']}))
     def get(self, request):
-        """get list of captures
         """
-        res = requests.get(f'{settings.BACKEND_API}/captures', params={'userid': request.user.id})
-        return ApiResponse(res.json(), status=res.status_code)
+        List capture jobs for the authenticated user.
 
-    @method_decorator(perms_test({'results': {400: ['user'], 401: [None]}}))
+        Given:
+        >>> user, client, mock_list_captures, django_settings = [getfixture(f) for f in ['user', 'client', 'mock_list_captures', 'settings']]
+        >>> url = reverse('captures')
+
+        We call out to the capture service using the authenticated user's ID.
+        >>> response = client.get(url, as_user=user)
+        >>> check_response(response)
+        >>> assert mock_list_captures.call_args[1]['params'].get('userid') == user.id
+
+        If this application is configured to override and correct the netloc of the WACZ files (see settings_base.py),
+        it is corrected before the response is returned to the user.
+        >>> django_settings.OVERRIDE_ACCESS_URL_NETLOC = {'internal': 'host.docker.internal:9000', 'external': 'localhost:9000'}
+        >>> overridden_response = client.get(url, as_user=user)
+        >>> check_response(overridden_response)
+        >>> for job in overridden_response.data['jobs']:
+        ...     if job['status'] == 'Complete':
+        ...         assert re.compile(f"https?://{django_settings.OVERRIDE_ACCESS_URL_NETLOC['external']}").match(job['access_url'])
+        ...     else:
+        ...         assert job['access_url'] is None
+        >>> for job in response.data['jobs']:
+        ...     if job['status'] == 'Complete':
+        ...         assert not re.compile(f"https?://{django_settings.OVERRIDE_ACCESS_URL_NETLOC['external']}").match(job['access_url'])
+        ...     else:
+        ...         assert job['access_url'] is None
+        """
+        response, data = query_capture_service(
+            method='get',
+            path='/captures',
+            params={'userid': request.user.id},
+            valid_if=lambda code, data: code == 200 and 'jobs' in data
+        )
+        if settings.OVERRIDE_ACCESS_URL_NETLOC:
+            for job in data['jobs']:
+                if job['access_url']:
+                    job['access_url'] = override_access_url_netloc(job['access_url'])
+        return ApiResponse(data)
+
+    @method_decorator(perms_test({'results': {400: ['user'], 401: [None]}, 'extra_fixtures': ['mock_create_captures']}))
     def post(self, request):
-        """ post capture
+        """
+        Launch capture jobs for the authenticated user.
+
+        Given:
+        >>> user, webhook_subscription, client, mock_create_captures, django_settings = [getfixture(f) for f in ['user', 'webhook_subscription', 'client', 'mock_create_captures', 'settings']]
+        >>> url = reverse('captures')
+
+        POST a list of URLs to capture...
+        >>> check_response(client.post(url, as_user=user), status_code=400, content_includes="'urls' is required")
+        >>> check_response(client.post(url, {'urls': 'http://example.com'}, content_type='application/json', as_user=user), status_code=400, content_includes="must be a list")
+
+        and...receive back the count of launched capture jobs ('urls') and a list of their IDs ('jobids').
+        >>> response = client.post(url, {'urls': ['http://example.com']}, content_type='application/json', as_user=user)
+        >>> check_response(response, status_code=201)
+        >>> assert all(key in response.data for key in {'urls', 'jobids'})
+
+        We request a callback when the capture is complete:
+        >>> [hook] =  mock_create_captures.call_args[1]['json']['webhooks']
+        >>> assert all(isinstance(value, str) for value in hook.values())
+
+        and...include callback info for any user webhook subscriptions...
+        >>> response = client.post(url, {'urls': ['http://example.com']}, content_type='application/json', as_user=webhook_subscription.user)
+        >>> assert len(mock_create_captures.call_args[1]['json']['webhooks']) == 2
+
+        and... include the user_data_field as a string, if supplied.
+        >>> response = client.post(url, {'urls': ['http://example.com'], 'user_data_field': 'slack_message=141414'}, content_type='application/json', as_user=webhook_subscription.user)
+        >>> assert len(mock_create_captures.call_args[1]['json']['webhooks']) == 2
+        >>> assert 'slack_message=141414' in mock_create_captures.call_args[1]['json']['webhooks'][1].values()
+        >>> response = client.post(url, {'urls': ['http://example.com'], 'user_data_field': 141414}, content_type='application/json', as_user=webhook_subscription.user)
+        >>> assert len(mock_create_captures.call_args[1]['json']['webhooks']) == 2
+        >>> assert '141414' in mock_create_captures.call_args[1]['json']['webhooks'][1].values()
+
+        The capture service accepts other parameters: 'tag' and 'embeds'. See our API docs for details.
+        We ensure these optional values are cast to the expected types and pass them along, if they are supplied.
+        >>> response = client.post(url, {'urls': ['http://example.com'], 'tag': 9, 'embeds': 'yes'}, content_type='application/json', as_user=user)
+        >>> assert mock_create_captures.call_args[1]['json']['tag'] == '9'
+        >>> assert mock_create_captures.call_args[1]['json']['embeds'] is True
         """
 
         try:
             data = {
                 'userid': request.user.id,
                 'urls': request.data['urls'],
-                'tag': request.data.get('tag') or '' ,
-                'embeds': request.data.get('embeds') or False
+                'tag': str(request.data.get('tag', '')),
+                'embeds': bool(request.data.get('embeds')) or False
             }
         except KeyError:
             raise serializers.ValidationError("Key 'urls' is required.")
+        if not isinstance(data['urls'], list):
+            raise serializers.ValidationError("'urls' must be a list.")
 
         if settings.SEND_WEBHOOK_DATA_TO_CAPTURE_SERVICE:
             # our callback
+            if settings.CALLBACK_PREFIX:
+                url = f"{settings.CALLBACK_PREFIX}{reverse('archived_callback')}"
+            else:
+                url = request.build_absolute_uri(reverse('archived_callback'))
             data['webhooks'] = [{
-                'callback_url': request.build_absolute_uri(reverse('archived_callback')),
+                'callback_url': url,
                 'signing_key': settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY,
                 'signing_key_algorithm': settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM,
-                'user_data_field': timezone.now().timestamp()
+                'user_data_field': str(timezone.now().timestamp())
             }]
             # user callbacks
             webhook_subscriptions = WebhookSubscription.objects.filter(
@@ -105,22 +185,54 @@ class CaptureListView(APIView):
                         'callback_url': subscription.callback_url,
                         'signing_key': subscription.signing_key,
                         'signing_key_algorithm': subscription.signing_key_algorithm,
-                        'user_data_field': request.data.get('user_data_field')
+                        'user_data_field': str(request.data.get('user_data_field', ''))
                     })
 
-        res = requests.post(f'{settings.BACKEND_API}/captures', json=data)
-        return ApiResponse(res.json(), status=res.status_code)
+        response, data = query_capture_service(
+            method='post',
+            path='/captures',
+            json=data,
+            valid_if=lambda code, data: code == 201 and all(key in data for key in {'urls', 'jobids'})
+        )
+        return ApiResponse(data, status=response.status_code)
 
 
 class CaptureDetailView(APIView):
 
-    @method_decorator(perms_test({'args': ['jobid'], 'results': {200: ['user'], 401: [None]}}))
+    @method_decorator(perms_test({'args': ['capture_job_data.jobid'], 'results': {204: ['user'], 401: [None]}, 'extra_fixtures': ['mock_delete_capture']}))
     def delete(self, request, jobid):
-        """ delete capture
         """
-        logger.info(f"Deleting job {jobid}")
-        res = requests.delete(f"{settings.BACKEND_API}/capture/{jobid}")
-        return ApiResponse(res.json(), status=res.status_code)
+        Delete a capture job belonging to the authenticated user.
+
+        Given:
+        >>> capture_job_data, client, mock_delete_capture = [getfixture(f) for f in ['capture_job_data', 'client', 'mock_delete_capture']]
+        >>> url = reverse('delete_capture', args=[capture_job_data['jobid']])
+        >>> user = User.objects.get(id=capture_job_data['userid'])
+
+        We call out to the capture service using the authenticated user's ID.
+        >>> response = client.delete(url, as_user=user)
+        >>> check_response(response, status_code=204)
+        >>> assert mock_delete_capture.call_args[1]['params'].get('userid') == user.id
+
+        Capture job IDs must be valid UUIDs. This application validates and returns
+        404 if passed an invalid job ID; if we pass it on to the capture service, we
+        should expect a 400.
+
+        If the job doesn't exist, or has already been deleted, we should expect a 404.
+
+        If the job doesn't belong to the user, we should expect a 403.
+
+        (If we wish to delete a job with admin-level privileges, we should omit the
+        userid param from our API call.)
+        """
+        logger.info(f"Deleting job {jobid} for user {request.user.id}")
+        response, data = query_capture_service(
+            method='delete',
+            path=f"/capture/{jobid}",
+            params={'userid': request.user.id},
+            valid_if=lambda code, data: code in [204, 403, 404]
+        )
+        return ApiResponse(data or None, status=response.status_code)
 
 
 class WebhookSubscriptionListView(APIView):
@@ -302,13 +414,13 @@ def archived_callback(request, format=None):
     Respond upon receiving a notification from the capture service that an archive is complete.
 
     Given:
-    >>> client, job, django_settings = [getfixture(f) for f in ['client', 'job', 'settings']]
+    >>> client, callback_data, django_settings, _ = [getfixture(f) for f in ['client', 'webhook_callback', 'settings', 'mock_download']]
     >>> url = reverse('archived_callback')
-    >>> user = User.objects.get(id=job['userid'])
+    >>> user = User.objects.get(id=callback_data['userid'])
     >>> assert user.archives.count() == 0
 
     By default, we do not expect the data to be signed.
-    >>> response = client.post(url, job, content_type='application/json')
+    >>> response = client.post(url, callback_data, content_type='application/json')
     >>> check_response(response)
     >>> user.refresh_from_db()
     >>> assert user.archives.count() == 1
@@ -316,50 +428,63 @@ def archived_callback(request, format=None):
     Signature verification can be enabled via Django settings.
     >>> django_settings.VERIFY_WEBHOOK_SIGNATURE = True
     >>> django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM = generate_hmac_signing_key()
-    >>> response = client.post(url, job, content_type='application/json')
+    >>> response = client.post(url, callback_data, content_type='application/json')
     >>> check_response(response, status_code=400, content_includes='Invalid signature')
-    >>> response = client.post(url, job, content_type='application/json',
+    >>> response = client.post(url, callback_data, content_type='application/json',
     ...     HTTP_X_HOOK_SIGNATURE='foo'
     ... )
     >>> check_response(response, status_code=400, content_includes='Invalid signature')
-    >>> response = client.post(url, job, content_type='application/json',
-    ...     HTTP_X_HOOK_SIGNATURE=sign_data(job, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
+    >>> response = client.post(url, callback_data, content_type='application/json',
+    ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
     ... )
     >>> check_response(response, content_includes='ok')
     >>> user.refresh_from_db()
     >>> assert user.archives.count() == 2
 
     Hashes are calculated if not supplied by the POSTed data.
-    >>> assert all(key not in job for key in ['hash', 'hash_algorithm'])
+    >>> assert all(key not in callback_data for key in ['hash', 'hash_algorithm'])
     >>> assert all(archive.hash and archive.hash_algorithm for archive in user.archives.all())
 
     If we send a timestamp with our initial request and receive it back, we store that value:
-    >>> assert user.archives.last().requested_at.timestamp() == job['user_data_field']
+    >>> assert str(user.archives.last().requested_at.timestamp()) == callback_data['user_data_field']
 
     If we do not send a timestamp with our initial request, or if the webhook
     payload does not include it, we default to 00:00:00 UTC 1 January 1970.
-    >>> del job['user_data_field']
-    >>> response = client.post(url, job, content_type='application/json',
-    ...     HTTP_X_HOOK_SIGNATURE=sign_data(job, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
+    >>> del callback_data['user_data_field']
+    >>> response = client.post(url, callback_data, content_type='application/json',
+    ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
     ... )
     >>> check_response(response)
-    >>> assert 'user_data_field' not in job and 'user_data_field' not in response.data
-    >>> assert user.archives.last().requested_at.timestamp() == 0
+    >>> assert user.archives.last().requested_at.timestamp() == 0.000000
 
     The POSTed `userid` must match the id of a registered user.
-    >>> job['userid'] = 1000
-    >>> response = client.post(url, job, content_type='application/json',
-    ...     HTTP_X_HOOK_SIGNATURE=sign_data(job, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
+    >>> callback_data['userid'] = User.objects.last().id + 1
+    >>> assert not User.objects.filter(id=callback_data['userid']).exists()
+    >>> response = client.post(url, callback_data, content_type='application/json',
+    ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
     ... )
     >>> check_response(response, status_code=400, content_includes=['user', 'Invalid', 'does not exist'])
 
     Note: though jobid and hash should be unique, it is not enforced by this application
     (as is clear from the examples above).
+
+    Finally: let's demonstrate that DRF is indeed handling camelcase conversion for us.
+    >>> response_from_snake_case_post = client.post(url, callback_data, content_type='application/json',
+    ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
+    ... )
+    >>> response_from_camel_case_post = client.post(url, humps.camelize(callback_data), content_type='application/json',
+    ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
+    ... )
+    >>> assert response_from_snake_case_post.data == response_from_camel_case_post.data
+    >>> assert humps.camelize(response_from_snake_case_post.data) == response_from_snake_case_post.data
     """
     if settings.VERIFY_WEBHOOK_SIGNATURE:
+        # DRF will have deserialized the request data and decamelized all the keys...
+        # which messes up the signature check. We recamelize here, just for that check.
+        camelcase_data = humps.camelize(request.data)
         if not is_valid_signature(
             request.headers.get('x-hook-signature', ''),
-            request.data,
+            camelcase_data,
             settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY,
             settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM
         ):
@@ -369,11 +494,15 @@ def archived_callback(request, format=None):
     # (hashing is not yet a feature of the capture service)
     hash = request.data.get('hash')
     hash_algorithm = request.data.get('hash_algorithm')
-    if request.data.get('url') and (not hash or not hash_algorithm):
-        hash, hash_algorithm = get_file_hash(request.data['url'])
+    if request.data.get('access_url') and (not hash or not hash_algorithm):
+        if settings.OVERRIDE_ACCESS_URL_NETLOC:
+            url = override_access_url_netloc(request.data['access_url'], internal=True)
+        else:
+            url = request.data['access_url']
+        hash, hash_algorithm = get_file_hash(url)
 
     # retrieve the datetime from our user_data_field
-    ts = request.data.get('user_data_field', 0)
+    ts = float(request.data.get('user_data_field', '0.000000'))
     requested_at = datetime.datetime.fromtimestamp(ts, tz(settings.TIME_ZONE))
 
     # validate and save
@@ -659,21 +788,22 @@ def webhooks_test(request, user_id, event):  # pragma: no cover
     if event == WebhookSubscription.EventType.ARCHIVE_CREATED:
         payload = {
             'userid': user.id,
-            'jobid': random.randint(0, 1000000000),
+            'jobid': str(uuid.uuid4()),
             'url': request.GET.get('url'),
             'user_data_field': timezone.now().timestamp()
         }
     else:
         raise NotImplementedError()
 
+    camel_case_payload = humps.camelize(payload)
     subscriptions = user.webhook_subscriptions.filter(event_type=event)
     responses = []
     for subscription in subscriptions:
         try:
             responses.append(requests.post(
                 subscription.callback_url,
-                json=payload,
-                headers={'x-hook-signature': sign_data(payload, subscription.signing_key, subscription.signing_key_algorithm)}
+                json=camel_case_payload,
+                headers={'x-hook-signature': sign_data(camel_case_payload, subscription.signing_key, subscription.signing_key_algorithm)}
             ))
         except requests.exceptions.RequestException as e:
             responses.append({'status_code': None, 'url': subscription.callback_url, 'text': e})
