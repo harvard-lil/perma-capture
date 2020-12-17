@@ -25,6 +25,10 @@ Then log into the main Docker container:
 
 You should now have a working installation!
 
+Migrate the database:
+
+    # ./manage.py migrate
+
 Spin up the development server:
 
     # fab run
