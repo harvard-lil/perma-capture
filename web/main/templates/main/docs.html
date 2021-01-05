@@ -87,7 +87,9 @@
 
     <p>You can create archives programmatically by sending an HTTP <code>POST</code> to <code>{{ base_url }}{% url 'captures' %}</code>.</p>
 
-    <p>Required data (JSON-formatted): <code>"urls"</code> (a list of URLs to capture, each explicitly prefixed by <code>http</code> or <code>https</code>). Optionally, you may also specify a <code>"tag"</code> (a nickname for this batch of URLs, for your convenience).</p>
+    <p>Required data (JSON-formatted): <code>"urls"</code> (a list of URLs to capture, each explicitly prefixed by <code>http</code> or <code>https</code>).</p>
+
+    <p>Optionally, you may also specify a <code>"tag"</code> (a nickname for this batch of URLs, for your convenience). If you are subscribed to <a href="#webhook-notifications">webhook notifications</a>, you may also optionally specify a <code>"userDataField"</code> for your convenience (a string you would like included, verbatim, in the webhook notification response).</p>
 
     <p>Here's a request to archive a small batch of two URLs using <code>curl</code>:</p>
 
@@ -99,7 +101,8 @@
         "https://twitter.com/permacc", \
         "https://example.com/" \
     ], \
-    "tag": "my-batch"
+    "tag": "my-batch", \
+    "userDataField": "foo=bar&boo=baz" \
 }' \
 {{ base_url}}{% url 'captures' %}
 </code></pre>
@@ -201,8 +204,10 @@
 
 <pre><code>{
   "userid": 3,
-  "jobid": "uuid4-1"
-  "url": "https://permacaptures.example.com/path/to/download/mycapture.wacz"
+  "jobid": "uuid4-1",
+  "url": "http://cnn.com",
+  "accessUrl": "https://permacaptures.example.com/path/to/download/mycapture.wacz",
+  "userDataField": ""
 }
 </code></pre>
 
