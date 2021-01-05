@@ -23,19 +23,19 @@
             <li><a href="#capturing-ui">Using the Web Interface</a></li>
             <li><a href="#capturing-api">Using the API</a>
               <ul>
-                <li>Authorization</li>
-                <li>Endpoints</li>
+                <li><a href="#capturing-auth">Authorization</a></li>
+                <li><a href="#capturing-endpoints">Endpoints</a></li>
               </ul>
             </li>
             <li><a href="#capturing-advanced-features">Advanced Features</a>
               <ul>
-                <li>oEmbed Captures</li>
+                <li><a href="#capturing-oembed">oEmbed Captures</a></li>
+                <li><a href="#webhook-notifications">Webhooks</a></li>
+                <li><a href="#zapier-integration">Zapier Integration</a></li>
               </ul>
             </li>
             <li><a href="#capturing-under-development">Features in Development</a>
               <ul>
-                <li>Webhooks</li>
-                <li>Zapier Integration</li>
                 <li>Archive Hashes</li>
               </ul>
             </li>
@@ -76,14 +76,14 @@
       <p><em>Your API Key is <code>{{ request.user.auth_token.key }}</code></em></p>
     {% endif %}
 
-    <h4>Authorization </h4>
+    <h4 id="capturing-auth">Authorization </h4>
 
     <p>All registered users receive an <a href="{% url 'account' %}">API key</a>. Every request to the API must be authenticated by providing that key as part of the <code>Authorization</code> header:</p>
 
 <pre><code>curl -H "Authorization: Token {{ request.user.auth_token.key | default:'your-api-key'}}" {{ base_url }}...
 </code></pre>
 
-    <h4>Endpoints</h4>
+    <h4 id="capturing-endpoints">Endpoints</h4>
 
     <p>You can create archives programmatically by sending an HTTP <code>POST</code> to <code>{{ base_url }}{% url 'captures' %}</code>.</p>
 
@@ -145,7 +145,7 @@
 
     <p>The response will list all active capture jobs created by your account. Each job will have a <code>"status"</code> field, set to either <code>In progress</code>, <code>Failed</code>, or <code>Complete</code>.</p>
 
-    <p>A job that is <code>In progress</code> should be monitored until it is <code>Complete</code>. A <code>Failed</code> job indicates a permanent failure to produce a capture: you may wish to retry. (Coming soon: support for <a href="#webhook-notifications">webhook notifications</a>.)</p>
+    <p>A job that is <code>In progress</code> should be monitored until it is <code>Complete</code>. (Or, if you'd like to be notified when a job is complete, check out <a href="#webhook-notifications">webhook notifications</a>.) A <code>Failed</code> job indicates a permanent failure to produce a capture: you may wish to retry.</p>
 
     <p>A job that is <code>Complete</code> will have an <code>accessUrl</code> set to a downloadable URL. The download URL is valid for 4 hours after the job is completed.</p>
 
@@ -156,7 +156,7 @@
 
     <h3 id="capturing-advanced-features">Advanced Features</h3>
 
-    <h4>Capture of "Embeddable" Views</h4>
+    <h4 id="capturing-oembed">Capture of "Embeddable" Views</h4>
 
     <p>Many websites offer an easily-embeddable "<a href="https://oembed.com/">oEmbed</a>" view of snippets of their content. For example, Twitter provides the following embeddable view of the Tweet at <a href="https://twitter.com/permacc/status/1039225277119954944">https://twitter.com/permacc/status/1039225277119954944</a>:</p>
 
@@ -167,9 +167,6 @@
     <p>Using the web interface: check the "Archive Embedded Version" box. Using the API: include <code>"embeds": true</code> in your <code>POST</code> data.</p>
 
     <p>Capture via oEmbed is currently supported for Twitter, Instagram, Facebook, YouTube, and SlideShare. Additional domains may be supported in the future; an up-to-date list of <a href="https://github.com/ikreymer/permafact-backend/blob/master/driver/embeds.json">supported domains and URL patterns</a> is available on Github.</p>
-
-
-    <h3 id="capturing-under-development">Features in Development</h3>
 
     <h4 id="webhook-notifications">Webhook Notifications</h4>
 
@@ -187,7 +184,7 @@
 {{ base_url}}{% url 'webhooks' %}
 </code></pre>
 
-    <p>We'll send back a subscription <code>id</code>, as well as a <code>signing_key</code> and <code>signing_key_algorithm</code> that you can optionally use to verify that any <code>POST</code> received by your callback URL is really from us.</p>
+    <p>We'll send back a subscription <code>id</code>, as well as a <code>signingKey</code> and <code>signingKeyAlgorithm</code> that you can optionally use to verify that any <code>POST</code> received by your callback URL is really from us.</p>
 
 <pre><code>{
   "id": 53,
@@ -200,7 +197,7 @@
 
     <p>You can subscribe as many times as you like, if you'd like multiple callback URLs to be notified.</p>
 
-    <p>This isn't enabled yet, but soon: when an archive you request is complete, we'll make a <code>POST</code> to your callback like the following:</p>
+    <p>When an archive you request is complete, we'll make a <code>POST</code> to your callback like the following:</p>
 
 <pre><code>{
   "userid": 3,
@@ -254,15 +251,23 @@ function isValidSignature(signature, data, signingKey, signingKeyAlgorithm){
 
     <h4 id="zapier-integration">Zapier Integration</h4>
 
-    <p><a href="https://zapier.com">Zapier</a> users can integrate the Perma.cc capture service in their workflows. For example, this <a href="https://zapier.com/shared/e1ccf1faa9b236b2317b85b46f0a643e8259aa77">example Zap</a> is configured to post a message to Slack when a new archive is ready to be downloaded.
+    <p><a href="https://zapier.com">Zapier</a> users can integrate the Perma.cc capture service in their workflows.</a>
 
-    <p><img style="max-width: 100%;" src="{% static 'img/slack-screenshot.png' %}" alt="Screenshot of Slack: 'Zapier APP 11:00 AM Ohai! A new web archive is available at http://example.com/archive3.wacz/. Sent via zapier.com/app/editor/100494867#slack'."></p>
+    <p>For example, using this Zap, you can <a href="https://zapier.com/shared/3ee9336c0d9734d9fe6cc86e672b530f8336e93b">archive a URL straight from Slack</a>, and this Zap will follow up, posting a <a href="https://zapier.com/app/editor/108033832/nodes/108033832">link to the completed archive as a reply</a>, when it's finished.</p>
+
+    <p><img style="max-width: 100%;" src="{% static 'img/slack-screenshot.png' %}" alt="Screenshot of Slack, showing a capture request and a threaded reply with a link to the archive."></p>
+
+    <p>This Zap, on the other hand, will post to a pre-configured Slack channel of your choice whenever <a href="https://zapier.com/shared/e1ccf1faa9b236b2317b85b46f0a643e8259aa77">an archive created by your account is ready to be downloaded</a>.</p>
+
+    <p>Let us know if you are interested in a Zapier integration, and we'll help you get started!</p>
 
     <p>Note: Zapier does not support <a href="http://resthooks.org/docs/security/">signature validation</a>, instead relying on the privacy of subscription URLs for security. If you need to further verify the authenticity of data triggering your workflows, we recommend working with our webhooks directly.</p>
 
+    <h3 id="capturing-under-development">Features in Development</h3>
+
     <h4 id="archive-hashes">Archive Hashes</h4>
 
-    <p>We plan to maintain a <code>sha-256</code> hash of every web archive file produced by the service, along with the timestamp of its production and the user id of the requesting user. We don't intend to store any other metadata about capture jobs, including the target URL.</p>
+    <p>We maintain a <code>sha-256</code> hash of every web archive file produced by the service, along with the timestamp of its production and the user id of the requesting user. We don't store any other metadata about capture jobs, including the target URL.</p>
 
     <p>We selected <code>sha256</code>, despite its known limitations, because we wanted the algorithm to be <a href="https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest">supported in JavaScript</a>, and we weren't sure it was reasonable to expect users attempting to verify file hashes to manually calculate <code>sha512/256</code>.
 
