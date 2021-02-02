@@ -321,4 +321,4 @@ OVERRIDE_ACCESS_URL_NETLOC = None
 CALLBACK_PREFIX = None
 
 # Playback
-RWP_BASE_URL = "https://cdn.jsdelivr.net/npm/replaywebpage@1.1.2"
+RWP_BASE_URL = "https://cdn.jsdelivr.net/npm/replaywebpage@1.3.8"
