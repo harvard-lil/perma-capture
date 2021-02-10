@@ -15,3 +15,9 @@ WORKDIR /app/web
 COPY web/requirements.txt /app/web
 RUN pip install -r requirements.txt \
     && rm requirements.txt
+
+# Install Node
+RUN apt-get install -y npm && npm install -g n && n 14.15.5
+
+# Install Yarn
+RUN npm install -g yarn
