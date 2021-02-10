@@ -99,3 +99,11 @@ def load_sample_capture_jobs(email=None, status=None, jobs=20):  # pragma: no co
         kwargs['status'] = status
     for _ in range(int(jobs)):
         print(create_capture_job(**kwargs))
+
+@task
+def run_fullstack(django_port=None):
+    frontend_proc = subprocess.Popen("yarn && yarn dev", cwd="./frontend", shell=True, stdout=sys.stdout, stderr=sys.stderr)
+    try:
+        run_django(django_port)
+    finally:
+        os.kill(frontent_proc.pid, signal.SIGKILL)

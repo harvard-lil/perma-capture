@@ -47,6 +47,7 @@ services:
       - ./services/browsertrix/data:/app/services/browsertrix/data
     ports:
       - "127.0.0.1:8000:8000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       - db
       - minio
