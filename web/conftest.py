@@ -1,6 +1,6 @@
 from collections import defaultdict
 from contextlib import contextmanager
-from datetime import timezone as tz
+from datetime import timezone as tz, timedelta
 from distutils.sysconfig import get_python_lib
 import factory
 import inspect
@@ -18,7 +18,7 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from django.db.backends import utils as django_db_utils
 
-from main.models import User, WebhookSubscription
+from main.models import User, WebhookSubscription, Archive, CaptureJob
 
 
 # This file defines test fixtures available to all tests.
@@ -255,7 +255,96 @@ def random_webhook_event():
     return random.choice(list(WebhookSubscription.EventType))
 
 
-### capture service mocks ###
+@register_factory
+class CaptureJobFactory(factory.DjangoModelFactory):
+    class Meta:
+        model = CaptureJob
+        exclude = ('create_archive',)
+
+    create_archive = True
+    user = factory.SubFactory(UserFactory)
+
+
+@register_factory
+class InvalidCaptureJobFactory(CaptureJobFactory):
+    requested_url = 'not-a-valid-url'
+    status = 'invalid'
+    message = {'url': ['Not a valid URL.']}
+
+
+@register_factory
+class PendingCaptureJobFactory(CaptureJobFactory):
+    requested_url = factory.Faker('url')
+    status = 'pending'
+
+
+@register_factory
+class InProgressCaptureJobFactory(PendingCaptureJobFactory):
+    status = 'in_progress'
+    capture_start_time = factory.Faker('future_datetime', end_date='+1m', tzinfo=tz.utc)
+    step_count = factory.Faker('pyfloat', min_value=1, max_value=10)
+    step_description = factory.Faker('text', max_nb_chars=15)
+
+
+@register_factory
+class CompletedCaptureJobFactory(InProgressCaptureJobFactory):
+    status = 'completed'
+    capture_end_time = factory.LazyAttribute(
+        lambda o: o.capture_start_time + timedelta(seconds=factory.Faker('random_int', min=0, max=settings.CELERY_TASK_TIME_LIMIT).generate())
+    )
+    archive = factory.Maybe(
+        'create_archive',
+        yes_declaration=factory.RelatedFactory(
+            'conftest.ArchiveFactory',
+            factory_related_name='capture_job',
+            create_capture_job=False
+        ),
+        no_declaration=None
+    )
+
+
+@register_factory
+class FailedCaptureJobFactory(CompletedCaptureJobFactory):
+    status = 'failed'
+    message = {'error': ['Failed during capture.']}
+    archive = None
+
+
+@register_factory
+class ArchiveFactory(factory.DjangoModelFactory):
+    class Meta:
+        model = Archive
+        exclude = ('create_capture_job', 'user')
+
+    create_capture_job = True
+    user = factory.Maybe(
+        'create_capture_job',
+        yes_declaration=factory.SubFactory(UserFactory),
+        no_declaration=None
+    )
+    capture_job = factory.Maybe(
+        'create_capture_job',
+        yes_declaration=factory.SubFactory(
+            CompletedCaptureJobFactory,
+            user=factory.SelfAttribute('..user'),
+            create_archive=False
+        ),
+        no_declaration=None
+    )
+    hash_algorithm = 'sha256'
+    hash = factory.Faker('sha256')
+    warc_size = factory.Faker('random_int', min=5000, max=200000000)
+    download_expiration_timestamp = factory.LazyFunction(
+        lambda:  timezone.now() + timedelta(minutes=settings.ARCHIVE_EXPIRES_AFTER_MINUTES)
+    )
+    download_url = factory.LazyAttribute(
+        lambda o: f"https://our-cloud-storage.com/{factory.Faker('uuid4').generate()}.wacz?params=for-presigned-download"
+    )
+
+
+###
+### k8s capture service mocks ###
+###
 
 @register_factory
 class CaptureJobData(factory.Factory):

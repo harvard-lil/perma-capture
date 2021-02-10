@@ -301,6 +301,9 @@ TESTING = False
 
 API_PREFIX = 'api'
 
+# Storage
+ARCHIVE_EXPIRES_AFTER_MINUTES = 4 * 60
+
 # Capture Service
 BACKEND_API = "http://capture-service"
 # Right now, the capture service is sending incorrect access URLs locally.
