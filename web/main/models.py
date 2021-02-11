@@ -174,10 +174,17 @@ class CaptureJob(TimestampedModel):
     # use_profile = models.SomeField(default=None)
     label = models.CharField(max_length=255, blank=True, null=True)
 
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'pending'
+        IN_PROGRESS = 'in_progress', 'in_progress'
+        COMPLETED = 'completed', 'completed'
+        FAILED = 'failed', 'failed'
+        INVALID = 'invalid', 'invalid'
+
     status = models.CharField(
         max_length=15,
-        default='invalid',
-        choices=(('pending','pending'),('in_progress','in_progress'),('completed','completed'),('failed','failed'),('invalid', 'invalid')),
+        choices=Status.choices,
+        default=Status.INVALID,
         db_index=True
     )
     # "Message" is a field for reporting validation errors or capture error messages. E.g.

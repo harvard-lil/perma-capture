@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from datetime import timezone as tz, timedelta
 from distutils.sysconfig import get_python_lib
 import factory
+import humps
 import inspect
 from io import BytesIO
 from json.decoder import JSONDecodeError
@@ -43,6 +44,9 @@ def pytest_addoption(parser):
 
 # functions used within this file to set up fixtures
 
+def snake_to_camel(s):
+    return re.sub('((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))', r'_\1', s).lower()
+
 def register_factory(cls):
     """
     Decorator to take a factory class and inject test fixtures. For example,
@@ -52,7 +56,7 @@ def register_factory(cls):
     This is basically the same as the @register decorator provided by the pytest_factoryboy package,
     but because it's simpler it seems to work better with RelatedFactory and SubFactory.
     """
-    camel_case_name = re.sub('((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))', r'_\1', cls.__name__).lower()
+    snake_case_name = re.sub('((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))', r'_\1', cls.__name__).lower()
 
     @pytest.fixture
     def factory_fixture(db):
@@ -62,8 +66,8 @@ def register_factory(cls):
     def instance_fixture(db):
         return cls()
 
-    globals()[camel_case_name] = factory_fixture
-    globals()[camel_case_name.rsplit('_factory', 1)[0]] = instance_fixture
+    globals()[snake_case_name] = factory_fixture
+    globals()[snake_case_name.rsplit('_factory', 1)[0]] = instance_fixture
 
     return cls
 
@@ -268,19 +272,19 @@ class CaptureJobFactory(factory.DjangoModelFactory):
 @register_factory
 class InvalidCaptureJobFactory(CaptureJobFactory):
     requested_url = 'not-a-valid-url'
-    status = 'invalid'
+    status = CaptureJob.Status.INVALID
     message = {'url': ['Not a valid URL.']}
 
 
 @register_factory
 class PendingCaptureJobFactory(CaptureJobFactory):
     requested_url = factory.Faker('url')
-    status = 'pending'
+    status = CaptureJob.Status.PENDING
 
 
 @register_factory
 class InProgressCaptureJobFactory(PendingCaptureJobFactory):
-    status = 'in_progress'
+    status = CaptureJob.Status.IN_PROGRESS
     capture_start_time = factory.Faker('future_datetime', end_date='+1m', tzinfo=tz.utc)
     step_count = factory.Faker('pyfloat', min_value=1, max_value=10)
     step_description = factory.Faker('text', max_nb_chars=15)
@@ -288,7 +292,7 @@ class InProgressCaptureJobFactory(PendingCaptureJobFactory):
 
 @register_factory
 class CompletedCaptureJobFactory(InProgressCaptureJobFactory):
-    status = 'completed'
+    status = CaptureJob.Status.COMPLETED
     capture_end_time = factory.LazyAttribute(
         lambda o: o.capture_start_time + timedelta(seconds=factory.Faker('random_int', min=0, max=settings.CELERY_TASK_TIME_LIMIT).generate())
     )
@@ -305,7 +309,7 @@ class CompletedCaptureJobFactory(InProgressCaptureJobFactory):
 
 @register_factory
 class FailedCaptureJobFactory(CompletedCaptureJobFactory):
-    status = 'failed'
+    status = CaptureJob.Status.FAILED
     message = {'error': ['Failed during capture.']}
     archive = None
 
@@ -341,6 +345,45 @@ class ArchiveFactory(factory.DjangoModelFactory):
         lambda o: f"https://our-cloud-storage.com/{factory.Faker('uuid4').generate()}.wacz?params=for-presigned-download"
     )
 
+
+# I'm defining this at the top-level scope so that it can be imported and used
+# outside of the contexts of tests, for instance, in local development.
+def create_capture_job(status=None, **kwargs):
+    if status is None:
+        status = random.choices(CaptureJob.Status.values)[0]
+    if status not in CaptureJob.Status.values:
+        raise ValueError(f"Status must be one of {CaptureJob.Status.values}")
+    return globals()[f"{humps.pascalize(status)}CaptureJobFactory"](**kwargs)
+
+
+@pytest.fixture
+def capturejob_factory(db):
+    """
+    Return a factory function that makes capture jobs for a user.
+
+    Given:
+    >>> capturejob_factory, user = [getfixture(f) for f in ['capturejob_factory', 'user']]
+
+    You can create a capture job with a specific status for a specific user...
+    >>> capture_job = capturejob_factory(user=user, status='in_progress')
+    >>> assert capture_job.user == user
+    >>> assert capture_job.status == CaptureJob.Status.IN_PROGRESS
+
+    ...or, just let the code pick a random status...
+    >>> capture_job_with_random_status = capturejob_factory(user=user)
+    >>> assert capture_job_with_random_status.user == user
+    >>> assert capture_job_with_random_status.status
+
+    ...or, let the code generate a new user.
+    >>> existing_users = list(User.objects.all())
+    >>> capture_job_with_new_user = capturejob_factory()
+    >>> assert capture_job_with_new_user.user not in existing_users
+    >>> assert User.objects.filter(pk=capture_job_with_new_user.user.pk).exists()
+
+    """
+    def factory(status=None, **kwargs):
+        return create_capture_job(status, **kwargs)
+    return factory
 
 ###
 ### k8s capture service mocks ###

@@ -65,3 +65,35 @@ def run_django(port=None):  # pragma: no cover
     else:
         with open_subprocess("watchmedo auto-restart -d ./ -p '*.py' -R -- celery worker --app config.celery.app --loglevel=info -Q celery,background -B -n w1@%h"):
             local(f'python manage.py runserver {port}')
+
+@task()
+@setup_django
+def load_sample_capture_jobs(email=None, status=None, jobs=20):  # pragma: no cover
+    """
+    Using our test fixtures, load some sample capture jobs into the database.
+    You may optionally specify the associated user, the desired status of the jobs,
+    and the number of capture jobs to create.
+
+    If you do not specify a user, one will be selected at random: you must create at least
+    one user before running.
+
+    Sample Invocations:
+    fab load_sample_capture_data
+    fab load_sample_capture_data:email=test_admin_user@example.com
+    fab load_sample_capture_data:email=test_admin_user@example.com,status=completed,jobs=3
+    """
+    from conftest import create_capture_job
+    from main.models import User
+
+    if not User.objects.exists():
+        raise Exception('You must create at least one user before loading sample capture jobs.')
+
+    kwargs = {}
+    if email:
+        kwargs['user'] = User.objects.get(email=email)
+    else:
+        kwargs['user'] = User.objects.order_by("?").first()
+    if status:
+        kwargs['status'] = status
+    for _ in range(int(jobs)):
+        print(create_capture_job(**kwargs))
