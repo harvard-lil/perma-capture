@@ -6,7 +6,6 @@ import factory
 import humps
 import inspect
 from io import BytesIO
-from json.decoder import JSONDecodeError
 import pytest
 import random
 import requests
@@ -357,33 +356,60 @@ def create_capture_job(status=None, **kwargs):
 
 
 @pytest.fixture
-def capturejob_factory(db):
+def capture_job_factory(db):
     """
-    Return a factory function that makes capture jobs for a user.
+    Return a factory function that makes a capture job for a user.
 
     Given:
-    >>> capturejob_factory, user = [getfixture(f) for f in ['capturejob_factory', 'user']]
+    >>> capture_job_factory, user = [getfixture(f) for f in ['capture_job_factory', 'user']]
 
-    You can create a capture job with a specific status for a specific user...
-    >>> capture_job = capturejob_factory(user=user, status='in_progress')
-    >>> assert capture_job.user == user
-    >>> assert capture_job.status == CaptureJob.Status.IN_PROGRESS
+    You can create a capture job for a user with a specific status...
+    >>> cj1 = capture_job_factory(user=user, status='in_progress')
+    >>> cj2 = capture_job_factory(user=user, status='failed')
+    >>> assert cj1.user == cj2.user == user
+    >>> assert cj1.status == CaptureJob.Status.IN_PROGRESS
+    >>> assert cj2.status == CaptureJob.Status.FAILED
 
-    ...or, just let the code pick a random status...
-    >>> capture_job_with_random_status = capturejob_factory(user=user)
-    >>> assert capture_job_with_random_status.user == user
-    >>> assert capture_job_with_random_status.status
+    ...or, just let the code pick a random status.
+    >>> cj3 = capture_job_factory(user=user)
+    >>> assert cj3.user == user
+    >>> assert cj3.status
 
-    ...or, let the code generate a new user.
+    You can also let the code generate a new user.
     >>> existing_users = list(User.objects.all())
-    >>> capture_job_with_new_user = capturejob_factory()
+    >>> capture_job_with_new_user = capture_job_factory()
     >>> assert capture_job_with_new_user.user not in existing_users
     >>> assert User.objects.filter(pk=capture_job_with_new_user.user.pk).exists()
-
     """
-    def factory(status=None, **kwargs):
+    def func(status=None, **kwargs):
         return create_capture_job(status, **kwargs)
-    return factory
+    return func
+
+
+@pytest.fixture
+def user_with_capture_jobs_factory(db):
+    """
+    Given:
+    >>> user_capturejob_factory = getfixture('user_with_capture_jobs_factory')
+
+    Generate a user with a random number of capture jobs.
+    >>> user = user_capturejob_factory()
+    >>> assert user.capture_jobs.exists()
+
+    Generate a user with a specific number of capture jobs.
+    >>> other_user = user_capturejob_factory(job_count=5)
+    >>> assert other_user.capture_jobs.count() == 5
+    """
+    def func(user=None, job_count=None):
+        if user is None:
+            user = UserFactory()
+        if job_count is None:
+            job_count = factory.Faker('random_int', min=3, max=15).generate()
+        for _ in range(job_count):
+            create_capture_job(user=user)
+        return user
+    return func
+
 
 ###
 ### k8s capture service mocks ###
@@ -421,19 +447,6 @@ class CaptureRequestData(factory.Factory):
         factory.Faker('random_digit_not_null').generate(),
         user=o.user
     )])
-
-
-@register_factory
-class CaptureListData(factory.Factory):
-    class Meta:
-        model = dict
-        exclude = ('user',)
-
-    user = factory.SubFactory(UserFactory)
-    jobs = factory.LazyAttribute(lambda o: CaptureJobData.create_batch(
-        factory.Faker('random_digit_not_null').generate(),
-        user=o.user
-    ))
 
 
 @register_factory
@@ -486,36 +499,6 @@ def mock_create_captures(mocker):
             *args,
             code=201,
             generate_data=CaptureRequestData,
-            **kwargs
-        )
-    mock_request = mocker.patch('requests.request', auto_spec=True)
-    mock_request.side_effect = response
-    return mock_request
-
-
-@pytest.fixture()
-def mock_list_captures(mocker):
-    def response(*args, **kwargs):
-        return MockResponse(
-            *args,
-            generate_data=CaptureListData,
-            **kwargs
-        )
-    mock_request = mocker.patch('requests.request', auto_spec=True)
-    mock_request.side_effect = response
-    return mock_request
-
-
-@pytest.fixture()
-def mock_delete_capture(mocker):
-    def raise_expected_json_exception():
-        raise JSONDecodeError('Expected value', '', 0)
-
-    def response(*args, **kwargs):
-        return MockResponse(
-            *args,
-            code=204,
-            generate_data=raise_expected_json_exception,
             **kwargs
         )
     mock_request = mocker.patch('requests.request', auto_spec=True)

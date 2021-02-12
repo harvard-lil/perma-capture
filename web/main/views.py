@@ -25,10 +25,12 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response as ApiResponse
 from rest_framework import serializers, status
 from rest_framework.views import APIView
+from rest_framework.pagination import LimitOffsetPagination
+
 
 from .forms import SignupForm, UserForm, PasswordResetForm
-from .models import User, WebhookSubscription
-from .serializers import WebhookSubscriptionSerializer, ArchiveSerializer
+from .models import CaptureJob, User, WebhookSubscription
+from .serializers import CaptureJobSerializer, ArchiveSerializer, WebhookSubscriptionSerializer
 from .utils import (generate_hmac_signing_key, sign_data, is_valid_signature,
     get_file_hash, query_capture_service, override_access_url_netloc)
 
@@ -61,6 +63,17 @@ def user_passes_test_or_403(test_func):
     return decorator
 
 
+class Paginator(LimitOffsetPagination):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+
+        # set the maximum number of items a user sees per page by default
+        self.default_limit = kwargs.get('page_size', 100)
+
+        # cap how much larger a user can make a page by manually setting the limit URL param
+        self.max_limit = kwargs.get('max_page_size', 500)
+
 ###
 ### Views
 ###
@@ -68,46 +81,27 @@ def user_passes_test_or_403(test_func):
 class CaptureListView(APIView):
 
     @method_decorator(perms_test({'results': {200: ['user'], 401: [None]}, 'extra_fixtures': ['mock_list_captures']}))
+    @method_decorator(perms_test({'results': {200: ['user'], 401: [None]}}))
     def get(self, request):
         """
         List capture jobs for the authenticated user.
 
         Given:
-        >>> user, client, mock_list_captures, django_settings = [getfixture(f) for f in ['user', 'client', 'mock_list_captures', 'settings']]
+        >>> user_factory, client= [getfixture(f) for f in ['user_with_capture_jobs_factory', 'client']]
         >>> url = reverse('captures')
+        >>> user = user_factory(job_count=5)
+        >>> other_user = user_factory(job_count=10)
 
-        We call out to the capture service using the authenticated user's ID.
+        Logged in users see their capture jobs, paginated.
         >>> response = client.get(url, as_user=user)
         >>> check_response(response)
-        >>> assert mock_list_captures.call_args[1]['params'].get('userid') == user.id
-
-        If this application is configured to override and correct the netloc of the WACZ files (see settings_base.py),
-        it is corrected before the response is returned to the user.
-        >>> django_settings.OVERRIDE_ACCESS_URL_NETLOC = {'internal': 'host.docker.internal:9000', 'external': 'localhost:9000'}
-        >>> overridden_response = client.get(url, as_user=user)
-        >>> check_response(overridden_response)
-        >>> for job in overridden_response.data['jobs']:
-        ...     if job['status'] == 'Complete':
-        ...         assert re.compile(f"https?://{django_settings.OVERRIDE_ACCESS_URL_NETLOC['external']}").match(job['access_url'])
-        ...     else:
-        ...         assert job['access_url'] is None
-        >>> for job in response.data['jobs']:
-        ...     if job['status'] == 'Complete':
-        ...         assert not re.compile(f"https?://{django_settings.OVERRIDE_ACCESS_URL_NETLOC['external']}").match(job['access_url'])
-        ...     else:
-        ...         assert job['access_url'] is None
+        >>> assert response.data['count'] == len(response.data['results']) == 5
         """
-        response, data = query_capture_service(
-            method='get',
-            path='/captures',
-            params={'userid': request.user.id},
-            valid_if=lambda code, data: code == 200 and 'jobs' in data
-        )
-        if settings.OVERRIDE_ACCESS_URL_NETLOC:
-            for job in data['jobs']:
-                if job['access_url']:
-                    job['access_url'] = override_access_url_netloc(job['access_url'])
-        return ApiResponse(data)
+        queryset = CaptureJob.objects.filter(user=request.user)
+        paginator = Paginator()
+        items = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = CaptureJobSerializer(items, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     @method_decorator(perms_test({'results': {400: ['user'], 401: [None]}, 'extra_fixtures': ['mock_create_captures']}))
     def post(self, request):
@@ -202,40 +196,31 @@ class CaptureListView(APIView):
 
 class CaptureDetailView(APIView):
 
-    @method_decorator(perms_test({'args': ['capture_job_data.jobid'], 'results': {204: ['user'], 401: [None]}, 'extra_fixtures': ['mock_delete_capture']}))
-    def delete(self, request, jobid):
+    @method_decorator(perms_test({'args': ['capture_job.pk'], 'results': {200: ['capture_job.user'], 401: [None], 403: ['user']}}))
+    def get(self, request, pk):
         """
-        Delete a capture job belonging to the authenticated user.
+        Retrieve details of a capture job.
 
         Given:
-        >>> capture_job_data, client, mock_delete_capture = [getfixture(f) for f in ['capture_job_data', 'client', 'mock_delete_capture']]
-        >>> url = reverse('delete_capture', args=[capture_job_data['jobid']])
-        >>> user = User.objects.get(id=capture_job_data['userid'])
+        >>> capture_job_factory, client = [getfixture(f) for f in ['capture_job_factory', 'client']]
+        >>> invalid_capture_job = capture_job_factory(status='invalid')
+        >>> completed_capture_job = capture_job_factory(status='completed')
 
-        We call out to the capture service using the authenticated user's ID.
-        >>> response = client.delete(url, as_user=user)
-        >>> check_response(response, status_code=204)
-        >>> assert mock_delete_capture.call_args[1]['params'].get('userid') == user.id
+        If the capture job has an associated archive, its serialization is included:
+        >>> response = client.get(reverse('capture', args=[completed_capture_job.pk]), as_user=completed_capture_job.user)
+        >>> check_response(response)
+        >>> assert isinstance(response.data['archive'], dict)
 
-        Capture job IDs must be valid UUIDs. This application validates and returns
-        404 if passed an invalid job ID; if we pass it on to the capture service, we
-        should expect a 400.
-
-        If the job doesn't exist, or has already been deleted, we should expect a 404.
-
-        If the job doesn't belong to the user, we should expect a 403.
-
-        (If we wish to delete a job with admin-level privileges, we should omit the
-        userid param from our API call.)
+        Otherwise, 'archive' is None (null in JSON):
+        >>> response = client.get(reverse('capture', args=[invalid_capture_job.pk]), as_user=invalid_capture_job.user)
+        >>> check_response(response)
+        >>> assert response.data['archive'] is None
         """
-        logger.info(f"Deleting job {jobid} for user {request.user.id}")
-        response, data = query_capture_service(
-            method='delete',
-            path=f"/capture/{jobid}",
-            params={'userid': request.user.id},
-            valid_if=lambda code, data: code in [204, 403, 404]
-        )
-        return ApiResponse(data or None, status=response.status_code)
+        target = get_object_or_404(CaptureJob, pk=pk)
+        if target.user_id != request.user.id:
+            raise PermissionDenied()
+        serializer = CaptureJobSerializer(target)
+        return ApiResponse(serializer.data)
 
 
 class WebhookSubscriptionListView(APIView):
