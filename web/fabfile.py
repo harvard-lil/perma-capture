@@ -106,4 +106,4 @@ def run_fullstack(django_port=None):
     try:
         run_django(django_port)
     finally:
-        os.kill(frontent_proc.pid, signal.SIGKILL)
+        os.kill(frontend_proc.pid, signal.SIGKILL)
