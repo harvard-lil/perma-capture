@@ -300,7 +300,8 @@ class CompletedCaptureJobFactory(InProgressCaptureJobFactory):
         yes_declaration=factory.RelatedFactory(
             'conftest.ArchiveFactory',
             factory_related_name='capture_job',
-            create_capture_job=False
+            create_capture_job=False,
+            expired=factory.Faker('boolean', chance_of_getting_true=70)
         ),
         no_declaration=None
     )
@@ -317,7 +318,7 @@ class FailedCaptureJobFactory(CompletedCaptureJobFactory):
 class ArchiveFactory(factory.DjangoModelFactory):
     class Meta:
         model = Archive
-        exclude = ('create_capture_job', 'user')
+        exclude = ('create_capture_job', 'user', 'expired')
 
     create_capture_job = True
     user = factory.Maybe(
@@ -334,14 +335,25 @@ class ArchiveFactory(factory.DjangoModelFactory):
         ),
         no_declaration=None
     )
+    expired = False
     hash_algorithm = 'sha256'
     hash = factory.Faker('sha256')
     warc_size = factory.Faker('random_int', min=5000, max=200000000)
-    download_expiration_timestamp = factory.LazyFunction(
-        lambda:  timezone.now() + timedelta(minutes=settings.ARCHIVE_EXPIRES_AFTER_MINUTES)
+    download_expiration_timestamp = factory.Maybe(
+        'expired',
+        yes_declaration= factory.LazyFunction(
+            lambda:  timezone.now() - timedelta(minutes=factory.Faker('random_int', min=1, max=60).generate())
+        ),
+        no_declaration=factory.LazyFunction(
+            lambda:  timezone.now() + timedelta(minutes=settings.ARCHIVE_EXPIRES_AFTER_MINUTES)
+        ),
     )
-    download_url = factory.LazyAttribute(
-        lambda o: f"https://our-cloud-storage.com/{factory.Faker('uuid4').generate()}.wacz?params=for-presigned-download"
+    download_url = factory.Maybe(
+        'expired',
+        yes_declaration=None,
+        no_declaration=factory.LazyAttribute(
+            lambda o: f"https://our-cloud-storage.com/{factory.Faker('uuid4').generate()}.wacz?params=for-presigned-download"
+        )
     )
 
 
@@ -400,13 +412,13 @@ def user_with_capture_jobs_factory(db):
     >>> other_user = user_capturejob_factory(job_count=5)
     >>> assert other_user.capture_jobs.count() == 5
     """
-    def func(user=None, job_count=None):
+    def func(user=None, job_count=None, **kwargs):
         if user is None:
             user = UserFactory()
         if job_count is None:
             job_count = factory.Faker('random_int', min=3, max=15).generate()
         for _ in range(job_count):
-            create_capture_job(user=user)
+            create_capture_job(user=user, **kwargs)
         return user
     return func
 

@@ -3,7 +3,6 @@ import datetime
 from functools import wraps
 import humps
 from pytz import timezone as tz
-import re
 import redis
 import requests
 import uuid
@@ -11,7 +10,8 @@ import uuid
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import PasswordResetView
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError as DjangoValidationError
+from django.db.models import Q
 from django.http import (HttpResponseRedirect,  HttpResponseForbidden,
     HttpResponseServerError, HttpResponseBadRequest
 )
@@ -21,12 +21,15 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.clickjacking import xframe_options_exempt
 
+import django_filters
+
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.exceptions import ValidationError
+# from rest_framework.filters import OrderingFilter  # comment in if we need support for ordering
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response as ApiResponse
 from rest_framework import serializers, status
 from rest_framework.views import APIView
-from rest_framework.pagination import LimitOffsetPagination
-
 
 from .forms import SignupForm, UserForm, PasswordResetForm
 from .models import CaptureJob, User, WebhookSubscription
@@ -74,30 +77,132 @@ class Paginator(LimitOffsetPagination):
         # cap how much larger a user can make a page by manually setting the limit URL param
         self.max_limit = kwargs.get('max_page_size', 500)
 
+
+class CaptureJobFilter(django_filters.rest_framework.FilterSet):
+    """
+    Custom filter for filtering capture jobs by query string.
+    """
+    active = django_filters.BooleanFilter(method='is_active')
+    downloadable = django_filters.BooleanFilter(field_name='archive', lookup_expr='download_url__isnull', exclude=True)
+    expired = django_filters.BooleanFilter(method='expired_download')
+    url_contains = django_filters.CharFilter(field_name='requested_url', lookup_expr='icontains')
+
+    def is_active(self, queryset, name, value):
+        active = Q(status__in=['pending', 'in_progress']) | Q(archive__download_url__isnull=False)
+        if value:
+            return queryset.filter(active)
+        return queryset.exclude(active)
+
+    def expired_download(self, queryset, name, value):
+        expired = Q(status='completed', archive__download_url__isnull=True)
+        if value:
+            return queryset.filter(expired)
+        return queryset.exclude(expired)
+
+    class Meta:
+        model = CaptureJob
+        fields = ['status', 'label']
+
+
 ###
 ### Views
 ###
 
 class CaptureListView(APIView):
 
-    @method_decorator(perms_test({'results': {200: ['user'], 401: [None]}, 'extra_fixtures': ['mock_list_captures']}))
+    #
+    # Set up query string filtering of GET endpoint
+    #
+
+    filter_backends = (
+        django_filters.rest_framework.DjangoFilterBackend,  # subclasses can be filtered by keyword if filterset_class is set
+        # OrderingFilter        # can be ordered by order_by= if ordering_fields is set
+    )
+    filterset_class = CaptureJobFilter
+    # ordering_fields = ()      # lock down order_by fields -- security risk if unlimited
+
+    def filter_queryset(self, queryset):
+        """
+        Given a queryset, filter it with whichever filter backend is in use.
+        Copied from GenericAPIView
+        """
+        try:
+            for backend in list(self.filter_backends):
+                queryset = backend().filter_queryset(self.request, queryset, self)
+            return queryset
+        except DjangoValidationError as e:
+            raise ValidationError(e.error_dict)
+
+    #
+    # Endpoints
+    #
+
     @method_decorator(perms_test({'results': {200: ['user'], 401: [None]}}))
     def get(self, request):
         """
         List capture jobs for the authenticated user.
 
         Given:
-        >>> user_factory, client= [getfixture(f) for f in ['user_with_capture_jobs_factory', 'client']]
+        >>> factory, client= [getfixture(f) for f in ['user_with_capture_jobs_factory', 'client']]
         >>> url = reverse('captures')
-        >>> user = user_factory(job_count=5)
-        >>> other_user = user_factory(job_count=10)
+        >>> user = factory(job_count=3, status='completed', archive__expired=False)
+        >>> _ = factory(user=user, job_count=1, status='completed', archive__expired=True)
+        >>> _ = factory(user=user, job_count=1, status='failed')
+        >>> _ = factory(user=user, job_count=1, status='in_progress', requested_url='https://perma.cc/canary')
+        >>> _ = factory(user=user, job_count=1, status='pending')
+        >>> _ = factory(user=user, job_count=1, status='invalid', label='a-very-special-label')
+        >>> assert user.capture_jobs.count() == 8
+        >>> other_user = factory(job_count=10)
 
         Logged in users see their capture jobs, paginated.
         >>> response = client.get(url, as_user=user)
         >>> check_response(response)
+        >>> assert response.data['count'] == len(response.data['results']) == 8
+
+        ## Filtering
+
+        There are a handful of simple filters.
+
+        You can filter by label...
+        >>> response = client.get(f'{url}?label=a-very-special-label', as_user=user)
+        >>> check_response(response)
+        >>> assert response.data['count'] == len(response.data['results']) == 1
+        >>> assert response.data['results'][0]['label'] == 'a-very-special-label'
+
+        ...by status...
+        >>> response = client.get(f'{url}?status=completed', as_user=user)
+        >>> check_response(response)
+        >>> assert response.data['count'] == len(response.data['results']) == 4
+        >>> assert response.data['results'][0]['status'] == 'completed'
+
+        ...and by requested URL (contains, case-insensitive).
+        >>> response = client.get(f'{url}?url_contains=perma.cc', as_user=user)
+        >>> check_response(response)
+        >>> assert response.data['count'] == len(response.data['results']) == 1
+        >>> assert response.data['results'][0]['requested_url'] == 'https://perma.cc/canary'
+
+        There are also a handful of composite filters.
+
+        Just get capture jobs with archives that are available to download...
+        >>> response = client.get(f'{url}?downloadable=true', as_user=user)
+        >>> check_response(response)
+        >>> assert response.data['count'] == len(response.data['results']) == 3
+
+        ...or capture jobs that succeeded, but whose archives have expired and are no longer available...
+        >>> response = client.get(f'{url}?expired=true', as_user=user)
+        >>> check_response(response)
+        >>> assert response.data['count'] == len(response.data['results']) == 1
+
+        ...or capture jobs that are still "active": pending, in progress, or with downloadable archives.
+        >>> response = client.get(f'{url}?active=true', as_user=user)
+        >>> check_response(response)
         >>> assert response.data['count'] == len(response.data['results']) == 5
+
+        ## Sorting
+
+        You can order by pk, and ?should we do any timestamps?
         """
-        queryset = CaptureJob.objects.filter(user=request.user)
+        queryset = self.filter_queryset(CaptureJob.objects.filter(user=request.user))
         paginator = Paginator()
         items = paginator.paginate_queryset(queryset, request, view=self)
         serializer = CaptureJobSerializer(items, many=True)

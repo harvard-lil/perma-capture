@@ -223,7 +223,7 @@ class CaptureJobAdmin(admin.ModelAdmin):
         'human',
         'created_at',
     )
-    list_filter = [UserEmailFilter, UserIDFilter, RequestedURLFilter, 'capture_oembed_view', 'headless', 'human']
+    list_filter = [UserEmailFilter, UserIDFilter, RequestedURLFilter, 'status', 'capture_oembed_view', 'headless', 'human']
     fieldsets = (
         (None, {'fields': ('user_link', 'requested_url', 'capture_oembed_view', 'headless', 'human', 'label')}),
         ('Progress', {'fields': ( 'status', 'message', 'order', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')})

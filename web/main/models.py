@@ -172,7 +172,7 @@ class CaptureJob(TimestampedModel):
     # We should, in some way, record that here. To be determined, as we
     # decide how we are going to produce and store profiles.
     # use_profile = models.SomeField(default=None)
-    label = models.CharField(max_length=255, blank=True, null=True)
+    label = models.CharField(max_length=255, blank=True, null=True, db_index=True)
 
     class Status(models.TextChoices):
         PENDING = 'pending', 'pending'
