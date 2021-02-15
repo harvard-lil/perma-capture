@@ -101,8 +101,10 @@ def load_sample_capture_jobs(email=None, status=None, jobs=20):  # pragma: no co
         print(create_capture_job(**kwargs))
 
 @task
+@setup_django
 def run_fullstack(django_port=None):
-    frontend_proc = subprocess.Popen("yarn && yarn dev", cwd="./frontend", shell=True, stdout=sys.stdout, stderr=sys.stderr)
+    from django.conf import settings
+    frontend_proc = subprocess.Popen(f'yarn && yarn dev --port {settings.VITE_PORT}', cwd="./frontend", shell=True, stdout=sys.stdout, stderr=sys.stderr)
     try:
         run_django(django_port)
     finally:

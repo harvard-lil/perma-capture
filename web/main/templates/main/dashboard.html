@@ -6,6 +6,7 @@
 {% block header_scripts %}
   <script src="{% static 'js/app.js' %}"></script>
   <script src="{{ rwp_base_url }}/ui.js"></script>
+  {% include "includes/vite.html" %}
 {% endblock header_scripts %}
 
 {% block flex %}no{% endblock %}
@@ -14,7 +15,7 @@
 {% block heading %}Create a new archive{% endblock %}
 
 {% block content %}
-
+<div id="app"></div>
   <p class="subheading">Enter any URL to capture it in a downloadable archive.</p>
 
   <captures-app apiPrefix="/{{ api_prefix }}" csrftoken="{{ csrf_token}}" csrftoken_name="csrfmiddlewaretoken">

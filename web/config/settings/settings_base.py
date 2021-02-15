@@ -270,6 +270,8 @@ TEMPLATE_VISIBLE_SETTINGS = (
     'USE_ANALYTICS',
     'ACCESSIBILITY_POLICY_URL',
     'PASSWORD_RESET_TIMEOUT',
+    'VITE_ENTRY_PATH',
+    'VITE_USE_MANIFEST'
 )
 
 DEFAULT_FROM_EMAIL = 'info@perma.cc'
@@ -315,3 +317,5 @@ EXPOSE_WEBHOOK_TEST_ROUTE = False
 
 # Playback
 RWP_BASE_URL = "https://cdn.jsdelivr.net/npm/replaywebpage@1.3.8"
+VITE_MANIFEST_PATH = "frontend/dist/manifest.json"
+VITE_ENTRY_PATH = "src/main.ts"

@@ -1,0 +1,12 @@
+{% if VITE_USE_MANIFEST %}
+{% load vite_manifest %}
+{% with main=VITE_ENTRY_PATH|vite_manifest %}
+{% for path in main.css %}
+<link rel="stylesheet" href="{{ path }}" />
+{% endfor %}
+<script type="module" src="{{ main.file }}"></script>
+{% endwith %}
+{% else %}
+<script type="module" src="http://localhost:{{ VITE_PORT }}/@vite/client"></script>
+<script type="module" src="http://localhost:{{ VITE_PORT }}/{{ VITE_ENTRY_PATH }}"></script>
+{% endif %}
