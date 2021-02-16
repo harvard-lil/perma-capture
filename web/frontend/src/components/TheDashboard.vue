@@ -1,6 +1,5 @@
 <template>
   <TheHeader/>
-  Here is the template
 </template>
 
 <script lang="ts">

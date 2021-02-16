@@ -24,7 +24,32 @@
 </script>
 
 <style scoped>
-  div {
-    color: red;
-  }
+header {
+  background-color: white;
+  padding: 20px 0;
+  width: 100%;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  font-size: 24px;
+}
+
+.header-right {
+  padding-right: 36px;
+  padding-left: 36px;
+  font-size: 18px;
+  margin-top: 6px;
+  font-weight: 300;
+}
+
+.header-right a {
+  padding-left: 12px;
+}
+
+.logo a {
+  font-weight: 900;
+  color: #222;
+  padding-left: 36px;
+  min-width: 7em;
+}
 </style>
