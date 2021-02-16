@@ -1,11 +1,11 @@
 from collections import defaultdict
 from contextlib import contextmanager
-from datetime import timezone as tz
+from datetime import timezone as tz, timedelta
 from distutils.sysconfig import get_python_lib
 import factory
+import humps
 import inspect
 from io import BytesIO
-from json.decoder import JSONDecodeError
 import pytest
 import random
 import requests
@@ -18,7 +18,7 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from django.db.backends import utils as django_db_utils
 
-from main.models import User, WebhookSubscription
+from main.models import User, WebhookSubscription, Archive, CaptureJob
 
 
 # This file defines test fixtures available to all tests.
@@ -43,6 +43,9 @@ def pytest_addoption(parser):
 
 # functions used within this file to set up fixtures
 
+def snake_to_camel(s):
+    return re.sub('((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))', r'_\1', s).lower()
+
 def register_factory(cls):
     """
     Decorator to take a factory class and inject test fixtures. For example,
@@ -52,7 +55,7 @@ def register_factory(cls):
     This is basically the same as the @register decorator provided by the pytest_factoryboy package,
     but because it's simpler it seems to work better with RelatedFactory and SubFactory.
     """
-    camel_case_name = re.sub('((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))', r'_\1', cls.__name__).lower()
+    snake_case_name = re.sub('((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))', r'_\1', cls.__name__).lower()
 
     @pytest.fixture
     def factory_fixture(db):
@@ -62,8 +65,8 @@ def register_factory(cls):
     def instance_fixture(db):
         return cls()
 
-    globals()[camel_case_name] = factory_fixture
-    globals()[camel_case_name.rsplit('_factory', 1)[0]] = instance_fixture
+    globals()[snake_case_name] = factory_fixture
+    globals()[snake_case_name.rsplit('_factory', 1)[0]] = instance_fixture
 
     return cls
 
@@ -255,7 +258,174 @@ def random_webhook_event():
     return random.choice(list(WebhookSubscription.EventType))
 
 
-### capture service mocks ###
+@register_factory
+class CaptureJobFactory(factory.DjangoModelFactory):
+    class Meta:
+        model = CaptureJob
+        exclude = ('create_archive',)
+
+    create_archive = True
+    user = factory.SubFactory(UserFactory)
+
+
+@register_factory
+class InvalidCaptureJobFactory(CaptureJobFactory):
+    requested_url = 'not-a-valid-url'
+    status = CaptureJob.Status.INVALID
+    message = {'url': ['Not a valid URL.']}
+
+
+@register_factory
+class PendingCaptureJobFactory(CaptureJobFactory):
+    requested_url = factory.Faker('url')
+    status = CaptureJob.Status.PENDING
+
+
+@register_factory
+class InProgressCaptureJobFactory(PendingCaptureJobFactory):
+    status = CaptureJob.Status.IN_PROGRESS
+    capture_start_time = factory.Faker('future_datetime', end_date='+1m', tzinfo=tz.utc)
+    step_count = factory.Faker('pyfloat', min_value=1, max_value=10)
+    step_description = factory.Faker('text', max_nb_chars=15)
+
+
+@register_factory
+class CompletedCaptureJobFactory(InProgressCaptureJobFactory):
+    status = CaptureJob.Status.COMPLETED
+    capture_end_time = factory.LazyAttribute(
+        lambda o: o.capture_start_time + timedelta(seconds=factory.Faker('random_int', min=0, max=settings.CELERY_TASK_TIME_LIMIT).generate())
+    )
+    archive = factory.Maybe(
+        'create_archive',
+        yes_declaration=factory.RelatedFactory(
+            'conftest.ArchiveFactory',
+            factory_related_name='capture_job',
+            create_capture_job=False,
+            expired=factory.Faker('boolean', chance_of_getting_true=70)
+        ),
+        no_declaration=None
+    )
+
+
+@register_factory
+class FailedCaptureJobFactory(CompletedCaptureJobFactory):
+    status = CaptureJob.Status.FAILED
+    message = {'error': ['Failed during capture.']}
+    archive = None
+
+
+@register_factory
+class ArchiveFactory(factory.DjangoModelFactory):
+    class Meta:
+        model = Archive
+        exclude = ('create_capture_job', 'user', 'expired')
+
+    create_capture_job = True
+    user = factory.Maybe(
+        'create_capture_job',
+        yes_declaration=factory.SubFactory(UserFactory),
+        no_declaration=None
+    )
+    capture_job = factory.Maybe(
+        'create_capture_job',
+        yes_declaration=factory.SubFactory(
+            CompletedCaptureJobFactory,
+            user=factory.SelfAttribute('..user'),
+            create_archive=False
+        ),
+        no_declaration=None
+    )
+    expired = False
+    hash_algorithm = 'sha256'
+    hash = factory.Faker('sha256')
+    warc_size = factory.Faker('random_int', min=5000, max=200000000)
+    download_expiration_timestamp = factory.Maybe(
+        'expired',
+        yes_declaration= factory.LazyFunction(
+            lambda:  timezone.now() - timedelta(minutes=factory.Faker('random_int', min=1, max=60).generate())
+        ),
+        no_declaration=factory.LazyFunction(
+            lambda:  timezone.now() + timedelta(minutes=settings.ARCHIVE_EXPIRES_AFTER_MINUTES)
+        ),
+    )
+    download_url = factory.Maybe(
+        'expired',
+        yes_declaration=None,
+        no_declaration=factory.LazyAttribute(
+            lambda o: f"https://our-cloud-storage.com/{factory.Faker('uuid4').generate()}.wacz?params=for-presigned-download"
+        )
+    )
+
+
+# I'm defining this at the top-level scope so that it can be imported and used
+# outside of the contexts of tests, for instance, in local development.
+def create_capture_job(status=None, **kwargs):
+    if status is None:
+        status = random.choices(CaptureJob.Status.values)[0]
+    if status not in CaptureJob.Status.values:
+        raise ValueError(f"Status must be one of {CaptureJob.Status.values}")
+    return globals()[f"{humps.pascalize(status)}CaptureJobFactory"](**kwargs)
+
+
+@pytest.fixture
+def capture_job_factory(db):
+    """
+    Return a factory function that makes a capture job for a user.
+
+    Given:
+    >>> capture_job_factory, user = [getfixture(f) for f in ['capture_job_factory', 'user']]
+
+    You can create a capture job for a user with a specific status...
+    >>> cj1 = capture_job_factory(user=user, status='in_progress')
+    >>> cj2 = capture_job_factory(user=user, status='failed')
+    >>> assert cj1.user == cj2.user == user
+    >>> assert cj1.status == CaptureJob.Status.IN_PROGRESS
+    >>> assert cj2.status == CaptureJob.Status.FAILED
+
+    ...or, just let the code pick a random status.
+    >>> cj3 = capture_job_factory(user=user)
+    >>> assert cj3.user == user
+    >>> assert cj3.status
+
+    You can also let the code generate a new user.
+    >>> existing_users = list(User.objects.all())
+    >>> capture_job_with_new_user = capture_job_factory()
+    >>> assert capture_job_with_new_user.user not in existing_users
+    >>> assert User.objects.filter(pk=capture_job_with_new_user.user.pk).exists()
+    """
+    def func(status=None, **kwargs):
+        return create_capture_job(status, **kwargs)
+    return func
+
+
+@pytest.fixture
+def user_with_capture_jobs_factory(db):
+    """
+    Given:
+    >>> user_capturejob_factory = getfixture('user_with_capture_jobs_factory')
+
+    Generate a user with a random number of capture jobs.
+    >>> user = user_capturejob_factory()
+    >>> assert user.capture_jobs.exists()
+
+    Generate a user with a specific number of capture jobs.
+    >>> other_user = user_capturejob_factory(job_count=5)
+    >>> assert other_user.capture_jobs.count() == 5
+    """
+    def func(user=None, job_count=None, **kwargs):
+        if user is None:
+            user = UserFactory()
+        if job_count is None:
+            job_count = factory.Faker('random_int', min=3, max=15).generate()
+        for _ in range(job_count):
+            create_capture_job(user=user, **kwargs)
+        return user
+    return func
+
+
+###
+### k8s capture service mocks ###
+###
 
 @register_factory
 class CaptureJobData(factory.Factory):
@@ -289,19 +459,6 @@ class CaptureRequestData(factory.Factory):
         factory.Faker('random_digit_not_null').generate(),
         user=o.user
     )])
-
-
-@register_factory
-class CaptureListData(factory.Factory):
-    class Meta:
-        model = dict
-        exclude = ('user',)
-
-    user = factory.SubFactory(UserFactory)
-    jobs = factory.LazyAttribute(lambda o: CaptureJobData.create_batch(
-        factory.Faker('random_digit_not_null').generate(),
-        user=o.user
-    ))
 
 
 @register_factory
@@ -354,36 +511,6 @@ def mock_create_captures(mocker):
             *args,
             code=201,
             generate_data=CaptureRequestData,
-            **kwargs
-        )
-    mock_request = mocker.patch('requests.request', auto_spec=True)
-    mock_request.side_effect = response
-    return mock_request
-
-
-@pytest.fixture()
-def mock_list_captures(mocker):
-    def response(*args, **kwargs):
-        return MockResponse(
-            *args,
-            generate_data=CaptureListData,
-            **kwargs
-        )
-    mock_request = mocker.patch('requests.request', auto_spec=True)
-    mock_request.side_effect = response
-    return mock_request
-
-
-@pytest.fixture()
-def mock_delete_capture(mocker):
-    def raise_expected_json_exception():
-        raise JSONDecodeError('Expected value', '', 0)
-
-    def response(*args, **kwargs):
-        return MockResponse(
-            *args,
-            code=204,
-            generate_data=raise_expected_json_exception,
             **kwargs
         )
     mock_request = mocker.patch('requests.request', auto_spec=True)

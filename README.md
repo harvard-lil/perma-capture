@@ -37,6 +37,15 @@ Create a test admin user (follow the prompts, then log in using those credential
 
     # ./manage.py createsuperuser
 
+### Optional: load some sample data
+
+To more fully explore the UI, you may want to load some sample data.
+
+    # fab load_sample_capture_data
+
+See [fabfile.py](https://github.com/harvard-lil/perma-capture/blob/develop/web/fabfile.py#L71)
+for a fuller discussion of options.
+
 ### Optional: wire up a capture service
 
 To capture websites and serve archives, this application must be configured to communicate with a running [capture service](https://github.com/webrecorder/kubecaptures-backend). You can run one locally at the same time as this application using Minikube (Docker driver).

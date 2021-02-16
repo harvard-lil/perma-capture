@@ -1,9 +1,6 @@
 from celery.task.control import inspect as celery_inspect
-import datetime
 from functools import wraps
 import humps
-from pytz import timezone as tz
-import re
 import redis
 import requests
 import uuid
@@ -11,7 +8,8 @@ import uuid
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import PasswordResetView
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError as DjangoValidationError
+from django.db.models import Q
 from django.http import (HttpResponseRedirect,  HttpResponseForbidden,
     HttpResponseServerError, HttpResponseBadRequest
 )
@@ -21,16 +19,20 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.clickjacking import xframe_options_exempt
 
-from rest_framework.decorators import api_view, permission_classes
+import django_filters
+
+from rest_framework.decorators import api_view
+from rest_framework.exceptions import ValidationError
+# from rest_framework.filters import OrderingFilter  # comment in if we need support for ordering
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response as ApiResponse
 from rest_framework import serializers, status
 from rest_framework.views import APIView
 
 from .forms import SignupForm, UserForm, PasswordResetForm
-from .models import User, WebhookSubscription
-from .serializers import WebhookSubscriptionSerializer, ArchiveSerializer
-from .utils import (generate_hmac_signing_key, sign_data, is_valid_signature,
-    get_file_hash, query_capture_service, override_access_url_netloc)
+from .models import CaptureJob, User, WebhookSubscription
+from .serializers import CaptureJobSerializer, WebhookSubscriptionSerializer
+from .utils import query_capture_service, sign_data
 
 from test.test_helpers import check_response
 from .test.test_permissions_helpers import no_perms_test, perms_test
@@ -61,53 +63,147 @@ def user_passes_test_or_403(test_func):
     return decorator
 
 
+class Paginator(LimitOffsetPagination):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+
+        # set the maximum number of items a user sees per page by default
+        self.default_limit = kwargs.get('page_size', 100)
+
+        # cap how much larger a user can make a page by manually setting the limit URL param
+        self.max_limit = kwargs.get('max_page_size', 500)
+
+
+class CaptureJobFilter(django_filters.rest_framework.FilterSet):
+    """
+    Custom filter for filtering capture jobs by query string.
+    """
+    active = django_filters.BooleanFilter(method='is_active')
+    downloadable = django_filters.BooleanFilter(field_name='archive', lookup_expr='download_url__isnull', exclude=True)
+    expired = django_filters.BooleanFilter(method='expired_download')
+    url_contains = django_filters.CharFilter(field_name='requested_url', lookup_expr='icontains')
+
+    def is_active(self, queryset, name, value):
+        active = Q(status__in=['pending', 'in_progress']) | Q(archive__download_url__isnull=False)
+        if value:
+            return queryset.filter(active)
+        return queryset.exclude(active)
+
+    def expired_download(self, queryset, name, value):
+        expired = Q(status='completed', archive__download_url__isnull=True)
+        if value:
+            return queryset.filter(expired)
+        return queryset.exclude(expired)
+
+    class Meta:
+        model = CaptureJob
+        fields = ['status', 'label']
+
+
 ###
 ### Views
 ###
 
 class CaptureListView(APIView):
 
-    @method_decorator(perms_test({'results': {200: ['user'], 401: [None]}, 'extra_fixtures': ['mock_list_captures']}))
+    #
+    # Set up query string filtering of GET endpoint
+    #
+
+    filter_backends = (
+        django_filters.rest_framework.DjangoFilterBackend,  # subclasses can be filtered by keyword if filterset_class is set
+        # OrderingFilter        # can be ordered by order_by= if ordering_fields is set
+    )
+    filterset_class = CaptureJobFilter
+    # ordering_fields = ()      # lock down order_by fields -- security risk if unlimited
+
+    def filter_queryset(self, queryset):
+        """
+        Given a queryset, filter it with whichever filter backend is in use.
+        Copied from GenericAPIView
+        """
+        try:
+            for backend in list(self.filter_backends):
+                queryset = backend().filter_queryset(self.request, queryset, self)
+            return queryset
+        except DjangoValidationError as e:
+            raise ValidationError(e.error_dict)
+
+    #
+    # Endpoints
+    #
+
+    @method_decorator(perms_test({'results': {200: ['user'], 401: [None]}}))
     def get(self, request):
         """
         List capture jobs for the authenticated user.
 
         Given:
-        >>> user, client, mock_list_captures, django_settings = [getfixture(f) for f in ['user', 'client', 'mock_list_captures', 'settings']]
+        >>> factory, client= [getfixture(f) for f in ['user_with_capture_jobs_factory', 'client']]
         >>> url = reverse('captures')
+        >>> user = factory(job_count=3, status='completed', archive__expired=False)
+        >>> _ = factory(user=user, job_count=1, status='completed', archive__expired=True)
+        >>> _ = factory(user=user, job_count=1, status='failed')
+        >>> _ = factory(user=user, job_count=1, status='in_progress', requested_url='https://perma.cc/canary')
+        >>> _ = factory(user=user, job_count=1, status='pending')
+        >>> _ = factory(user=user, job_count=1, status='invalid', label='a-very-special-label')
+        >>> assert user.capture_jobs.count() == 8
+        >>> other_user = factory(job_count=10)
 
-        We call out to the capture service using the authenticated user's ID.
+        Logged in users see their capture jobs, paginated.
         >>> response = client.get(url, as_user=user)
         >>> check_response(response)
-        >>> assert mock_list_captures.call_args[1]['params'].get('userid') == user.id
+        >>> assert response.data['count'] == len(response.data['results']) == 8
 
-        If this application is configured to override and correct the netloc of the WACZ files (see settings_base.py),
-        it is corrected before the response is returned to the user.
-        >>> django_settings.OVERRIDE_ACCESS_URL_NETLOC = {'internal': 'host.docker.internal:9000', 'external': 'localhost:9000'}
-        >>> overridden_response = client.get(url, as_user=user)
-        >>> check_response(overridden_response)
-        >>> for job in overridden_response.data['jobs']:
-        ...     if job['status'] == 'Complete':
-        ...         assert re.compile(f"https?://{django_settings.OVERRIDE_ACCESS_URL_NETLOC['external']}").match(job['access_url'])
-        ...     else:
-        ...         assert job['access_url'] is None
-        >>> for job in response.data['jobs']:
-        ...     if job['status'] == 'Complete':
-        ...         assert not re.compile(f"https?://{django_settings.OVERRIDE_ACCESS_URL_NETLOC['external']}").match(job['access_url'])
-        ...     else:
-        ...         assert job['access_url'] is None
+        ## Filtering
+
+        There are a handful of simple filters.
+
+        You can filter by label...
+        >>> response = client.get(f'{url}?label=a-very-special-label', as_user=user)
+        >>> check_response(response)
+        >>> assert response.data['count'] == len(response.data['results']) == 1
+        >>> assert response.data['results'][0]['label'] == 'a-very-special-label'
+
+        ...by status...
+        >>> response = client.get(f'{url}?status=completed', as_user=user)
+        >>> check_response(response)
+        >>> assert response.data['count'] == len(response.data['results']) == 4
+        >>> assert response.data['results'][0]['status'] == 'completed'
+
+        ...and by requested URL (contains, case-insensitive).
+        >>> response = client.get(f'{url}?url_contains=perma.cc', as_user=user)
+        >>> check_response(response)
+        >>> assert response.data['count'] == len(response.data['results']) == 1
+        >>> assert response.data['results'][0]['requested_url'] == 'https://perma.cc/canary'
+
+        There are also a handful of composite filters.
+
+        Just get capture jobs with archives that are available to download...
+        >>> response = client.get(f'{url}?downloadable=true', as_user=user)
+        >>> check_response(response)
+        >>> assert response.data['count'] == len(response.data['results']) == 3
+
+        ...or capture jobs that succeeded, but whose archives have expired and are no longer available...
+        >>> response = client.get(f'{url}?expired=true', as_user=user)
+        >>> check_response(response)
+        >>> assert response.data['count'] == len(response.data['results']) == 1
+
+        ...or capture jobs that are still "active": pending, in progress, or with downloadable archives.
+        >>> response = client.get(f'{url}?active=true', as_user=user)
+        >>> check_response(response)
+        >>> assert response.data['count'] == len(response.data['results']) == 5
+
+        ## Sorting
+
+        You can order by pk, and ?should we do any timestamps?
         """
-        response, data = query_capture_service(
-            method='get',
-            path='/captures',
-            params={'userid': request.user.id},
-            valid_if=lambda code, data: code == 200 and 'jobs' in data
-        )
-        if settings.OVERRIDE_ACCESS_URL_NETLOC:
-            for job in data['jobs']:
-                if job['access_url']:
-                    job['access_url'] = override_access_url_netloc(job['access_url'])
-        return ApiResponse(data)
+        queryset = self.filter_queryset(CaptureJob.objects.filter(user=request.user))
+        paginator = Paginator()
+        items = paginator.paginate_queryset(queryset, request, view=self)
+        serializer = CaptureJobSerializer(items, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     @method_decorator(perms_test({'results': {400: ['user'], 401: [None]}, 'extra_fixtures': ['mock_create_captures']}))
     def post(self, request):
@@ -127,24 +223,24 @@ class CaptureListView(APIView):
         >>> check_response(response, status_code=201)
         >>> assert all(key in response.data for key in {'urls', 'jobids'})
 
-        We request a callback when the capture is complete:
-        >>> [hook] =  mock_create_captures.call_args[1]['json']['webhooks']
-        >>> assert hook['signingKeyAlgorithm'] is None
-        >>> assert not hook['signingKey']
-        >>> assert hook['callbackUrl'] and hook['userDataField']
-        >>> assert isinstance(hook['signingKey'], str) and isinstance(hook['callbackUrl'], str) and isinstance(hook['userDataField'], str)
+        # We request a callback when the capture is complete:
+        # >>> [hook] =  mock_create_captures.call_args[1]['json']['webhooks']
+        # >>> assert hook['signingKeyAlgorithm'] is None
+        # >>> assert not hook['signingKey']
+        # >>> assert hook['callbackUrl'] and hook['userDataField']
+        # >>> assert isinstance(hook['signingKey'], str) and isinstance(hook['callbackUrl'], str) and isinstance(hook['userDataField'], str)
 
         and...include callback info for any user webhook subscriptions...
         >>> response = client.post(url, {'urls': ['http://example.com']}, content_type='application/json', as_user=webhook_subscription.user)
-        >>> assert len(mock_create_captures.call_args[1]['json']['webhooks']) == 2
+        >>> assert len(mock_create_captures.call_args[1]['json']['webhooks']) == 1
 
         and... include the user_data_field as a string, if supplied.
         >>> response = client.post(url, {'urls': ['http://example.com'], 'user_data_field': 'slack_message=141414'}, content_type='application/json', as_user=webhook_subscription.user)
-        >>> assert len(mock_create_captures.call_args[1]['json']['webhooks']) == 2
-        >>> assert 'slack_message=141414' in mock_create_captures.call_args[1]['json']['webhooks'][1].values()
+        >>> assert len(mock_create_captures.call_args[1]['json']['webhooks']) == 1
+        >>> assert 'slack_message=141414' in mock_create_captures.call_args[1]['json']['webhooks'][0].values()
         >>> response = client.post(url, {'urls': ['http://example.com'], 'user_data_field': 141414}, content_type='application/json', as_user=webhook_subscription.user)
-        >>> assert len(mock_create_captures.call_args[1]['json']['webhooks']) == 2
-        >>> assert '141414' in mock_create_captures.call_args[1]['json']['webhooks'][1].values()
+        >>> assert len(mock_create_captures.call_args[1]['json']['webhooks']) == 1
+        >>> assert '141414' in mock_create_captures.call_args[1]['json']['webhooks'][0].values()
 
         The capture service accepts other parameters: 'tag' and 'embeds'. See our API docs for details.
         We ensure these optional values are cast to the expected types and pass them along, if they are supplied.
@@ -167,16 +263,17 @@ class CaptureListView(APIView):
 
         if settings.SEND_WEBHOOK_DATA_TO_CAPTURE_SERVICE:
             # our callback
-            if settings.CALLBACK_PREFIX:
-                url = f"{settings.CALLBACK_PREFIX}{reverse('archived_callback')}"
-            else:
-                url = request.build_absolute_uri(reverse('archived_callback'))
-            data['webhooks'] = [{
-                'callback_url': url,
-                'signing_key': settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY,
-                'signing_key_algorithm': settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM,
-                'user_data_field': str(timezone.now().timestamp())
-            }]
+            data['webhooks'] = []
+            # if settings.CALLBACK_PREFIX:
+            #     url = f"{settings.CALLBACK_PREFIX}{reverse('archived_callback')}"
+            # else:
+            #     url = request.build_absolute_uri(reverse('archived_callback'))
+            # data['webhooks'] = [{
+            #     'callback_url': url,
+            #     'signing_key': settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY,
+            #     'signing_key_algorithm': settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM,
+            #     'user_data_field': str(timezone.now().timestamp())
+            # }]
             # user callbacks
             webhook_subscriptions = WebhookSubscription.objects.filter(
                 user=request.user,
@@ -202,40 +299,31 @@ class CaptureListView(APIView):
 
 class CaptureDetailView(APIView):
 
-    @method_decorator(perms_test({'args': ['capture_job_data.jobid'], 'results': {204: ['user'], 401: [None]}, 'extra_fixtures': ['mock_delete_capture']}))
-    def delete(self, request, jobid):
+    @method_decorator(perms_test({'args': ['capture_job.pk'], 'results': {200: ['capture_job.user'], 401: [None], 403: ['user']}}))
+    def get(self, request, pk):
         """
-        Delete a capture job belonging to the authenticated user.
+        Retrieve details of a capture job.
 
         Given:
-        >>> capture_job_data, client, mock_delete_capture = [getfixture(f) for f in ['capture_job_data', 'client', 'mock_delete_capture']]
-        >>> url = reverse('delete_capture', args=[capture_job_data['jobid']])
-        >>> user = User.objects.get(id=capture_job_data['userid'])
+        >>> capture_job_factory, client = [getfixture(f) for f in ['capture_job_factory', 'client']]
+        >>> invalid_capture_job = capture_job_factory(status='invalid')
+        >>> completed_capture_job = capture_job_factory(status='completed')
 
-        We call out to the capture service using the authenticated user's ID.
-        >>> response = client.delete(url, as_user=user)
-        >>> check_response(response, status_code=204)
-        >>> assert mock_delete_capture.call_args[1]['params'].get('userid') == user.id
+        If the capture job has an associated archive, its serialization is included:
+        >>> response = client.get(reverse('capture', args=[completed_capture_job.pk]), as_user=completed_capture_job.user)
+        >>> check_response(response)
+        >>> assert isinstance(response.data['archive'], dict)
 
-        Capture job IDs must be valid UUIDs. This application validates and returns
-        404 if passed an invalid job ID; if we pass it on to the capture service, we
-        should expect a 400.
-
-        If the job doesn't exist, or has already been deleted, we should expect a 404.
-
-        If the job doesn't belong to the user, we should expect a 403.
-
-        (If we wish to delete a job with admin-level privileges, we should omit the
-        userid param from our API call.)
+        Otherwise, 'archive' is None (null in JSON):
+        >>> response = client.get(reverse('capture', args=[invalid_capture_job.pk]), as_user=invalid_capture_job.user)
+        >>> check_response(response)
+        >>> assert response.data['archive'] is None
         """
-        logger.info(f"Deleting job {jobid} for user {request.user.id}")
-        response, data = query_capture_service(
-            method='delete',
-            path=f"/capture/{jobid}",
-            params={'userid': request.user.id},
-            valid_if=lambda code, data: code in [204, 403, 404]
-        )
-        return ApiResponse(data or None, status=response.status_code)
+        target = get_object_or_404(CaptureJob, pk=pk)
+        if target.user_id != request.user.id:
+            raise PermissionDenied()
+        serializer = CaptureJobSerializer(target)
+        return ApiResponse(serializer.data)
 
 
 class WebhookSubscriptionListView(APIView):
@@ -409,119 +497,119 @@ class WebhookSubscriptionDetailView(APIView):
         return ApiResponse(status=status.HTTP_204_NO_CONTENT)
 
 
-@no_perms_test
-@api_view(['POST'])
-@permission_classes([])  # no auth required
-def archived_callback(request, format=None):
-    """
-    Respond upon receiving a notification from the capture service that an archive is complete.
+# @no_perms_test
+# @api_view(['POST'])
+# @permission_classes([])  # no auth required
+# def archived_callback(request, format=None):
+#     """
+#     Respond upon receiving a notification from the capture service that an archive is complete.
 
-    Given:
-    >>> client, callback_data, django_settings, _ = [getfixture(f) for f in ['client', 'webhook_callback', 'settings', 'mock_download']]
-    >>> url = reverse('archived_callback')
-    >>> user = User.objects.get(id=callback_data['userid'])
-    >>> assert user.archives.count() == 0
+#     Given:
+#     >>> client, callback_data, django_settings, _ = [getfixture(f) for f in ['client', 'webhook_callback', 'settings', 'mock_download']]
+#     >>> url = reverse('archived_callback')
+#     >>> user = User.objects.get(id=callback_data['userid'])
+#     >>> assert user.archives.count() == 0
 
-    By default, we do not expect the data to be signed.
-    >>> response = client.post(url, callback_data, content_type='application/json')
-    >>> check_response(response)
-    >>> user.refresh_from_db()
-    >>> assert user.archives.count() == 1
+#     By default, we do not expect the data to be signed.
+#     >>> response = client.post(url, callback_data, content_type='application/json')
+#     >>> check_response(response)
+#     >>> user.refresh_from_db()
+#     >>> assert user.archives.count() == 1
 
-    Signature verification can be enabled via Django settings.
-    >>> django_settings.VERIFY_WEBHOOK_SIGNATURE = True
-    >>> django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM = generate_hmac_signing_key()
-    >>> response = client.post(url, callback_data, content_type='application/json')
-    >>> check_response(response, status_code=400, content_includes='Invalid signature')
-    >>> response = client.post(url, callback_data, content_type='application/json',
-    ...     HTTP_X_HOOK_SIGNATURE='foo'
-    ... )
-    >>> check_response(response, status_code=400, content_includes='Invalid signature')
-    >>> response = client.post(url, callback_data, content_type='application/json',
-    ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
-    ... )
-    >>> check_response(response, content_includes='ok')
-    >>> user.refresh_from_db()
-    >>> assert user.archives.count() == 2
+#     Signature verification can be enabled via Django settings.
+#     >>> django_settings.VERIFY_WEBHOOK_SIGNATURE = True
+#     >>> django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM = generate_hmac_signing_key()
+#     >>> response = client.post(url, callback_data, content_type='application/json')
+#     >>> check_response(response, status_code=400, content_includes='Invalid signature')
+#     >>> response = client.post(url, callback_data, content_type='application/json',
+#     ...     HTTP_X_HOOK_SIGNATURE='foo'
+#     ... )
+#     >>> check_response(response, status_code=400, content_includes='Invalid signature')
+#     >>> response = client.post(url, callback_data, content_type='application/json',
+#     ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
+#     ... )
+#     >>> check_response(response, content_includes='ok')
+#     >>> user.refresh_from_db()
+#     >>> assert user.archives.count() == 2
 
-    Hashes are calculated if not supplied by the POSTed data.
-    >>> assert all(key not in callback_data for key in ['hash', 'hash_algorithm'])
-    >>> assert all(archive.hash and archive.hash_algorithm for archive in user.archives.all())
+#     Hashes are calculated if not supplied by the POSTed data.
+#     >>> assert all(key not in callback_data for key in ['hash', 'hash_algorithm'])
+#     >>> assert all(archive.hash and archive.hash_algorithm for archive in user.archives.all())
 
-    If we send a timestamp with our initial request and receive it back, we store that value:
-    >>> assert str(user.archives.last().requested_at.timestamp()) == callback_data['user_data_field']
+#     If we send a timestamp with our initial request and receive it back, we store that value:
+#     >>> assert str(user.archives.last().requested_at.timestamp()) == callback_data['user_data_field']
 
-    If we do not send a timestamp with our initial request, or if the webhook
-    payload does not include it, we default to 00:00:00 UTC 1 January 1970.
-    >>> del callback_data['user_data_field']
-    >>> response = client.post(url, callback_data, content_type='application/json',
-    ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
-    ... )
-    >>> check_response(response)
-    >>> assert user.archives.last().requested_at.timestamp() == 0.000000
+#     If we do not send a timestamp with our initial request, or if the webhook
+#     payload does not include it, we default to 00:00:00 UTC 1 January 1970.
+#     >>> del callback_data['user_data_field']
+#     >>> response = client.post(url, callback_data, content_type='application/json',
+#     ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
+#     ... )
+#     >>> check_response(response)
+#     >>> assert user.archives.last().requested_at.timestamp() == 0.000000
 
-    The POSTed `userid` must match the id of a registered user.
-    >>> callback_data['userid'] = User.objects.last().id + 1
-    >>> assert not User.objects.filter(id=callback_data['userid']).exists()
-    >>> response = client.post(url, callback_data, content_type='application/json',
-    ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
-    ... )
-    >>> check_response(response, status_code=400, content_includes=['user', 'Invalid', 'does not exist'])
+#     The POSTed `userid` must match the id of a registered user.
+#     >>> callback_data['userid'] = User.objects.last().id + 1
+#     >>> assert not User.objects.filter(id=callback_data['userid']).exists()
+#     >>> response = client.post(url, callback_data, content_type='application/json',
+#     ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
+#     ... )
+#     >>> check_response(response, status_code=400, content_includes=['user', 'Invalid', 'does not exist'])
 
-    Note: though jobid and hash should be unique, it is not enforced by this application
-    (as is clear from the examples above).
+#     Note: though jobid and hash should be unique, it is not enforced by this application
+#     (as is clear from the examples above).
 
-    Finally: let's demonstrate that DRF is indeed handling camelcase conversion for us.
-    >>> response_from_snake_case_post = client.post(url, callback_data, content_type='application/json',
-    ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
-    ... )
-    >>> response_from_camel_case_post = client.post(url, humps.camelize(callback_data), content_type='application/json',
-    ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
-    ... )
-    >>> assert response_from_snake_case_post.data == response_from_camel_case_post.data
-    >>> assert humps.camelize(response_from_snake_case_post.data) == response_from_snake_case_post.data
-    """
-    if settings.VERIFY_WEBHOOK_SIGNATURE:
-        # DRF will have deserialized the request data and decamelized all the keys...
-        # which messes up the signature check. We recamelize here, just for that check.
-        camelcase_data = humps.camelize(request.data)
-        if not is_valid_signature(
-            request.headers.get('x-hook-signature', ''),
-            camelcase_data,
-            settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY,
-            settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM
-        ):
-            raise serializers.ValidationError('Invalid signature.')
+#     Finally: let's demonstrate that DRF is indeed handling camelcase conversion for us.
+#     >>> response_from_snake_case_post = client.post(url, callback_data, content_type='application/json',
+#     ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
+#     ... )
+#     >>> response_from_camel_case_post = client.post(url, humps.camelize(callback_data), content_type='application/json',
+#     ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
+#     ... )
+#     >>> assert response_from_snake_case_post.data == response_from_camel_case_post.data
+#     >>> assert humps.camelize(response_from_snake_case_post.data) == response_from_snake_case_post.data
+#     """
+#     if settings.VERIFY_WEBHOOK_SIGNATURE:
+#         # DRF will have deserialized the request data and decamelized all the keys...
+#         # which messes up the signature check. We recamelize here, just for that check.
+#         camelcase_data = humps.camelize(request.data)
+#         if not is_valid_signature(
+#             request.headers.get('x-hook-signature', ''),
+#             camelcase_data,
+#             settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY,
+#             settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM
+#         ):
+#             raise serializers.ValidationError('Invalid signature.')
 
-    # for now, calculate file hash, if not included in POST
-    # (hashing is not yet a feature of the capture service)
-    hash = request.data.get('hash')
-    hash_algorithm = request.data.get('hash_algorithm')
-    if request.data.get('access_url') and (not hash or not hash_algorithm):
-        if settings.OVERRIDE_ACCESS_URL_NETLOC:
-            url = override_access_url_netloc(request.data['access_url'], internal=True)
-        else:
-            url = request.data['access_url']
-        hash, hash_algorithm = get_file_hash(url)
+#     # for now, calculate file hash, if not included in POST
+#     # (hashing is not yet a feature of the capture service)
+#     hash = request.data.get('hash')
+#     hash_algorithm = request.data.get('hash_algorithm')
+#     if request.data.get('access_url') and (not hash or not hash_algorithm):
+#         if settings.OVERRIDE_ACCESS_URL_NETLOC:
+#             url = override_access_url_netloc(request.data['access_url'], internal=True)
+#         else:
+#             url = request.data['access_url']
+#         hash, hash_algorithm = get_file_hash(url)
 
-    # retrieve the datetime from our user_data_field
-    ts = float(request.data.get('user_data_field', '0.000000'))
-    requested_at = datetime.datetime.fromtimestamp(ts, tz(settings.TIME_ZONE))
+#     # retrieve the datetime from our user_data_field
+#     ts = float(request.data.get('user_data_field', '0.000000'))
+#     requested_at = datetime.datetime.fromtimestamp(ts, tz(settings.TIME_ZONE))
 
-    # validate and save
-    serializer = ArchiveSerializer(data={
-        'user': request.data.get('userid'),
-        'jobid': request.data.get('jobid'),
-        'requested_at': requested_at,
-        'hash': hash,
-        'hash_algorithm': hash_algorithm
-    })
-    if serializer.is_valid():
-        serializer.save()
-        if not ts:
-            logger.warning(f'No requested_at timestamp received for archive {serializer.instance.id}; defaulting to Unix Epoch.')
-        return ApiResponse({'status': 'ok'}, status=status.HTTP_200_OK)
-    return ApiResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#     # validate and save
+#     serializer = ArchiveSerializer(data={
+#         'user': request.data.get('userid'),
+#         'jobid': request.data.get('jobid'),
+#         'requested_at': requested_at,
+#         'hash': hash,
+#         'hash_algorithm': hash_algorithm
+#     })
+#     if serializer.is_valid():
+#         serializer.save()
+#         if not ts:
+#             logger.warning(f'No requested_at timestamp received for archive {serializer.instance.id}; defaulting to Unix Epoch.')
+#         return ApiResponse({'status': 'ok'}, status=status.HTTP_200_OK)
+#     return ApiResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @perms_test({'results': {200: ['user', None]}})

@@ -1,3 +1,5 @@
+import itertools
+
 from rest_framework.authtoken.models import Token
 
 from django.conf import settings
@@ -5,6 +7,7 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
+from django.contrib.postgres.fields import JSONField
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.encoding import force_bytes
@@ -158,20 +161,121 @@ class WebhookSubscription(TimestampedModel):
         super().save(*args, **kwargs)
 
 
+class CaptureJob(TimestampedModel):
+    """
+    Metadata about capture jobs requested by a user.
+    """
+    requested_url = models.CharField(max_length=2100, db_index=True)
+    capture_oembed_view = models.BooleanField(default=False)
+    headless = models.BooleanField(default=True)
+    # Some captures will be made using a pre-configured browser profile.
+    # We should, in some way, record that here. To be determined, as we
+    # decide how we are going to produce and store profiles.
+    # use_profile = models.SomeField(default=None)
+    label = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'pending'
+        IN_PROGRESS = 'in_progress', 'in_progress'
+        COMPLETED = 'completed', 'completed'
+        FAILED = 'failed', 'failed'
+        INVALID = 'invalid', 'invalid'
+
+    status = models.CharField(
+        max_length=15,
+        choices=Status.choices,
+        default=Status.INVALID,
+        db_index=True
+    )
+    # "Message" is a field for reporting validation errors or capture error messages. E.g.
+    # {"url": ["URL cannot be empty."]}
+    # {"url": ["Not a valid URL."]}
+    # {"error": ["Failed during capture."]}
+    message = JSONField(null=True, blank=True)
+    # Record whether a human is actively awaiting the results of the job; may influence queue order.
+    human = models.BooleanField(default=False)
+    order = models.FloatField(db_index=True)
+
+    # reporting
+    step_count = models.FloatField(default=0)
+    step_description = models.CharField(max_length=255, blank=True, null=True)
+    capture_start_time = models.DateTimeField(blank=True, null=True)
+    capture_end_time = models.DateTimeField(blank=True, null=True)
+
+    user = models.ForeignKey(
+        'User',
+        on_delete=models.PROTECT,
+        related_name='capture_jobs'
+    )
+
+    # settings to allow our tests to draw out race conditions
+    TEST_PAUSE_TIME = 0
+    TEST_ALLOW_RACE = False
+
+    def __str__(self):
+        return f"CaptureJob {self.pk}"
+
+    def save(self, *args, **kwargs):
+
+        # If this job does not have an order yet (just created),
+        # examine all pending jobs to place this one in a fair position in the queue.
+        # "Fair" means round robin: this job will be processed after every other job submitted by this user,
+        # and then after every other user waiting in line has had at least one job done.
+        if not self.order:
+
+            # get all pending jobs, in reverse priority order
+            pending_jobs = CaptureJob.objects.filter(status='pending', human=self.human).order_by('-order')
+            # narrow down to just the jobs that come *after* the most recent job submitted by this user
+            pending_jobs = list(itertools.takewhile(lambda x: x.user_id != self.user_id, pending_jobs))
+            # flip the list of jobs back around to the order they'll be processed in
+            pending_jobs = list(reversed(pending_jobs))
+
+            # Go through pending jobs until we find two jobs submitted by the same user.
+            # It's not fair for another user to run two jobs after all of ours are done,
+            # so this new job should come right before that user's second job.
+            next_jobs = {}
+            last_job = None
+            for pending_job in pending_jobs:
+                pending_job_user_id = pending_job.user_id
+                if pending_job_user_id in next_jobs:
+                    # pending_job is the other user's second job, so this one goes in between that and last_job
+                    self.order = last_job.order + (pending_job.order - last_job.order)/2
+                    break
+                next_jobs[pending_job_user_id] = pending_job
+                last_job = pending_job
+
+            # If order isn't set yet, that means we should go last. Find the highest current order and add 1.
+            if not self.order:
+                if pending_jobs:
+                    self.order = pending_jobs[-1].order + 1
+                else:
+                    self.order = (CaptureJob.objects.filter(human=self.human).aggregate(models.Max('order'))['order__max'] or 0) + 1
+
+        super().save(*args, **kwargs)
+
+
 
 class Archive(TimestampedModel):
     """
     Metadata about archives produced for a user.
     """
-    jobid = models.UUIDField()
-    requested_at = models.DateTimeField()
-    delivered_at = models.DateTimeField(auto_now_add=True)
     hash = models.CharField(max_length=256)
     hash_algorithm = models.CharField(max_length=32)
-    user = models.ForeignKey(
-        'User',
-        on_delete=models.PROTECT,
-        related_name='archives'
+    warc_size = models.IntegerField(blank=True, null=True)
+    download_url = models.URLField(max_length=2100, null=True)
+    download_expiration_timestamp = models.DateTimeField(null=True)
+
+    # maybe? not sure
+    # content_type = models.CharField(max_length=255, null=False, default='', help_text="HTTP Content-type header.")
+    # contains_screenshot = models.BooleanField(default=False)
+    # Potentially robots.txt / <meta name="robots" content="noarchive"> / X-Robots-Tag Directives
+
+    capture_job = models.OneToOneField(
+        'CaptureJob',
+        on_delete=models.CASCADE,
+        related_name='archive',
+        null=True,
+        blank=True
     )
 
 
