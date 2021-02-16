@@ -7,6 +7,6 @@
 <script type="module" src="{{ main.file }}"></script>
 {% endwith %}
 {% else %}
-<script type="module" src="http://localhost:{{ VITE_PORT }}/@vite/client"></script>
-<script type="module" src="http://localhost:{{ VITE_PORT }}/{{ VITE_ENTRY_PATH }}"></script>
+<script type="module" src="/vite/@vite/client"></script>
+<script type="module" src="/vite/{{ VITE_ENTRY_PATH }}"></script>
 {% endif %}

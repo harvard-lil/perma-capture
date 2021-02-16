@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.contrib.auth import views as auth_views
-from django.urls import path, include
+from django.urls import path, re_path, include
 from django.views.generic import TemplateView
 
 from .test.test_permissions_helpers import no_perms_test
@@ -42,6 +42,11 @@ if settings.EXPOSE_WEBHOOK_TEST_ROUTE:
 # for example, http://localhost:8000/404 triggers an actual 404
 # and http://localhost:8000/404.html shows the 404 template
 if settings.DEBUG or settings.TESTING:
+    from .vite_proxy import ViteProxy
+    urlpatterns += [
+        re_path(r'^(?P<url>vite/.*)$', ViteProxy.as_view(), name='vite_proxy')
+    ]
+
     from .test import views as test_views
     urlpatterns += [
         path(error_page, TemplateView.as_view(template_name=error_page), name=error_page)

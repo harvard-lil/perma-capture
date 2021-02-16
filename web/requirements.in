@@ -36,3 +36,6 @@ pytest-mock         # mocking
 requests-mock       # mock the requests library
 factory-boy         # create django model fixtures on demand
 pyhumps             # a helper for dealing with camel case and snake case
+
+# Frontend Dev
+djproxy

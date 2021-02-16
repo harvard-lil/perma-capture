@@ -180,6 +180,10 @@ docker==4.4.4 \
     --hash=sha256:d3393c878f575d3a9ca3b94471a3c89a6d960b35feb92f033c0de36cc9d934db \
     --hash=sha256:f3607d5695be025fa405a12aca2e5df702a57db63790c73b927eb6a94aac60af \
     # via -r requirements.in
+djproxy==2.3.6 \
+    --hash=sha256:3152528ea85a3fcfbe518fb1523dd7df1aa1080864f72d323b2ee0b8de19c137 \
+    --hash=sha256:60dfaeb9f74910612310aff7ee22708e6f0ab2c7fa3e205d749af6fc240ac0c3 \
+    # via -r requirements.in
 fabric3==1.14.post1 \
     --hash=sha256:647e485ec83f30b587862f92374d6affc217f3d79819d1d7f512e42e7ae51e81 \
     --hash=sha256:7c5a5f2eb3079eb6bd2a69931f1ca298844c730ce3fdc68111db16e8857a0408 \
@@ -291,6 +295,7 @@ pynacl==1.4.0 \
     --hash=sha256:11335f09060af52c97137d4ac54285bcb7df0cef29014a1a4efe64ac065434c4 \
     --hash=sha256:2fe0fc5a2480361dcaf4e6e7cea00e078fcda07ba45f811b167e3f99e8cff574 \
     --hash=sha256:30f9b96db44e09b3304f9ea95079b1b7316b2b4f3744fe3aaecccd95d547063d \
+    --hash=sha256:4e10569f8cbed81cb7526ae137049759d2a8d57726d52c1a000a3ce366779634 \
     --hash=sha256:511d269ee845037b95c9781aa702f90ccc36036f95d0f31373a6a79bd8242e25 \
     --hash=sha256:537a7ccbea22905a0ab36ea58577b39d1fa9b1884869d173b5cf111f006f689f \
     --hash=sha256:54e9a2c849c742006516ad56a88f5c74bf2ce92c9f67435187c3c5953b346505 \
@@ -299,6 +304,7 @@ pynacl==1.4.0 \
     --hash=sha256:7c6092102219f59ff29788860ccb021e80fffd953920c4a8653889c029b2d420 \
     --hash=sha256:8122ba5f2a2169ca5da936b2e5a511740ffb73979381b4229d9188f6dcb22f1f \
     --hash=sha256:9c4a7ea4fb81536c1b1f5cc44d54a296f96ae78c1ebd2311bd0b60be45a48d96 \
+    --hash=sha256:c914f78da4953b33d4685e3cdc7ce63401247a21425c16a39760e282075ac4a6 \
     --hash=sha256:cd401ccbc2a249a47a3a1724c2918fcd04be1f7b54eb2a5a71ff915db0ac51c6 \
     --hash=sha256:d452a6746f0a7e11121e64625109bc4468fc3100452817001dbe018bb8b08514 \
     --hash=sha256:ea6841bc3a76fa4942ce00f3bda7d436fda21e2d91602b9e21b7ca9ecab8f3ff \
@@ -336,11 +342,13 @@ pyyaml==5.3.1 \
     --hash=sha256:06a0d7ba600ce0b2d2fe2e78453a470b5a6e000a985dd4a4e54e436cc36b0e97 \
     --hash=sha256:240097ff019d7c70a4922b6869d8a86407758333f02203e0fc6ff79c5dcede76 \
     --hash=sha256:4f4b913ca1a7319b33cfb1369e91e50354d6f07a135f3b901aca02aa95940bd2 \
+    --hash=sha256:6034f55dab5fea9e53f436aa68fa3ace2634918e8b5994d82f3621c04ff5ed2e \
     --hash=sha256:69f00dca373f240f842b2931fb2c7e14ddbacd1397d57157a9b005a6a9942648 \
     --hash=sha256:73f099454b799e05e5ab51423c7bcf361c58d3206fa7b0d555426b1f4d9a3eaf \
     --hash=sha256:74809a57b329d6cc0fdccee6318f44b9b8649961fa73144a98735b0aaf029f1f \
     --hash=sha256:7739fc0fa8205b3ee8808aea45e968bc90082c10aef6ea95e855e10abf4a37b2 \
     --hash=sha256:95f71d2af0ff4227885f7a6605c37fd53d3a106fcab511b8860ecca9fcf400ee \
+    --hash=sha256:ad9c67312c84def58f3c04504727ca879cb0013b2517c85a9a253f0cb6380c0a \
     --hash=sha256:b8eac752c5e14d3eca0e6dd9199cd627518cb5ec06add0de9d32baeee6fe645d \
     --hash=sha256:cc8955cfbfc7a115fa81d85284ee61147059a753344bc51098f3ccd69b0d7e0c \
     --hash=sha256:d13155f591e6fcc1ec3b30685d50bf0711574e2c0dfffd7644babf8b5102ca1a \
@@ -364,7 +372,7 @@ s3transfer==0.3.4 \
 six==1.15.0 \
     --hash=sha256:30639c035cdb23534cd4aa2dd52c3bf48f06e5f4a941509c8bafd8ce11080259 \
     --hash=sha256:8b74bedcbbbaca38ff6d7491d76f2b06b3592611af620f8426e82dddb04a5ced \
-    # via bcrypt, cryptography, django-extensions, docker, fabric3, packaging, pip-tools, pynacl, python-dateutil, requests-mock, websocket-client
+    # via bcrypt, cryptography, django-extensions, djproxy, docker, fabric3, packaging, pip-tools, pynacl, python-dateutil, requests-mock, websocket-client
 sqlparse==0.3.1 \
     --hash=sha256:022fb9c87b524d1f7862b3037e541f68597a730a8843245c349fc93e1643dc4e \
     --hash=sha256:e162203737712307dfe78860cc56c8da8a852ab2ee33750e33aeadf38d12c548 \
@@ -421,7 +429,7 @@ zipp==3.1.0 \
     # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
-pip==20.2.2 \
-    --hash=sha256:5244e51494f5d1dfbb89da492d4250cb07f9246644736d10ed6c45deb1a48500 \
-    --hash=sha256:58a3b0b55ee2278104165c7ee7bc8e2db6f635067f3c66cf637113ec5aa71584 \
+pip==21.0.1 \
+    --hash=sha256:37fd50e056e2aed635dec96594606f0286640489b0db0ce7607f7e51890372d5 \
+    --hash=sha256:99bbde183ec5ec037318e774b0d8ae0a64352fe53b2c7fd630be1d07e94f41e5 \
     # via pip-tools
