@@ -900,10 +900,10 @@ node-unique-machine-id@^1.1.0:
   dependencies:
     uuid "^3.3.3"
 
-normalize.css@^8.0.1:
-  version "8.0.1"
-  resolved "https://registry.yarnpkg.com/normalize.css/-/normalize.css-8.0.1.tgz#9b98a208738b9cc2634caacbc42d131c97487bf3"
-  integrity sha512-qizSNPO93t1YUuUhP22btGOo3chcvDFqFaj2TRybP0DMxkHOCTYwp3n34fel4a31ORXy4m1Xq0Gyqpb5m33qIg==
+normalize.css@3.0.2:
+  version "3.0.2"
+  resolved "https://registry.yarnpkg.com/normalize.css/-/normalize.css-3.0.2.tgz#060310d24f5e0394f3a42672edb6e80956e8efd4"
+  integrity sha1-BgMQ0k9eA5TzpCZy7bboCVbo79Q=
 
 object-assign@^4.0.1:
   version "4.1.1"

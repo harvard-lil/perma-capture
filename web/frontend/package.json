@@ -9,7 +9,7 @@
   "dependencies": {
     "@fontsource/roboto": "^4.2.1",
     "bulma": "^0.9.2",
-    "normalize.css": "^8.0.1",
+    "normalize.css": "3.0.2",
     "skeleton-css": "^2.0.4",
     "vue": "^3.0.5",
     "vuex": "^4.0.0"
