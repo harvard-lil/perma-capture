@@ -498,11 +498,6 @@ braces@^3.0.1:
   dependencies:
     fill-range "^7.0.1"
 
-bulma@0.9.0:
-  version "0.9.0"
-  resolved "https://registry.yarnpkg.com/bulma/-/bulma-0.9.0.tgz#948c5445a49e9d7546f0826cb3820d17178a814f"
-  integrity sha512-rV75CJkubNUroAt0qCRkjznZLoaXq/ctfMXsMvKSL84UetbSyx5REl96e8GoQ04G4Tkw0XF3STECffTOQrbzOQ==
-
 chalk@^2.0.0, chalk@^2.4.2:
   version "2.4.2"
   resolved "https://registry.yarnpkg.com/chalk/-/chalk-2.4.2.tgz#cd42541677a54333cf541a49108c1432b44c9424"
@@ -900,10 +895,10 @@ node-unique-machine-id@^1.1.0:
   dependencies:
     uuid "^3.3.3"
 
-normalize.css@3.0.2:
-  version "3.0.2"
-  resolved "https://registry.yarnpkg.com/normalize.css/-/normalize.css-3.0.2.tgz#060310d24f5e0394f3a42672edb6e80956e8efd4"
-  integrity sha1-BgMQ0k9eA5TzpCZy7bboCVbo79Q=
+normalize.css@^8.0.1:
+  version "8.0.1"
+  resolved "https://registry.yarnpkg.com/normalize.css/-/normalize.css-8.0.1.tgz#9b98a208738b9cc2634caacbc42d131c97487bf3"
+  integrity sha512-qizSNPO93t1YUuUhP22btGOo3chcvDFqFaj2TRybP0DMxkHOCTYwp3n34fel4a31ORXy4m1Xq0Gyqpb5m33qIg==
 
 object-assign@^4.0.1:
   version "4.1.1"
@@ -1064,11 +1059,6 @@ run-parallel@^1.1.9:
   integrity sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==
   dependencies:
     queue-microtask "^1.2.2"
-
-skeleton-css@^2.0.4:
-  version "2.0.4"
-  resolved "https://registry.yarnpkg.com/skeleton-css/-/skeleton-css-2.0.4.tgz#d70db2f01fe8209ac79f2f4eee83fae8a40591b8"
-  integrity sha1-1w2y8B/oIJrHny9O7oP66KQFkbg=
 
 source-map@0.6.1, source-map@^0.6.1:
   version "0.6.1"
