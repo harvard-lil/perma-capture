@@ -1,15 +1,13 @@
 <template>
-  <header>
-    <div class="navbar-brand logo">
-      <a href="/">{{ app_name }}</a>
-    </div>
-    <!-- {% if not request.user.is_authenticated %} -->
+  <header id="header">
+    <a href="/" class="brand">
+      {{ app_name }} <img alt="" class="logo" src="/static/img/eyes.svg">
+    </a>
     <div class="header-right">
       <a href="#">Sign up</a>
       <a href="#">User Guide</a>
       <a href="#">Log in</a>
     </div>
-    <!-- {% endif %} -->
   </header>
 </template>
 
@@ -24,7 +22,7 @@
 </script>
 
 <style scoped>
-header {
+#header {
   background-color: white;
   padding: 20px 0;
   width: 100%;
@@ -32,6 +30,11 @@ header {
   display: flex;
   justify-content: space-between;
   font-size: 24px;
+}
+
+#header a:hover,
+#header a:focus {
+  color: #DD671A;
 }
 
 .header-right {
@@ -46,10 +49,15 @@ header {
   padding-left: 12px;
 }
 
-.logo a {
+.brand {
   font-weight: 900;
   color: #222;
   padding-left: 36px;
   min-width: 7em;
+}
+
+.logo {
+  height: 15px;
+  margin-left: 5px;
 }
 </style>

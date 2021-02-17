@@ -28,4 +28,31 @@ html, body {
   font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
   color: #2D76EE;
 }
+
+h1 {
+  font-weight: 700;
+  color: black;
+}
+
+.wrapper {
+  height:100%;
+  text-align: center;
+}
+
+.wrapper-flex {
+  display: -webkit-flex;
+  display: flex;
+  flex-direction: column;
+  -webkit-justify-content: center;
+  justify-content:center;
+}
+
+.subheading {
+  text-align: center;
+  margin-top: -32px;
+  color: #DD671A;
+  font-weight: bold;
+  font-size: 1.5em;
+  line-height: 1.3;
+}
 </style>
