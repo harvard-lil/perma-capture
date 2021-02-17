@@ -16,6 +16,8 @@ export default defineComponent({
 
 <style>
 @import 'normalize.css';
+@import 'skeleton-css/css/skeleton.css';
+@import 'bulma/css/bulma.css';
 @import '@fontsource/roboto/300.css';
 @import '@fontsource/roboto/400.css';
 @import '@fontsource/roboto/900.css';
