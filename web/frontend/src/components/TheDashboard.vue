@@ -22,7 +22,15 @@ export default {
 </script>
 
 <style scoped>
+.container {
+  padding: 54px 18px 0 0;
+}
 .h1 {
   font-size: 50px;
+  margin-bottom: 32px;
+  text-align: center;
+}
+.subheading {
+  font-size: 20px;
 }
 </style>

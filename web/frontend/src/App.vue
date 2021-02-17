@@ -24,6 +24,7 @@ export default defineComponent({
 
 html, body {
   height: 100%;
+  font-size: 100%;
   background-color: #F6F8F1;
   font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
   color: #2D76EE;
