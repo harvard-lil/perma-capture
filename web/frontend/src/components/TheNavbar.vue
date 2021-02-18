@@ -14,15 +14,16 @@
 
 <script lang="ts">
 import TheMainNav from './TheMainNav.vue'
-import { mapState } from 'vuex'
+import { createNamespacedHelpers } from 'vuex'
+const { mapState } = createNamespacedHelpers('globals')
 
 export default {
-    components: {
-        TheMainNav
-    },
-    computed: mapState([
-        'app_name'
-    ])
+  components: {
+    TheMainNav
+  },
+  computed: mapState([
+    'app_name'
+  ])
 }
 </script>
 

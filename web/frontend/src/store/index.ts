@@ -1,10 +1,10 @@
-import { createApp } from 'vue'
 import { createStore } from 'vuex'
+import globals from './modules/globals'
+import captures from './modules/captures'
 
 export default createStore({
-  state () {
-    return {
-      app_name: 'capture.perma.cc'
+    modules: {
+        globals,
+        captures
     }
-  }
 })
