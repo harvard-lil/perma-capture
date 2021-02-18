@@ -1,34 +1,22 @@
 <template>
-  <form>    
-    <div class="field">
-      <label for="urls" class="label">URLs</label>
-      <div class="control">
-        <textarea id="urls" rows="3" required="" placeholder="Enter one or more URLs on each line" aria-describedby="urls-errors" class="textarea " aria-invalid="false"></textarea>
-      </div>
-    </div>
-
-    <div class="field">
-      <label class="checkbox">
-        <input id="embed" type="checkbox" class="checkbox">
-        Archive Embedded Version (if available)
-      </label>
-    </div>
-
-    <div class="field">
-      <label for="tag" class="label">Label (Optional)</label>
-      <div class="control">
-        <input id="tag" type="text" class="input" value="">
-      </div>
-    </div>
-
-    <div class="submit-error">
-      <div class="field">
-        <div class="control">
-          <button type="submit" class="button is-link">Capture</button>
-        </div>
-      </div>
-    </div>
-  </form>
+<form>    
+  <div class="mb-3">
+    <label for="urls" class="form-label">URLs</label>
+    <textarea id="urls" class="form-control" rows="3" required="" placeholder="Enter one or more URLs on each line" aria-describedby="urls-errors" aria-invalid="false"></textarea>
+  </div>
+  
+  <div class="mb-3 form-check">
+    <input id="embed" type="checkbox" class="form-check-input">
+    <label for="embed" class="form-check-label">Archive Embedded Version (if available)</label>
+  </div>
+  
+  <div class="mb-3">
+    <label for="tag" class="form-label">Label (Optional)</label>
+    <input id="tag" type="text" class="form-control" value="">
+  </div>
+  
+  <button type="submit" class="btn btn-primary mb-3">Capture</button>
+</form>
 </template>
 
 <script lang="ts">

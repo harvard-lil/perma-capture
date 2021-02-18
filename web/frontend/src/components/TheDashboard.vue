@@ -1,36 +1,23 @@
 <template>
-<TheHeader/>
-<main class="container wrapper-flex">
-  <div class="row">
-    <h1 class="h1">Create a new archive</h1>
-    <p class="subheading">Enter any URL to capture it in a downloadable archive.</p>
-    <CaptureForm/>
-  </div>
+<TheNavbar/>
+<main>
+  <h1 class="text-center display-5">Create a new archive</h1>
+  <p class="text-center">Enter any URL to capture it in a downloadable archive.</p>
+  <CaptureForm/>
 </main>
 </template>
 
 <script lang="ts">
-import TheHeader from './TheHeader.vue'
+import TheNavbar from './TheNavbar.vue'
 import CaptureForm from './CaptureForm.vue'
 
 export default {
   components: {
-      TheHeader,
+      TheNavbar,
       CaptureForm
   }
 }
 </script>
 
 <style scoped>
-.container {
-  padding: 54px 18px 0 0;
-}
-.h1 {
-  font-size: 50px;
-  margin-bottom: 32px;
-  text-align: center;
-}
-.subheading {
-  font-size: 20px;
-}
 </style>
