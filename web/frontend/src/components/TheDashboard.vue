@@ -1,10 +1,16 @@
 <template>
 <TheNavbar/>
 <main>
-  <h1 class="text-center display-5">Create a new archive</h1>
-  <p class="text-center">Enter any URL to capture it in a downloadable archive.</p>
-  <CaptureForm/>
-  <CaptureList/>
+  <div class="mb-5">
+    <h1 class="text-center display-5">Create a new archive</h1>
+    <p class="text-center">Enter any URL to capture it in a downloadable archive.</p>
+  </div>
+  <div class="mb-5">
+    <CaptureForm/>
+  </div>
+  <div class="mb-5">
+    <CaptureList/>
+  </div>
 </main>
 </template>
 

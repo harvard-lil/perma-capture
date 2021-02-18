@@ -4,6 +4,8 @@
     <tr>
       <th scope="col">ID</th>
       <th scope="col">URL</th>
+      <th scope="col">Label</th>
+      <th scope="col">Embedded Version</th>
       <th scope="col">Status</th>
       <th scope="col">Created At</th>
     </tr>
