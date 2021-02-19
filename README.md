@@ -118,22 +118,6 @@ Contributions to this project should be made in individual forks and then merged
 1. Push your branch to your fork: `git push origin feature-1`
 1. Submit a pull request to the upstream develop through GitHub.
 
-
-## Design Notes
-
-### JSON Keys
-
-The [Kubecaptures capture service](https://github.com/webrecorder/kubecaptures-backend) returns JSON data with keys formatted in [camel case](https://en.wikipedia.org/wiki/Camel_case). Since this application is primarily a wrapper for the capture service, we too return camel case keys, even though the Python convention is to use [snake case](https://en.wikipedia.org/wiki/Snake_case).
-
-That requires a bit of acrobatics.
-
-We treat the conversion like that between strings and bytes: we work exclusively with snake case keys within the application and convert to and from camel case at the application boundaries, only when communicating with the capture service API or when serializing our own API responses.
-
-Utilities should, for the most part, keep developers from having to think about this much: Django REST Framework will handle the conversion during serialization/deserialization of standard Django requests/responses; our [utility function]() will handle the conversion when we interact with the capture API inside a view function. But, developers should be aware this is occurring and may occasionally become relevant (for instance, during [signature validation]()).
-
-Please keep this in mind when updating docs: JSON should be in camel case, even though the corresponding Python dictionary of data will be in snake case.
-
-
 ## License
 
 This codebase is Copyright 2020 The President and Fellows of Harvard College and is licensed under the open-source AGPLv3 for public use and modification. See [LICENSE](LICENSE) for details.
