@@ -173,6 +173,10 @@ class CaptureJob(TimestampedModel):
     # decide how we are going to produce and store profiles.
     # use_profile = models.SomeField(default=None)
     label = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+    webhook_data = models.CharField(max_length=255, blank=True, null=True,
+        help_text="This string will be included, verbatim, in any webhook \
+        notification response that you have subscribed to receive."
+    )
 
     class Status(models.TextChoices):
         PENDING = 'pending', 'pending'

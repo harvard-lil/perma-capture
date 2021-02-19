@@ -26,13 +26,13 @@ from rest_framework.exceptions import ValidationError
 # from rest_framework.filters import OrderingFilter  # comment in if we need support for ordering
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response as ApiResponse
-from rest_framework import serializers, status
+from rest_framework import status
 from rest_framework.views import APIView
 
 from .forms import SignupForm, UserForm, PasswordResetForm
 from .models import CaptureJob, User, WebhookSubscription
-from .serializers import CaptureJobSerializer, WebhookSubscriptionSerializer
-from .utils import query_capture_service, sign_data
+from .serializers import CaptureJobSerializer, ReadOnlyCaptureJobSerializer, WebhookSubscriptionSerializer
+from .utils import sign_data
 
 from test.test_helpers import check_response
 from .test.test_permissions_helpers import no_perms_test, perms_test
@@ -202,99 +202,93 @@ class CaptureListView(APIView):
         queryset = self.filter_queryset(CaptureJob.objects.filter(user=request.user))
         paginator = Paginator()
         items = paginator.paginate_queryset(queryset, request, view=self)
-        serializer = CaptureJobSerializer(items, many=True)
+        serializer = ReadOnlyCaptureJobSerializer(items, many=True)
         return paginator.get_paginated_response(serializer.data)
 
-    @method_decorator(perms_test({'results': {400: ['user'], 401: [None]}, 'extra_fixtures': ['mock_create_captures']}))
+    @method_decorator(perms_test({'results': {400: ['user'], 401: [None]}}))
     def post(self, request):
         """
         Launch capture jobs for the authenticated user.
 
         Given:
-        >>> user, webhook_subscription, client, mock_create_captures, django_settings = [getfixture(f) for f in ['user', 'webhook_subscription', 'client', 'mock_create_captures', 'settings']]
+        >>> user, client = [getfixture(f) for f in ['user', 'client']]
         >>> url = reverse('captures')
 
-        POST a list of URLs to capture...
-        >>> check_response(client.post(url, as_user=user), status_code=400, content_includes="'urls' is required")
-        >>> check_response(client.post(url, {'urls': 'http://example.com'}, content_type='application/json', as_user=user), status_code=400, content_includes="must be a list")
-
-        and...receive back the count of launched capture jobs ('urls') and a list of their IDs ('jobids').
-        >>> response = client.post(url, {'urls': ['http://example.com']}, content_type='application/json', as_user=user)
+        You can send a single capture request...
+        >>> response = client.post(url, {'requested_url': 'http://example.com'}, content_type='application/json', as_user=user)
         >>> check_response(response, status_code=201)
-        >>> assert all(key in response.data for key in {'urls', 'jobids'})
+        >>> assert response.data['status'] == 'pending'
 
-        # We request a callback when the capture is complete:
-        # >>> [hook] =  mock_create_captures.call_args[1]['json']['webhooks']
-        # >>> assert hook['signingKeyAlgorithm'] is None
-        # >>> assert not hook['signingKey']
-        # >>> assert hook['callbackUrl'] and hook['userDataField']
-        # >>> assert isinstance(hook['signingKey'], str) and isinstance(hook['callbackUrl'], str) and isinstance(hook['userDataField'], str)
+        ...or a list of independent capture requests.
+        >>> response = client.post(url, [{'requested_url': 'http://example.com/1'}, {'requested_url': 'http://example.com/2', 'capture_oembed_view': True}], content_type='application/json', as_user=user)
+        >>> check_response(response, status_code=201)
+        >>> assert not response.data[0]['capture_oembed_view'] and response.data[1]['capture_oembed_view']
 
-        and...include callback info for any user webhook subscriptions...
-        >>> response = client.post(url, {'urls': ['http://example.com']}, content_type='application/json', as_user=webhook_subscription.user)
-        >>> assert len(mock_create_captures.call_args[1]['json']['webhooks']) == 1
+        We tidy up submitted URLs: stripping whitespace...
+        >>> response = client.post(url, {'requested_url': '   http://example.com   '}, content_type='application/json', as_user=user)
+        >>> check_response(response, status_code=201)
+        >>> response.data['requested_url'] = 'http://example.com'
 
-        and... include the user_data_field as a string, if supplied.
-        >>> response = client.post(url, {'urls': ['http://example.com'], 'user_data_field': 'slack_message=141414'}, content_type='application/json', as_user=webhook_subscription.user)
-        >>> assert len(mock_create_captures.call_args[1]['json']['webhooks']) == 1
-        >>> assert 'slack_message=141414' in mock_create_captures.call_args[1]['json']['webhooks'][0].values()
-        >>> response = client.post(url, {'urls': ['http://example.com'], 'user_data_field': 141414}, content_type='application/json', as_user=webhook_subscription.user)
-        >>> assert len(mock_create_captures.call_args[1]['json']['webhooks']) == 1
-        >>> assert '141414' in mock_create_captures.call_args[1]['json']['webhooks'][0].values()
+        ...and adding http if the protocol is omitted.
+        >>> response = client.post(url, {'requested_url': 'example.com'}, content_type='application/json', as_user=user)
+        >>> check_response(response, status_code=201)
+        >>> response.data['requested_url'] = 'http://example.com'
 
-        The capture service accepts other parameters: 'tag' and 'embeds'. See our API docs for details.
-        We ensure these optional values are cast to the expected types and pass them along, if they are supplied.
-        >>> response = client.post(url, {'urls': ['http://example.com'], 'tag': 9, 'embeds': 'yes'}, content_type='application/json', as_user=user)
-        >>> assert mock_create_captures.call_args[1]['json']['tag'] == '9'
-        >>> assert mock_create_captures.call_args[1]['json']['embeds'] is True
+        We also perform some simple validation.
+        >>> check_response(client.post(url, {'requested_url': ''}, content_type='application/json', as_user=user), status_code=400)
+        >>> check_response(client.post(url, {'requested_url': 'examplecom'}, content_type='application/json', as_user=user), status_code=400)
+        >>> check_response(client.post(url, {'requested_url': 'https://www.ntanet.org/some-article.pdf\\x01'}, content_type='application/json', as_user=user), status_code=400)
+        >>> check_response(client.post(url, {'requested_url': 'file:///etc/passwd'}, content_type='application/json', as_user=user), status_code=400)
+
+        If one request is invalid, we reject the whole batch.
+        >>> check_response(client.post(url, [{'requested_url': 'http://valid.com'}, {'requested_url': 'httpinvalidcom'}], content_type='application/json', as_user=user), status_code=400)
+
+        In addition to specifying the URL, your request can optionally include configuration options:
+        - whether we should use a headless or 'headful' browser to make the capture;
+        - whether you would like the standard web view or the oEmbed snippet view of the target;
+        - a label you would like associated with the job, for your convenience;
+        - a data string you would like passed along to your webhook callbacks, when the capture is complete;
+        - and, finally, "human": an indicator that a human is actively waiting for the result of the capture
+          (for instance, watching the UI, waiting for its completion), and so, we should prioritize it... as
+          opposed to, for instance, a large batch of URLs that can stand a few seconds of queuing.
+        >>> configurable_fields = {
+        ...     'requested_url': 'https://twitter.com/permacc/status/1039225277119954944',
+        ...     'capture_oembed_view': True,
+        ...     'headless': True,
+        ...     'label': 'article-1-url-3',
+        ...     'webhook_data': 'foo=bar&boo=baz',
+        ...     'human': True
+        ... }
+        >>> response = client.post(url, configurable_fields, content_type='application/json', as_user=user)
+        >>> check_response(response, status_code=201)
+        >>> for key in configurable_fields:
+        ...     assert response.data[key] == configurable_fields[key]
+
+        The rest of the fields are read-only.
+        >>> read_only_fields = {
+        ...    'status': 'complete',
+        ...    'message': {'foo': 'bar'},
+        ...    'order': 1.0,
+        ...    'step_count': 5,
+        ...    'step_description': 'foo',
+        ...    'capture_start_time': "2014-06-16T19:23:24Z",
+        ...    'capture_end_time': "2014-06-16T19:23:24Z",
+        ...    'archive': 1
+        ... }
+        >>> response = client.post(url, {'requested_url': 'https://twitter.com/permacc/status/1039225277119954944', 'user': 1, **read_only_fields}, content_type='application/json', as_user=user)
+        >>> check_response(response, status_code=201)
+        >>> for key in read_only_fields:
+        ...     assert response.data[key] != read_only_fields[key]
+        >>> assert 'user' not in response.data
+        >>> assert CaptureJob.objects.get(id=response.data['id']).user_id != 1
         """
-
-        try:
-            data = {
-                'userid': request.user.id,
-                'urls': request.data['urls'],
-                'tag': str(request.data.get('tag', '')),
-                'embeds': bool(request.data.get('embeds')) or False
-            }
-        except KeyError:
-            raise serializers.ValidationError("Key 'urls' is required.")
-        if not isinstance(data['urls'], list):
-            raise serializers.ValidationError("'urls' must be a list.")
-
-        if settings.SEND_WEBHOOK_DATA_TO_CAPTURE_SERVICE:
-            # our callback
-            data['webhooks'] = []
-            # if settings.CALLBACK_PREFIX:
-            #     url = f"{settings.CALLBACK_PREFIX}{reverse('archived_callback')}"
-            # else:
-            #     url = request.build_absolute_uri(reverse('archived_callback'))
-            # data['webhooks'] = [{
-            #     'callback_url': url,
-            #     'signing_key': settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY,
-            #     'signing_key_algorithm': settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM,
-            #     'user_data_field': str(timezone.now().timestamp())
-            # }]
-            # user callbacks
-            webhook_subscriptions = WebhookSubscription.objects.filter(
-                user=request.user,
-                event_type=WebhookSubscription.EventType.ARCHIVE_CREATED
-            )
-            if webhook_subscriptions:
-                for subscription in webhook_subscriptions:
-                    data['webhooks'].append({
-                        'callback_url': subscription.callback_url,
-                        'signing_key': subscription.signing_key,
-                        'signing_key_algorithm': subscription.signing_key_algorithm,
-                        'user_data_field': str(request.data.get('user_data_field', ''))
-                    })
-
-        response, data = query_capture_service(
-            method='post',
-            path='/captures',
-            json=data,
-            valid_if=lambda code, data: code == 201 and all(key in data for key in {'urls', 'jobids'})
-        )
-        return ApiResponse(data, status=response.status_code)
+        many = isinstance(request.data, list)
+        serializer = CaptureJobSerializer(data=request.data, many=many)
+        if serializer.is_valid():
+            serializer.save(user=request.user, status=CaptureJob.Status.PENDING)
+        else:
+            return ApiResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return ApiResponse(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class CaptureDetailView(APIView):
@@ -322,7 +316,7 @@ class CaptureDetailView(APIView):
         target = get_object_or_404(CaptureJob, pk=pk)
         if target.user_id != request.user.id:
             raise PermissionDenied()
-        serializer = CaptureJobSerializer(target)
+        serializer = ReadOnlyCaptureJobSerializer(target)
         return ApiResponse(serializer.data)
 
 
