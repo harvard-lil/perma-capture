@@ -18,8 +18,6 @@ django
 django-extensions
 django-filter
 djangorestframework
-djangorestframework-camel-case  # conform to capture service's JSON convention
-pyhumps             # a helper for dealing with the fallout of the above
 whitenoise          # static file serving
 
 # Features
@@ -35,3 +33,4 @@ pytest-django
 pytest-cov          # record code coverage
 pytest-mock         # mocking
 factory-boy         # create django model fixtures on demand
+pyhumps             # a helper for dealing with camel case and snake case

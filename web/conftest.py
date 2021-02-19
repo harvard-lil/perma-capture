@@ -43,9 +43,6 @@ def pytest_addoption(parser):
 
 # functions used within this file to set up fixtures
 
-def snake_to_camel(s):
-    return re.sub('((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))', r'_\1', s).lower()
-
 def register_factory(cls):
     """
     Decorator to take a factory class and inject test fixtures. For example,
@@ -55,7 +52,7 @@ def register_factory(cls):
     This is basically the same as the @register decorator provided by the pytest_factoryboy package,
     but because it's simpler it seems to work better with RelatedFactory and SubFactory.
     """
-    snake_case_name = re.sub('((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))', r'_\1', cls.__name__).lower()
+    snake_case_name = humps.decamelize(cls.__name__)
 
     @pytest.fixture
     def factory_fixture(db):
@@ -448,20 +445,6 @@ class CaptureJobData(factory.Factory):
 
 
 @register_factory
-class CaptureRequestData(factory.Factory):
-    class Meta:
-        model = dict
-        exclude = ('user',)
-
-    user = factory.SubFactory(UserFactory)
-    urls = factory.LazyAttribute(lambda o: len(o.jobids))
-    jobids = factory.LazyAttribute(lambda o: [job['jobid'] for job in CaptureJobData.create_batch(
-        factory.Faker('random_digit_not_null').generate(),
-        user=o.user
-    )])
-
-
-@register_factory
 class WebhookCallbackFactory(factory.Factory):
     class Meta:
         model = dict
@@ -502,20 +485,6 @@ class MockResponse:
             if not chunk:
                 break
             yield chunk
-
-
-@pytest.fixture()
-def mock_create_captures(mocker):
-    def response(*args, **kwargs):
-        return MockResponse(
-            *args,
-            code=201,
-            generate_data=CaptureRequestData,
-            **kwargs
-        )
-    mock_request = mocker.patch('requests.request', auto_spec=True)
-    mock_request.side_effect = response
-    return mock_request
 
 
 @pytest.fixture()

@@ -1,8 +1,8 @@
 import hashlib
 import hmac
-import humps
 import requests
 import secrets
+import unicodedata
 import urllib.parse
 
 from django.conf import settings
@@ -42,6 +42,13 @@ def send_template_email(subject, template, context, from_address, to_addresses):
     return success_count
 
 
+def contains_control_characters(url_string):
+    for x in str(url_string):
+        if unicodedata.category(x)[0] == "C":
+            return True
+    return False
+
+
 def get_file_hash(url, chunk_size=1024, algorithm='sha256'):
     """
     Download URL and calculate the file's hash.
@@ -57,46 +64,6 @@ def get_file_hash(url, chunk_size=1024, algorithm='sha256'):
 #
 # Communicate with the Browserkube/Kubecaptures capture service
 #
-
-class CaptureServiceException(Exception):
-    pass
-
-
-def safe_get_response_json(response):
-    """
-    Return the response's JSON data, or, if absent, an empty dict.
-    """
-    try:
-        data = response.json()
-    except ValueError:
-        data = {}
-    return data
-
-
-def query_capture_service(method, path, valid_if, params=None, json=None, data=None):
-
-    # Make the request
-    try:
-        response = requests.request(
-            method,
-            f"{settings.BACKEND_API}{path}",
-            params=params,
-            json=humps.camelize(json) if json else None,
-            data=humps.camelize(data) if data else None,
-            timeout=10,
-            allow_redirects=False
-        )
-    except requests.exceptions.RequestException as e:
-        raise CaptureServiceException(f"Communication with the capture service failed: {e}") from e
-
-    # Validate the response
-    try:
-        data = humps.decamelize(safe_get_response_json(response))
-        assert valid_if(response.status_code, data)
-    except AssertionError:
-        raise CaptureServiceException(f"{response.status_code}: {data}")
-
-    return response, data
 
 def override_access_url_netloc(access_url, internal=False):
     return urllib.parse.urlparse(access_url)._replace(
