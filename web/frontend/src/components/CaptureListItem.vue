@@ -1,9 +1,9 @@
 <template>
   <tr>
     <th scope="row">{{ capture.id }}</th>
-    <td><a :href=capture.requestedUrl>{{ capture.requestedUrl }}</a></td>
+    <td><a :href=capture.requested_url>{{ capture.requested_url }}</a></td>
     <td>{{ capture.label }}</td>
-    <td><input class="form-check-input" type="checkbox" :value=capture.captureOembedView id="flexCheckDisabled" disabled></td>
+    <td><input class="form-check-input" type="checkbox" :value=capture.capture_oembed_view id="flexCheckDisabled" disabled></td>
     <td><span :class="['badge', 'bg-'+statusBG]">{{ capture.status }}</span></td>
     <td>{{ formattedDate }}</td>
   </tr>
@@ -14,7 +14,7 @@ export default {
   props: ['capture'],
   computed: {
     formattedDate() {
-      return (new Date(this.capture.createdAt)).toLocaleDateString()
+      return (new Date(this.capture.created_at)).toLocaleDateString()
     },
     statusBG() {
       return {
