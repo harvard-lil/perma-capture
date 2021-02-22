@@ -28,4 +28,7 @@ export default {
 </script>
 
 <style scoped>
+  .navbar-brand {
+    color: var(--color-black);
+  }
 </style>

@@ -1,5 +1,5 @@
 <template>
-<form>    
+<form class="capture-form p-3">
   <div class="mb-3">
     <label for="urls" class="form-label">URLs</label>
     <textarea id="urls" class="form-control" rows="3" required="" placeholder="Enter one or more URLs on each line" aria-describedby="urls-errors" aria-invalid="false"></textarea>
@@ -23,4 +23,7 @@
 </script>
 
 <style scoped>
+  .capture-form {
+    background: var(--color-background);
+  }
 </style>
