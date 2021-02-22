@@ -152,9 +152,9 @@ django-extensions==3.0.3 \
     --hash=sha256:6230898b1e1d5deb3ddab8335b2d270edb7afa4ef916a95e479a19fdfb0464cb \
     --hash=sha256:d5fcf8f3bab019487e07473c24453bccd5acfb4440f3ef36788294c307b09d4c \
     # via -r requirements.in
-django==3.0.8 \
-    --hash=sha256:31a5fbbea5fc71c99e288ec0b2f00302a0a92c44b13ede80b73a6a4d6d205582 \
-    --hash=sha256:5457fc953ec560c5521b41fad9e6734a4668b7ba205832191bbdff40ec61073c \
+django==3.1.7 \
+    --hash=sha256:32ce792ee9b6a0cbbec340123e229ac9f765dff8c2a4ae9247a14b2ba3a365a7 \
+    --hash=sha256:baf099db36ad31f970775d0be5587cc58a6256a6771a44eb795b554d45f211b8 \
     # via -r requirements.in, djangorestframework
 djangorestframework-camel-case==1.2.0 \
     --hash=sha256:9714d43fba5bb654057c29501649684d3d9f11a92319ae417fd4d65e80d1159d \
