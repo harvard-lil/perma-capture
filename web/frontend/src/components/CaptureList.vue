@@ -22,17 +22,24 @@
 
 <script lang="ts">
 import CaptureListItem from './CaptureListItem.vue'
-import { mapState, mapActions } from 'vuex'
+
+import { createNamespacedHelpers } from 'vuex'
+const { mapState, mapActions } = createNamespacedHelpers('captures')
 
 export default {
   components: {
     CaptureListItem
   },
-  computed: mapState({
-    captures: state => state.captures.all
-  }),
+  computed: {
+    ...mapState({
+      captures: state => state.all.sort((a, b) => b.id - a.id)
+    })
+  },
+  methods: {
+    ...mapActions(['list'])
+  },
   created () {
-    this.$store.dispatch('captures/list')
+    this.list()
   }
 }
 </script>

@@ -1,10 +1,8 @@
 import Axios from '../../config/axios'
 
-interface State {
-  all: Array<{}>
-}
+const url_root = '/captures/'
 
-const state: State = {
+const state = {
   all: []
 }
 
@@ -14,23 +12,31 @@ const getters = {
 const actions = {
   list: ({ commit }, payload) =>
     Axios
-      .get('/captures')
+      .get(url_root)
       .then(resp => {
         commit('replace', resp.data.results);
+      }),
+
+  create: ({ commit }, payload) =>
+    Axios
+      .post(url_root, payload)
+      .then(resp => {
+        commit('append', resp.data)
+      }),
       })
 }
 
 const mutations = {
-  replace: (state: State, payload: Array<{}>) =>
+  replace: (state, payload) =>
     state.all = payload,
 
-  append: (state: State, payload: Array<{}>) =>
+  append: (state, payload) =>
     state.all.push(...payload),
 
-  update: (state: State, payload: {}) =>
+  update: (state, payload) =>
     Object.assign(payload.obj, payload.vals),
 
-  destroy: (state: State, payload: {}) =>
+  destroy: (state, payload) =>
     state.all.splice(state.all.indexOf(payload), 1)
 }
 
