@@ -24,13 +24,11 @@ import { createNamespacedHelpers } from 'vuex'
 const { mapActions } = createNamespacedHelpers('captures')
 
 export default {
-  data() {
-    return {
-      requested_urls: '',
-      capture_oembed_view: false,
-      label: ''
-    }
-  },
+  data: () => ({
+    requested_urls: '',
+    capture_oembed_view: false,
+    label: ''
+  }),
   computed: {
     formatted_urls() {
       return this.requested_urls.split('\n');
