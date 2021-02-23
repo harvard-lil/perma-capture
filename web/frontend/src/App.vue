@@ -3,6 +3,9 @@
 </template>
 
 <script lang="ts">
+import '@popperjs/core'
+import 'bootstrap'
+
 import { defineComponent } from 'vue'
 import TheDashboard from './components/TheDashboard.vue'
 
