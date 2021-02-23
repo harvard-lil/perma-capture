@@ -1,13 +1,13 @@
 <template>
 <form class="capture-form p-3" @submit.prevent="submit">
   <div class="mb-3">
-    <label for="urls" class="form-label">URLs</label>
-    <textarea v-model="urls" id="urls" class="form-control" rows="3" required="" placeholder="Enter one or more URLs on each line" aria-describedby="urls-errors" aria-invalid="false"></textarea>
+    <label for="requested_urls" class="form-label">URLs</label>
+    <textarea v-model="requested_urls" id="requested_urls" class="form-control" rows="3" required="" placeholder="Enter one or more URLs on each line" aria-describedby="urls-errors" aria-invalid="false"></textarea>
   </div>
   
   <div class="mb-3 form-check">
-    <input v-model="embed" id="embed" type="checkbox" class="form-check-input">
-    <label for="embed" class="form-check-label">Archive Embedded Version (if available)</label>
+    <input v-model="capture_oembed_view" id="capture_oembed_view" type="checkbox" class="form-check-input">
+    <label for="capture_oembed_view" class="form-check-label">Archive Embedded Version (if available)</label>
   </div>
   
   <div class="mb-3">
@@ -26,14 +26,14 @@ const { mapActions } = createNamespacedHelpers('captures')
 export default {
   data() {
     return {
-      urls: '',
-      embed: false,
+      requested_urls: '',
+      capture_oembed_view: false,
       label: ''
     }
   },
   computed: {
     formatted_urls() {
-      return this.urls.split('\n');
+      return this.requested_urls.split('\n');
     }
   },
   methods: {
@@ -41,7 +41,7 @@ export default {
     submit() {
       this.create(this.formatted_urls.map(url => ({
         requested_url: url,
-        capture_oembed_view: this.embed,
+        capture_oembed_view: this.capture_oembed_view,
         label: this.label
       })))
     }
