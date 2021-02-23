@@ -38,12 +38,13 @@ export default {
   },
   methods: {
     ...mapActions(['create']),
-    submit() {
+    submit(e) {
       this.create(this.formatted_urls.map(url => ({
         requested_url: url,
         capture_oembed_view: this.capture_oembed_view,
         label: this.label
       })))
+      e.target.reset()
     }
   }
 }
