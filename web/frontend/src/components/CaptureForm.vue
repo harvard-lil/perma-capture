@@ -1,5 +1,9 @@
 <template>
-<form class="capture-form p-3" @submit.prevent="submit">
+<form ref="form"
+      class="capture-form p-3"
+      @submit.prevent="submit"
+      @keydown.shift.enter.exact.prevent="submit"
+      @keydown.meta.enter.exact.prevent="submit">
   <div class="mb-3">
     <label for="requested_urls" class="form-label">URLs</label>
     <textarea v-model="requested_urls" id="requested_urls" class="form-control" rows="3" required="" placeholder="Enter one or more URLs on each line" aria-describedby="urls-errors" aria-invalid="false"></textarea>
@@ -36,13 +40,13 @@ export default {
   },
   methods: {
     ...mapActions(['create']),
-    submit(e) {
+    submit() {
       this.create(this.formatted_urls.map(url => ({
         requested_url: url,
         capture_oembed_view: this.capture_oembed_view,
         label: this.label
       })))
-      e.target.reset()
+      this.$refs.form.reset()
     }
   }
 }
