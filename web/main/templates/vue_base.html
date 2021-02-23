@@ -1,6 +1,17 @@
 {% extends "base.html" %}
 
 {% block css %}{% endblock css %}
-{% block header_scripts %}{% include "includes/vite.html" %}{% endblock %}
+{% block header_scripts %}
+<script>
+  const store_bootstrap = {
+      user: {
+          is_authenticated: {{ request.user.is_authenticated | lower }},
+          is_staff: {{ request.user.is_staff | lower }},
+          first_name: '{{ request.user.first_name }}'
+      }
+  };
+</script>
+{% include "includes/vite.html" %}
+{% endblock %}
 {% block body %}<div id="app" class="container"></div>{% endblock body %}
 {% block scripts %}{% endblock scripts %}
