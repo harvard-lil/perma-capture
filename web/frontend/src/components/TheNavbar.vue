@@ -1,7 +1,9 @@
 <template>
-<nav class="navbar mb-3 py-3">
-  <a href="/" class="navbar-brand">{{ app_name }}</a>
-  <TheMainNav/>
+<nav class="navbar navbar-expand-lg mb-3 py-3">
+  <div class="container-fluid">
+    <a href="/" class="navbar-brand">{{ app_name }}</a>
+    <TheMainNav/>
+  </div>
 </nav>
 </template>
 
