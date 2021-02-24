@@ -1,6 +1,5 @@
 <template>
   <tr>
-    <th scope="row">{{ capture.id }}</th>
     <td><a :href=capture.requested_url>{{ capture.requested_url }}</a></td>
     <td>{{ capture.label }}</td>
     <td><input class="form-check-input" type="checkbox" v-model="capture.capture_oembed_view" id="flexCheckDisabled" disabled></td>

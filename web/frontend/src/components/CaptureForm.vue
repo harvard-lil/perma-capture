@@ -44,7 +44,8 @@ export default {
       this.create(this.formatted_urls.map(url => ({
         requested_url: url,
         capture_oembed_view: this.capture_oembed_view,
-        label: this.label
+        label: this.label,
+        created_at: new Date().toISOString()
       })))
       this.$refs.form.reset()
     }

@@ -2,7 +2,6 @@
 <table class="table">
   <thead>
     <tr>
-      <th scope="col">ID</th>
       <th scope="col">URL</th>
       <th scope="col">Label</th>
       <th scope="col">Embedded Version</th>
@@ -32,7 +31,8 @@ export default {
   },
   computed: {
     ...mapState({
-      captures: state => state.all.sort((a, b) => b.id - a.id)
+      captures: state => state.all.sort((a, b) =>
+        new Date(b.created_at) - new Date(a.created_at))
     })
   },
   methods: {
