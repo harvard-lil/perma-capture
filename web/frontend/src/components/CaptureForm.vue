@@ -35,7 +35,7 @@ export default {
   }),
   computed: {
     formatted_urls() {
-      return this.requested_urls.split('\n');
+      return this.requested_urls.trim().split('\n');
     }
   },
   methods: {
