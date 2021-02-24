@@ -165,7 +165,7 @@ class CaptureJob(TimestampedModel):
     """
     Metadata about capture jobs requested by a user.
     """
-    requested_url = models.CharField(max_length=2100, db_index=True)
+    requested_url = models.CharField(max_length=2100, db_index=True, blank=True, null=False, default='')
     capture_oembed_view = models.BooleanField(default=False)
     headless = models.BooleanField(default=True)
     # Some captures will be made using a pre-configured browser profile.
@@ -188,7 +188,7 @@ class CaptureJob(TimestampedModel):
     status = models.CharField(
         max_length=15,
         choices=Status.choices,
-        default=Status.INVALID,
+        default=Status.PENDING,
         db_index=True
     )
     # "Message" is a field for reporting validation errors or capture error messages. E.g.

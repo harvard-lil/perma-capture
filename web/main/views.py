@@ -205,7 +205,7 @@ class CaptureListView(APIView):
         serializer = ReadOnlyCaptureJobSerializer(items, many=True)
         return paginator.get_paginated_response(serializer.data)
 
-    @method_decorator(perms_test({'results': {400: ['user'], 401: [None]}}))
+    @method_decorator(perms_test({'results': {201: ['user'], 401: [None]}}))
     def post(self, request):
         """
         Launch capture jobs for the authenticated user.
@@ -223,25 +223,6 @@ class CaptureListView(APIView):
         >>> response = client.post(url, [{'requested_url': 'http://example.com/1'}, {'requested_url': 'http://example.com/2', 'capture_oembed_view': True}], content_type='application/json', as_user=user)
         >>> check_response(response, status_code=201)
         >>> assert not response.data[0]['capture_oembed_view'] and response.data[1]['capture_oembed_view']
-
-        We tidy up submitted URLs: stripping whitespace...
-        >>> response = client.post(url, {'requested_url': '   http://example.com   '}, content_type='application/json', as_user=user)
-        >>> check_response(response, status_code=201)
-        >>> response.data['requested_url'] = 'http://example.com'
-
-        ...and adding http if the protocol is omitted.
-        >>> response = client.post(url, {'requested_url': 'example.com'}, content_type='application/json', as_user=user)
-        >>> check_response(response, status_code=201)
-        >>> response.data['requested_url'] = 'http://example.com'
-
-        We also perform some simple validation.
-        >>> check_response(client.post(url, {'requested_url': ''}, content_type='application/json', as_user=user), status_code=400)
-        >>> check_response(client.post(url, {'requested_url': 'examplecom'}, content_type='application/json', as_user=user), status_code=400)
-        >>> check_response(client.post(url, {'requested_url': 'https://www.ntanet.org/some-article.pdf\\x01'}, content_type='application/json', as_user=user), status_code=400)
-        >>> check_response(client.post(url, {'requested_url': 'file:///etc/passwd'}, content_type='application/json', as_user=user), status_code=400)
-
-        If one request is invalid, we reject the whole batch.
-        >>> check_response(client.post(url, [{'requested_url': 'http://valid.com'}, {'requested_url': 'httpinvalidcom'}], content_type='application/json', as_user=user), status_code=400)
 
         In addition to specifying the URL, your request can optionally include configuration options:
         - whether we should use a headless or 'headful' browser to make the capture;
@@ -285,7 +266,7 @@ class CaptureListView(APIView):
         many = isinstance(request.data, list)
         serializer = CaptureJobSerializer(data=request.data, many=many)
         if serializer.is_valid():
-            serializer.save(user=request.user, status=CaptureJob.Status.PENDING)
+            serializer.save(user=request.user)
         else:
             return ApiResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return ApiResponse(serializer.data, status=status.HTTP_201_CREATED)
