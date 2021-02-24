@@ -32,6 +32,7 @@ from rest_framework.views import APIView
 from .forms import SignupForm, UserForm, PasswordResetForm
 from .models import CaptureJob, User, WebhookSubscription
 from .serializers import CaptureJobSerializer, ReadOnlyCaptureJobSerializer, WebhookSubscriptionSerializer
+from .tasks import run_next_capture
 from .utils import sign_data
 
 from test.test_helpers import check_response
@@ -280,6 +281,11 @@ class CaptureListView(APIView):
             serializer.save(user=request.user)
         else:
             return ApiResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        if settings.LAUNCH_CAPTURE_JOBS:
+            for _ in range(len(request.data) if many else 1):
+                run_next_capture.apply_async()
+
         return ApiResponse(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -572,7 +578,7 @@ class WebhookSubscriptionDetailView(APIView):
 #     hash = request.data.get('hash')
 #     hash_algorithm = request.data.get('hash_algorithm')
 #     if request.data.get('access_url') and (not hash or not hash_algorithm):
-#         if settings.OVERRIDE_ACCESS_URL_NETLOC:
+#         if settings.OVERRIDE_DOWNLOAD_URL_NETLOC:
 #             url = override_access_url_netloc(request.data['access_url'], internal=True)
 #         else:
 #             url = request.data['access_url']

@@ -10,22 +10,48 @@ services:
       POSTGRES_PASSWORD: password
     volumes:
       - db_data:/var/lib/postgresql/data:delegated
+  minio:
+    image: minio/minio:RELEASE.2021-02-19T04-38-02Z
+    entrypoint:
+      - "/entrypoint.sh"
+    command:
+      - "server"
+      - "/data"
+    environment:
+      - MINIO_ACCESS_KEY=accesskey
+      - MINIO_SECRET_KEY=secretkey
+      - DATA_DIR=/data
+      - BUCKET=archives
+    volumes:
+      - ./docker/minio/entrypoint.sh:/entrypoint.sh
+      - minio_data:/data:delegated
+    ports:
+      - "127.0.0.1:9000:9000"
   web:
     build:
       context: .
-      dockerfile: ./docker/Dockerfile
-    image: perma-capture:0.8.1
+      dockerfile: ./docker/web/Dockerfile
+    image: perma-capture:0.9
     tty: true
     command: bash
     environment:
-    - DOCKERIZED=true
+      - DOCKERIZED=true
+      - BROWSERTRIX_HOST_DATA_DIR=${PWD}/services/browsertrix/data
+      - BROWSERTRIX_INTERNAL_DATA_DIR=/tmp/data
+      - BROWSERTRIX_ENTRYPOINT=${PWD}/docker/browsertrix/entrypoint.sh
     volumes:
-      - .:/app:delegated
+      - ./web:/app/web:delegated
+      # Grant the container access to your host's Docker daemon, so that it can launch browsertrix.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Grant the container access to BROWSERTRIX_HOST_DATA_DIR.
+      - ./services/browsertrix/data:/app/services/browsertrix/data:ro
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
       - db
+      - minio
 
 volumes:
   db_data:
   redis_data:
+  minio_data:

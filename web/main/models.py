@@ -1,4 +1,5 @@
 import itertools
+import time
 
 from rest_framework.authtoken.models import Token
 
@@ -7,6 +8,7 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
+from django.db.models.functions import Now
 from django.contrib.postgres.fields import JSONField
 from django.urls import reverse
 from django.utils import timezone
@@ -191,6 +193,7 @@ class CaptureJob(TimestampedModel):
         default=Status.PENDING,
         db_index=True
     )
+    validated_url = models.CharField(max_length=2100, blank=True, null=True)
     # "Message" is a field for reporting validation errors or capture error messages. E.g.
     # {"url": ["URL cannot be empty."]}
     # {"url": ["Not a valid URL."]}
@@ -256,6 +259,61 @@ class CaptureJob(TimestampedModel):
                     self.order = (CaptureJob.objects.filter(human=self.human).aggregate(models.Max('order'))['order__max'] or 0) + 1
 
         super().save(*args, **kwargs)
+
+
+    @classmethod
+    def get_next_job(cls, reserve=False):
+        """
+        Return the next job to work on, looking first at the human queue and then at the robot queue.
+        If `reserve=True`, mark the returned job with `status=in_progress` and remove from queue so the
+        same job can't be returned twice. Caller must make sure the job is actually processed once returned.
+        """
+
+        while True:
+            next_job = cls.objects.filter(status='pending').order_by('-human', 'order', 'pk').first()
+
+            if reserve and next_job:
+                if cls.TEST_PAUSE_TIME:
+                    time.sleep(cls.TEST_PAUSE_TIME)
+
+                # update the returned job to be in_progress instead of pending, so it won't be returned again
+                # set time using database time, so timeout comparisons will be consistent across worker servers
+                update_count = CaptureJob.objects.filter(
+                    status='pending',
+                    pk=next_job.pk
+                ).update(
+                    status='in_progress',
+                    capture_start_time=Now()
+                )
+
+                # if no rows were updated, another worker claimed this job already -- try again
+                if not update_count and not cls.TEST_ALLOW_RACE:
+                    continue
+
+                # load up-to-date time from database
+                next_job.refresh_from_db()
+
+            return next_job
+
+    def queue_position(self):
+        """
+        Search job_queues to calculate the queue position for this job -- how many pending jobs have to be processed
+        before this one?
+        Returns 0 if job is not pending.
+        """
+        if self.status != 'pending':
+            return 0
+
+        queue_position = CaptureJob.objects.filter(status='pending', order__lte=self.order, human=self.human).count()
+        if not self.human:
+            queue_position += CaptureJob.objects.filter(status='pending', human=True).count()
+
+        return queue_position
+
+    def inc_progress(self, inc, description):
+        self.step_count = int(self.step_count) + inc
+        self.step_description = description
+        self.save(update_fields=['step_count', 'step_description'])
 
 
 

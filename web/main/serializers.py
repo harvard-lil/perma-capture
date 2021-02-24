@@ -1,6 +1,9 @@
 from rest_framework import serializers
 
+from django.conf import settings
+
 from main.models import WebhookSubscription, CaptureJob, Archive
+from main.utils import override_access_url_netloc
 
 
 class WebhookSubscriptionSerializer(serializers.ModelSerializer):
@@ -13,9 +16,15 @@ class WebhookSubscriptionSerializer(serializers.ModelSerializer):
 
 class ArchiveSerializer(serializers.ModelSerializer):
 
+    download_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Archive
         read_only_fields = fields = ('id', 'hash', 'hash_algorithm', 'warc_size', 'download_url', 'download_expiration_timestamp', 'created_at', 'updated_at')
+
+    def get_download_url(self, archive):
+        if archive.download_url:
+            return override_access_url_netloc(archive.download_url) if settings.OVERRIDE_DOWNLOAD_URL_NETLOC else archive.download_url
 
 
 class CaptureJobSerializer(serializers.ModelSerializer):

@@ -1,14 +1,21 @@
+import datetime
 import hashlib
 import hmac
-import requests
+from pytz import timezone as tz
 import secrets
 import unicodedata
 import urllib.parse
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
+from django.core.validators import URLValidator, ProhibitNullCharactersValidator
+from django.forms.fields import URLField
 from django.template import Context, RequestContext, engines
 
+#
+# Email
+#
 
 def render_plaintext_template_to_string(template, context, request=None):
     """
@@ -42,33 +49,65 @@ def send_template_email(subject, template, context, from_address, to_addresses):
     return success_count
 
 
-def contains_control_characters(url_string):
-    for x in str(url_string):
-        if unicodedata.category(x)[0] == "C":
-            return True
-    return False
+#
+# Capture helpers
+#
+
+def prohibit_control_characters_validator(value):
+    for char in str(value):
+        if unicodedata.category(char)[0] == "C":
+            raise ValidationError("Non-printing characters are not allowed.", code='invalid', params={'value': value})
 
 
-def get_file_hash(url, chunk_size=1024, algorithm='sha256'):
+def validate_and_clean_url(url):
     """
-    Download URL and calculate the file's hash.
+    The Django form's URLField provides a bunch of validation and cleanup of submitted URLs.
+    Take advantage of that, and restrict allowed protocols to http and https.
+    See Django's tests for a full demonstration.
+    https://github.com/django/django/blob/5fcfe5361e5b8c9738b1ee4c1e9a6f293a7dda40/tests/forms_tests/field_tests/test_urlfield.py
+
+    N.B. Loopback addresses and reserved IP spaces are considered valid.
+
+    N.B. Though we do restrict allowed protocols to http and https, this does not protect
+    against redirect attacks, where an attacker's website redirects to file:///etc/passwrd
+    or similar. That must be handled by the code responsible for the capturing browser.
+    """
+    url_validator = URLField(validators=[
+        URLValidator(schemes=['http', 'https']),
+        ProhibitNullCharactersValidator(),
+        # Our past experience shows it is possible for control characters to make
+        # it through and cause problems down the line. Reject them explicitly.
+        prohibit_control_characters_validator
+    ])
+    return url_validator.clean(url)
+
+
+def get_file_hash(handle, chunk_size=1024, algorithm='sha256'):
+    """
+    Calculate the file's hash.
     """
     hasher = getattr(hashlib, algorithm)()
-    r = requests.get(url, stream=True)
-    for chunk in r.iter_content(chunk_size=1024):
-        if chunk:
-            hasher.update(chunk)
+    while True:
+        chunk = handle.read(chunk_size)
+        if not chunk:
+            break
+        hasher.update(chunk)
     return (hasher.hexdigest(), algorithm)
 
 
-#
-# Communicate with the Browserkube/Kubecaptures capture service
-#
-
-def override_access_url_netloc(access_url, internal=False):
+def override_access_url_netloc(access_url):
     return urllib.parse.urlparse(access_url)._replace(
-        netloc=settings.OVERRIDE_ACCESS_URL_NETLOC['internal' if internal else 'external']
+        netloc=settings.OVERRIDE_DOWNLOAD_URL_NETLOC
     ).geturl()
+
+
+def parse_querystring(url):
+    return urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
+
+
+def datetime_from_timestamp(ts):
+    return datetime.datetime.fromtimestamp(float(ts), tz(settings.TIME_ZONE))
+
 
 #
 # Webhook signatures

@@ -218,6 +218,7 @@ class CaptureJobAdmin(admin.ModelAdmin):
         'capture_oembed_view',
         'headless',
         'label',
+        'order',
         'status',
         'message',
         'human',

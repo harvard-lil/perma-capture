@@ -294,14 +294,25 @@ API_PREFIX = 'api'
 
 # Storage
 ARCHIVE_EXPIRES_AFTER_MINUTES = 4 * 60
+TMP_S3_STORAGE = {
+    'endpoint_url': 'http://minio:9000',
+    'access_key': 'accesskey',
+    'secret_key': 'secretkey',
+    'bucket_name': 'archives'
+}
+OVERRIDE_DOWNLOAD_URL_NETLOC = None
+
+# Browsertrix
+BROWSERTRIX_IMAGE = 'webrecorder/browsertrix-crawler:0.1.5'
+BROWSERTRIX_HOST_DATA_DIR = os.environ.get('BROWSERTRIX_HOST_DATA_DIR')
+BROWSERTRIX_INTERNAL_DATA_DIR = os.environ.get('BROWSERTRIX_INTERNAL_DATA_DIR')
+BROWSERTRIX_ENTRYPOINT = os.environ.get('BROWSERTRIX_ENTRYPOINT')
+BROWSERTRIX_TIMEOUT_SECONDS = 10
+
+LAUNCH_CAPTURE_JOBS = True
 
 # Capture Service
 BACKEND_API = "http://capture-service"
-# Right now, the capture service is sending incorrect access URLs locally.
-# Until that is fixed, use this setting to correct the netloc returned by the API.
-# Example:
-# {'internal': 'host.docker.internal:9000', 'external': 'localhost:9000'}
-OVERRIDE_ACCESS_URL_NETLOC = None
 # We have discussed the possibility that the capture service might communicate
 # with this application via a private network connection, rather than over
 # the public internet or using the service's public name. If that's the case,

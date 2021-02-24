@@ -18,13 +18,14 @@ django
 django-extensions
 django-filter
 djangorestframework
+django-storages
+boto3               # required for django-storages to use s3 backend
 whitenoise          # static file serving
 
 # Features
+docker              # for running browsertrix-crawler
+requests            # for sending webhook notifications
 ua-parser           # user-agent parsing
-
-# API
-requests            # need for contacting api server
 
 # Testing
 flake8
