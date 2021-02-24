@@ -39,9 +39,9 @@ export default {
     }
   },
   methods: {
-    ...mapActions(['create']),
+    ...mapActions(['eagerCreateAndUpdate']),
     submit() {
-      this.create(this.formatted_urls.map(url => ({
+      this.eagerCreateAndUpdate(this.formatted_urls.map(url => ({
         requested_url: url,
         capture_oembed_view: this.capture_oembed_view,
         label: this.label,

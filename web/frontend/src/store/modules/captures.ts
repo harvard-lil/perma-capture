@@ -7,6 +7,10 @@ const state = {
 }
 
 const getters = {
+  getByProperties: state => (props) =>
+    state.all.find(
+      obj => Object.keys(props).reduce((t, key) => t && props[key] == obj[key], true)
+    )
 }
 
 const actions = {
@@ -23,7 +27,18 @@ const actions = {
       .then(resp => {
         commit('append', resp.data)
       }),
+
+  eagerCreateAndUpdate: ({ commit, getters }, payload) => {
+    commit('append', payload)
+    Axios
+      .post(url_root, payload)
+      .then(response => {
+        for (const [i, responseCapture] of response.data.entries()){
+          commit('update', {obj: getters.getByProperties({created_at: payload[i].created_at}),
+                            vals: responseCapture});
+        }
       })
+  }
 }
 
 const mutations = {
