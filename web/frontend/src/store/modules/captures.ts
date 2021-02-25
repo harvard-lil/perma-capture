@@ -28,6 +28,16 @@ const actions = {
         commit('append', resp.data)
       }),
 
+  read: ({ commit, getters }, payload) =>
+    Axios
+      .get(`${url_root}${payload.id}`)
+      .then(resp => {
+        const existing = getters.getByProperties({id: payload.id})
+        existing ?
+          commit('update', {obj: existing, vals: resp.data}) :
+          commit('append', resp.data)
+      }),
+
   eagerCreateAndUpdate: ({ commit, getters }, payload) => {
     commit('append', payload)
     Axios
