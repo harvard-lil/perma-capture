@@ -145,7 +145,7 @@ class CaptureListView(APIView):
         List capture jobs for the authenticated user.
 
         Given:
-        >>> factory, client= [getfixture(f) for f in ['user_with_capture_jobs_factory', 'client']]
+        >>> _, factory, client= [getfixture(f) for f in ['reset_sequences', 'user_with_capture_jobs_factory', 'client']]
         >>> url = reverse('captures')
         >>> user = factory(job_count=3, status='completed', archive__expired=False)
         >>> _ = factory(user=user, job_count=1, status='completed', archive__expired=True)
