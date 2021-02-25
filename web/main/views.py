@@ -75,6 +75,10 @@ class Paginator(LimitOffsetPagination):
         self.max_limit = kwargs.get('max_page_size', 500)
 
 
+class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
+    pass
+
+
 class CaptureJobFilter(django_filters.rest_framework.FilterSet):
     """
     Custom filter for filtering capture jobs by query string.
@@ -83,6 +87,7 @@ class CaptureJobFilter(django_filters.rest_framework.FilterSet):
     downloadable = django_filters.BooleanFilter(field_name='archive', lookup_expr='download_url__isnull', exclude=True)
     expired = django_filters.BooleanFilter(method='expired_download')
     url_contains = django_filters.CharFilter(field_name='requested_url', lookup_expr='icontains')
+    id__in = NumberInFilter(field_name='id', lookup_expr='in')
 
     def is_active(self, queryset, name, value):
         active = Q(status__in=['pending', 'in_progress']) | Q(archive__download_url__isnull=False)
@@ -140,7 +145,7 @@ class CaptureListView(APIView):
         List capture jobs for the authenticated user.
 
         Given:
-        >>> factory, client= [getfixture(f) for f in ['user_with_capture_jobs_factory', 'client']]
+        >>> _, factory, client= [getfixture(f) for f in ['reset_sequences', 'user_with_capture_jobs_factory', 'client']]
         >>> url = reverse('captures')
         >>> user = factory(job_count=3, status='completed', archive__expired=False)
         >>> _ = factory(user=user, job_count=1, status='completed', archive__expired=True)
@@ -149,6 +154,7 @@ class CaptureListView(APIView):
         >>> _ = factory(user=user, job_count=1, status='pending')
         >>> _ = factory(user=user, job_count=1, status='invalid', label='a-very-special-label')
         >>> assert user.capture_jobs.count() == 8
+        >>> assert all(n in [job.id for job in user.capture_jobs.all()] for n in [1, 3, 5, 7])
         >>> other_user = factory(job_count=10)
 
         Logged in users see their capture jobs, paginated.
@@ -171,6 +177,11 @@ class CaptureListView(APIView):
         >>> check_response(response)
         >>> assert response.data['count'] == len(response.data['results']) == 4
         >>> assert response.data['results'][0]['status'] == 'completed'
+
+        ...by ID...
+        >>> response = client.get(f'{url}?id__in=1,3,5,7', as_user=user)
+        >>> check_response(response)
+        >>> assert [job['id'] for job in response.data['results']] == [7, 5, 3, 1]
 
         ...and by requested URL (contains, case-insensitive).
         >>> response = client.get(f'{url}?url_contains=perma.cc', as_user=user)
