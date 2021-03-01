@@ -23,23 +23,47 @@
 import CaptureListItem from './CaptureListItem.vue'
 
 import { createNamespacedHelpers } from 'vuex'
-const { mapState, mapActions } = createNamespacedHelpers('captures')
+const { mapGetters, mapActions } = createNamespacedHelpers('captures')
 
 export default {
+  poller: null,
   components: {
     CaptureListItem
   },
   computed: {
-    ...mapState({
-      captures: state => state.all.sort((a, b) =>
-        new Date(b.created_at) - new Date(a.created_at))
+    ...mapGetters({
+      captures: 'createdAtDesc',
+      processing: 'processing'
     })
   },
   methods: {
-    ...mapActions(['list'])
+    ...mapActions([
+      'list',
+      'batchRead'
+    ]),
+    pollForProcessingChanges() {
+      this.$options.poller = setInterval(() => {
+        this.batchRead(this.processing)
+      }, 3000)
+    },
+    clearProcessingPoll() {
+      clearInterval(this.$options.poller)
+    }
   },
-  created () {
+  watch: {
+    processing(current, previous) {
+      if(this.$options.poller){
+        if(!current.length) this.clearProcessingPoll()
+      } else if(current.length) {
+        this.pollForProcessingChanges()
+      }
+    }
+  },
+  created() {
     this.list()
+  },
+  unmounted() {
+    this.clearProcessingPoll()
   }
 }
 </script>

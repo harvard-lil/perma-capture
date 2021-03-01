@@ -12,15 +12,9 @@
 import { createNamespacedHelpers } from 'vuex'
 const { mapActions } = createNamespacedHelpers('captures')
 
-const TRANSITIONAL_STATES = ["pending", "in_progress"]
-
 export default {
-  poller: null,
   props: ['capture'],
   computed: {
-    isProcessing() {
-      return this.capture.id && TRANSITIONAL_STATES.includes(this.capture.status)
-    },
     statusOrDefault() {
       return this.capture.status || 'pending'
     },
@@ -39,15 +33,6 @@ export default {
   },
   methods: {
     ...mapActions(['read'])
-  },
-  watch: {
-    isProcessing(val, prev) {
-      if(val){
-        this.$options.poller = setInterval(() => this.read(this.capture), 3000)
-      } else {
-        clearInterval(this.$options.poller)
-      }
-    }
   }
 }
 </script>
