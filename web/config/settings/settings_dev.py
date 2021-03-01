@@ -45,5 +45,11 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # For testing error reporting
 ADMINS = [('John', 'john@example.com'), ('Mary', 'mary@example.com')]
 
+# Minio is available at http://minio:9000 from within this container,
+# but is only available at localhost:9000 from the host.
+# Override the netloc during serialization, so download links work.
+OVERRIDE_DOWNLOAD_URL_NETLOC = 'localhost:9000'
+
+
 SEND_WEBHOOK_DATA_TO_CAPTURE_SERVICE = True
 EXPOSE_WEBHOOK_TEST_ROUTE = True

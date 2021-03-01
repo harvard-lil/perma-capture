@@ -41,7 +41,7 @@ Create a test admin user (follow the prompts, then log in using those credential
 
 To more fully explore the UI, you may want to load some sample data.
 
-    # fab load_sample_capture_data
+    # fab load_sample_capture_jobs
 
 See [fabfile.py](https://github.com/harvard-lil/perma-capture/blob/develop/web/fabfile.py#L71)
 for a fuller discussion of options.

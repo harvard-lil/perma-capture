@@ -12,3 +12,5 @@ from .settings_dev import *
 MIDDLEWARE.remove('whitenoise.middleware.WhiteNoiseMiddleware')
 
 TESTING = True
+
+LAUNCH_CAPTURE_JOBS = False
