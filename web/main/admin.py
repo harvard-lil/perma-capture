@@ -223,6 +223,7 @@ class CaptureJobAdmin(admin.ModelAdmin):
         'message',
         'human',
         'created_at',
+        'updated_at',
     )
     list_filter = [UserEmailFilter, UserIDFilter, RequestedURLFilter, 'status', 'capture_oembed_view', 'headless', 'human']
     fieldsets = (
