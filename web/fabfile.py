@@ -78,9 +78,9 @@ def load_sample_capture_jobs(email=None, status=None, jobs=20):  # pragma: no co
     one user before running.
 
     Sample Invocations:
-    fab load_sample_capture_data
-    fab load_sample_capture_data:email=test_admin_user@example.com
-    fab load_sample_capture_data:email=test_admin_user@example.com,status=completed,jobs=3
+    fab load_sample_capture_jobs
+    fab load_sample_capture_jobs:email=test_admin_user@example.com
+    fab load_sample_capture_jobs:email=test_admin_user@example.com,status=completed,jobs=3
     """
     from conftest import create_capture_job
     from main.models import User
