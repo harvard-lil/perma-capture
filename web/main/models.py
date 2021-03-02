@@ -9,7 +9,6 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.db.models.functions import Now
-from django.contrib.postgres.fields import JSONField
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.encoding import force_bytes
@@ -198,7 +197,7 @@ class CaptureJob(TimestampedModel):
     # {"url": ["URL cannot be empty."]}
     # {"url": ["Not a valid URL."]}
     # {"error": ["Failed during capture."]}
-    message = JSONField(null=True, blank=True)
+    message = models.JSONField(null=True, blank=True)
     # Record whether a human is actively awaiting the results of the job; may influence queue order.
     human = models.BooleanField(default=False)
     order = models.FloatField(db_index=True)
