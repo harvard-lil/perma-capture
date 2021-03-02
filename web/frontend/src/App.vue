@@ -20,6 +20,7 @@ export default defineComponent({
 <style lang="scss">
 @import "styles/_vars-global-native";
 @import "styles/_bootstrap";
+@import "bootstrap-icons/font/bootstrap-icons";
 
 @import "@fontsource/roboto/300";
 @import "@fontsource/roboto/400";

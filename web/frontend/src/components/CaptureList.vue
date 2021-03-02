@@ -2,11 +2,12 @@
 <table class="table">
   <thead>
     <tr>
+      <th scope="col">Status</th>
       <th scope="col">URL</th>
       <th scope="col">Label</th>
       <th scope="col">Embedded Version</th>
-      <th scope="col">Status</th>
       <th scope="col">Created At</th>
+      <th scope="col">Actions</th>
     </tr>
   </thead>
   <tbody>

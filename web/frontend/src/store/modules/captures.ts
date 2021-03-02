@@ -1,7 +1,8 @@
 import Axios from '../../config/axios'
+import { TransitionalStates } from '../../constants/captures'
+import { snakeToPascal } from '../../lib/helpers'
 
 const URL_ROOT = '/captures/'
-const TRANSITIONAL_STATES = ["pending", "in_progress"]
 
 const state = {
   all: []
@@ -17,7 +18,7 @@ const getters = {
     new Date(b.created_at) - new Date(a.created_at)),
 
   processing: state => state.all.filter(obj =>
-      TRANSITIONAL_STATES.includes(obj.status))
+    snakeToPascal(obj.status) in TransitionalStates)
 }
 
 const actions = {

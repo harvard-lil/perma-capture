@@ -14,3 +14,7 @@ export function getCookie(name) {
     }
     return cookieValue;
 }
+
+export function snakeToPascal(str='') {
+    return str.split('_').map(word => word.slice(0,1).toUpperCase() + word.slice(1)).join('');
+}
