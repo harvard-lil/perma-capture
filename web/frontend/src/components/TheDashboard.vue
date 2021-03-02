@@ -24,6 +24,11 @@ export default {
     TheNavbar,
     CaptureForm,
     CaptureList
+  },
+  mounted() {
+    const replay = document.createElement('script')
+    replay.setAttribute('src', 'https://cdn.jsdelivr.net/npm/replaywebpage@1.3.9/ui.js')
+    document.head.appendChild(replay)
   }
 }
 </script>

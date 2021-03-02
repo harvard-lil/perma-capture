@@ -14,8 +14,17 @@
   <td>
     <template v-if="downloadUrl">
       <a role="button" class="btn btn-primary bi bi-download mx-1" :href="downloadUrl"></a>
-      <a role="button" class="btn btn-primary bi bi-chevron-up mx-1"></a>
+      <a role="button" class="btn btn-primary bi bi-chevron-up mx-1" @click="toggleReplay"></a>
     </template>
+  </td>
+</tr>
+<tr v-if="downloadUrl && displayReplay">
+  <td colspan="999" class="replayWrapper">
+    <replay-web-page
+      :source="downloadUrl"
+      :url="capture.requested_url"
+      replaybase="/vite/src/config/"
+      class="replay"/>
   </td>
 </tr>
 </template>
@@ -29,6 +38,9 @@ import { snakeToPascal } from '../lib/helpers'
 
 export default {
   props: ['capture'],
+  data: () => ({
+    displayReplay: false
+  }),
   computed: {
     statusOrDefault() {
       return this.capture.status || 'pending'
@@ -56,7 +68,10 @@ export default {
     }
   },
   methods: {
-    ...mapActions(['read'])
+    ...mapActions(['read']),
+    toggleReplay() {
+      this.displayReplay = !this.displayReplay
+    }
   }
 }
 </script>
@@ -64,5 +79,13 @@ export default {
 <style scoped>
 .status {
   font-size: 1em;
+}
+.replayWrapper {
+  background: var(--color-background);
+}
+.replay {
+  display: flex;
+  min-height: 500px;
+  height: 75vh;
 }
 </style>
