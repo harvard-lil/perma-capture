@@ -18,15 +18,17 @@
     </template>
   </td>
 </tr>
-<tr v-if="downloadUrl && displayReplay">
-  <td colspan="999" class="replayWrapper">
-    <replay-web-page
-      :source="downloadUrl"
-      :url="capture.requested_url"
-      replaybase="/vite/src/config/"
-      class="replay"/>
-  </td>
-</tr>
+<transition name="slide">
+  <tr v-if="downloadUrl && displayReplay" class="replayRow">
+    <td colspan="999" class="replayCell">
+      <replay-web-page
+        :source="downloadUrl"
+        :url="capture.requested_url"
+        replaybase="/vite/src/config/"
+        class="replay"/>
+    </td>
+  </tr>
+</transition>
 </template>
 
 <script lang="ts">
@@ -80,12 +82,27 @@ export default {
 .status {
   font-size: 1em;
 }
-.replayWrapper {
+.replayRow {
+  min-height: 500px;
+  height: 75vh;
+}
+.replayCell {
   background: var(--color-background);
+  height: 100%;
 }
 .replay {
   display: flex;
-  min-height: 500px;
-  height: 75vh;
+  height: 100%;
+}
+
+.slide-enter-active,
+.slide-leave-active {
+  transition: all 0.2s;
+}
+
+.slide-enter-from,
+.slide-leave-to {
+  height: 0;
+  min-height: 0;
 }
 </style>
