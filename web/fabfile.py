@@ -48,6 +48,8 @@ def pip_compile(args=''):
     # run pip-compile
     # Use --allow-unsafe because pip --require-hashes needs all requirements to be pinned, including those like
     # setuptools that pip-compile leaves out by default.
+    #
+    # Example: fab pip-compile:args="--upgrade-package djangorestframework"
     command = ['pip-compile', '--generate-hashes', '--allow-unsafe']+args.split()
     print("Calling %s" % " ".join(command))
     subprocess.check_call(command, env=dict(os.environ, CUSTOM_COMPILE_COMMAND='fab pip-compile'))

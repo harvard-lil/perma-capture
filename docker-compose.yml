@@ -31,7 +31,7 @@ services:
     build:
       context: .
       dockerfile: ./docker/web/Dockerfile
-    image: perma-capture:0.9
+    image: perma-capture:0.10
     tty: true
     command: bash
     environment:
