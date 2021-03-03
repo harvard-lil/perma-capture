@@ -14,18 +14,22 @@
   <td>
     <template v-if="downloadUrl">
       <a role="button" class="btn btn-primary bi bi-download mx-1" :href="downloadUrl"></a>
-      <a role="button" class="btn btn-primary bi bi-chevron-up mx-1 replayToggle" :class="{active: displayReplay}" @click="toggleReplay"></a>
+      <a role="button" class="btn btn-primary bi bi-chevron-up mx-1 replayToggle" :class="{active: displayContext}" @click="toggleContext"></a>
     </template>
+    <a v-if="capture.message" role="button" class="btn btn-primary bi bi-question-diamond mx-1" @click="toggleContext"></a>
   </td>
 </tr>
 <transition name="slide">
-  <tr v-if="downloadUrl && displayReplay" class="replayRow">
-    <td colspan="999" class="replayCell">
-      <replay-web-page
+  <tr v-if="displayContext">
+    <td colspan="999" class="p-0">
+      <div v-if="capture.message" class="contextItem">
+        <div class="alert alert-danger">{{ capture.message }}</div>
+      </div>
+      <replay-web-page v-if="downloadUrl"
         :source="downloadUrl"
         :url="capture.requested_url"
         replaybase="/vite/src/config/"
-        class="replay"/>
+        class="replay contextItem"/>
     </td>
   </tr>
 </transition>
@@ -41,7 +45,7 @@ import { snakeToPascal } from '../lib/helpers'
 export default {
   props: ['capture'],
   data: () => ({
-    displayReplay: false
+    displayContext: false
   }),
   computed: {
     statusOrDefault() {
@@ -71,8 +75,8 @@ export default {
   },
   methods: {
     ...mapActions(['read']),
-    toggleReplay() {
-      this.displayReplay = !this.displayReplay
+    toggleContext() {
+      this.displayContext = !this.displayContext
     }
   }
 }
@@ -82,11 +86,12 @@ export default {
 .status {
   font-size: 1em;
 }
-.replayCell {
-  padding: 0;
+.contextItem {
+  display: block;
+  overflow: hidden;
+  max-height: 200px;
 }
 .replay {
-  display: block;
   min-height: 500px;
   height: 75vh;
 }
@@ -98,15 +103,16 @@ export default {
 /* Without setting the transition timing on the parent, Vue will not add transition states for the child elements to use */
 .slide-enter-active,
 .slide-leave-active,
-.slide-enter-active .replay,
-.slide-leave-active .replay,
+.slide-enter-active .contextItem,
+.slide-leave-active .contextItem,
 .replayToggle::before {
   transition: all 0.2s;
 }
 
-.slide-enter-from .replay,
-.slide-leave-to .replay {
+.slide-enter-from .contextItem,
+.slide-leave-to .contextItem {
   height: 0;
   min-height: 0;
+  max-height: 0;
 }
 </style>
