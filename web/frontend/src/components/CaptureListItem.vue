@@ -1,7 +1,7 @@
 <template>
 <tr>
   <td>
-    <span :class="['status', 'badge', `bg-${statusBG}`]">
+    <span class="status badge" :class="`bg-${statusBG}`">
       <span v-if="isProcessing" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
       <span v-else-if="hasFailed" class="bi bi-x"></span>
       <span v-else class="bi bi-check"></span>
@@ -14,7 +14,7 @@
   <td>
     <template v-if="downloadUrl">
       <a role="button" class="btn btn-primary bi bi-download mx-1" :href="downloadUrl"></a>
-      <a role="button" class="btn btn-primary bi bi-chevron-up mx-1" @click="toggleReplay"></a>
+      <a role="button" class="btn btn-primary bi bi-chevron-up mx-1 replayToggle" :class="{active: displayReplay}" @click="toggleReplay"></a>
     </template>
   </td>
 </tr>
@@ -91,11 +91,16 @@ export default {
   height: 75vh;
 }
 
+.replayToggle.active::before {
+  transform: rotate(180deg);
+}
+
 /* Without setting the transition timing on the parent, Vue will not add transition states for the child elements to use */
 .slide-enter-active,
 .slide-leave-active,
 .slide-enter-active .replay,
-.slide-leave-active .replay {
+.slide-leave-active .replay,
+.replayToggle::before {
   transition: all 0.2s;
 }
 
