@@ -82,26 +82,25 @@ export default {
 .status {
   font-size: 1em;
 }
-.replayRow {
+.replayCell {
+  padding: 0;
+}
+.replay {
+  display: block;
   min-height: 500px;
   height: 75vh;
 }
-.replayCell {
-  background: var(--color-background);
-  height: 100%;
-}
-.replay {
-  display: flex;
-  height: 100%;
-}
 
+/* Without setting the transition timing on the parent, Vue will not add transition states for the child elements to use */
 .slide-enter-active,
-.slide-leave-active {
+.slide-leave-active,
+.slide-enter-active .replay,
+.slide-leave-active .replay {
   transition: all 0.2s;
 }
 
-.slide-enter-from,
-.slide-leave-to {
+.slide-enter-from .replay,
+.slide-leave-to .replay {
   height: 0;
   min-height: 0;
 }
