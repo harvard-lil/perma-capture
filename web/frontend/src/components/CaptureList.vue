@@ -2,11 +2,12 @@
 <table class="table">
   <thead>
     <tr>
-      <th scope="col">Status</th>
-      <th scope="col">URL</th>
-      <th scope="col">Label</th>
-      <th scope="col">Embedded Version</th>
-      <th scope="col">Created At</th>
+      <th v-for="(heading, prop) in headings" scope="col">
+        <a @click="changeSort(prop)" role="button" :class="sortBy == prop ? 'active' : ''" class="sortButton">
+          {{ heading }}
+          <span :class="`bi-sort-${sortDesc ? 'down' : 'up'}`" class="sortIcon bi"></span>
+        </a>
+      </th>
       <th scope="col">Actions</th>
     </tr>
   </thead>
@@ -31,6 +32,17 @@ export default {
   components: {
     CaptureListItem
   },
+  data: () => ({
+    sortBy: 'created_at',
+    sortDesc: true,
+    headings: {
+      status: 'Status',
+      requested_url: 'URL',
+      label: 'Label',
+      capture_oembed_view: 'Embedded Version',
+      created_at: 'Created At'
+    }
+  }),
   computed: {
     ...mapGetters({
       captures: 'createdAtDesc',
@@ -49,6 +61,14 @@ export default {
     },
     clearProcessingPoll() {
       clearInterval(this.$options.poller)
+    },
+    changeSort(prop) {
+      if(this.sortBy == prop){
+        this.sortDesc = !this.sortDesc
+      } else {
+        this.sortBy = prop
+        this.sortDesc = true
+      }
     }
   },
   watch: {
@@ -70,4 +90,30 @@ export default {
 </script>
 
 <style scoped>
+.sortIcon {
+  visibility: hidden;
+}
+.sortButton:hover .sortIcon,
+.active .sortIcon {
+  visibility: visible;
+}
+
+.sortButton:hover .sortIcon {
+  opacity: 0.25;
+}
+.active .sortIcon,
+.active:hover .sortIcon {
+  opacity: 1;
+}
+.sortButton {
+  color: inherit;
+  text-decoration: none;
+  padding: 0.5rem;
+  margin-left: -0.5rem;
+}
+.sortButton:hover,
+.sortButton.active {
+  background: var(--color-background);
+  color: #000;
+}
 </style>
