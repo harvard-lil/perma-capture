@@ -17,7 +17,8 @@ RUN pip install -r requirements.txt \
     && rm requirements.txt
 
 # Install Node
-RUN apt-get install -y npm && npm install -g n && n 14.15.5
+RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
+RUN apt-get install -y nodejs
 
 # Install Yarn
 RUN npm install -g yarn
