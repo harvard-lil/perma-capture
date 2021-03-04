@@ -1,9 +1,6 @@
 from celery.task.control import inspect as celery_inspect
 from functools import wraps
-import humps
 import redis
-import requests
-import uuid
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -15,13 +12,12 @@ from django.http import (HttpResponseRedirect,  HttpResponseForbidden,
 )
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
-from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.clickjacking import xframe_options_exempt
 
 import django_filters
 
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import ValidationError
 # from rest_framework.filters import OrderingFilter  # comment in if we need support for ordering
 from rest_framework.pagination import LimitOffsetPagination
@@ -33,7 +29,6 @@ from .forms import SignupForm, UserForm, PasswordResetForm
 from .models import CaptureJob, User, WebhookSubscription
 from .serializers import CaptureJobSerializer, ReadOnlyCaptureJobSerializer, WebhookSubscriptionSerializer
 from .tasks import run_next_capture
-from .utils import sign_data
 
 from test.test_helpers import check_response
 from .test.test_permissions_helpers import no_perms_test, perms_test
@@ -489,121 +484,6 @@ class WebhookSubscriptionDetailView(APIView):
         return ApiResponse(status=status.HTTP_204_NO_CONTENT)
 
 
-# @no_perms_test
-# @api_view(['POST'])
-# @permission_classes([])  # no auth required
-# def archived_callback(request, format=None):
-#     """
-#     Respond upon receiving a notification from the capture service that an archive is complete.
-
-#     Given:
-#     >>> client, callback_data, django_settings, _ = [getfixture(f) for f in ['client', 'webhook_callback', 'settings', 'mock_download']]
-#     >>> url = reverse('archived_callback')
-#     >>> user = User.objects.get(id=callback_data['userid'])
-#     >>> assert user.archives.count() == 0
-
-#     By default, we do not expect the data to be signed.
-#     >>> response = client.post(url, callback_data, content_type='application/json')
-#     >>> check_response(response)
-#     >>> user.refresh_from_db()
-#     >>> assert user.archives.count() == 1
-
-#     Signature verification can be enabled via Django settings.
-#     >>> django_settings.VERIFY_WEBHOOK_SIGNATURE = True
-#     >>> django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM = generate_hmac_signing_key()
-#     >>> response = client.post(url, callback_data, content_type='application/json')
-#     >>> check_response(response, status_code=400, content_includes='Invalid signature')
-#     >>> response = client.post(url, callback_data, content_type='application/json',
-#     ...     HTTP_X_HOOK_SIGNATURE='foo'
-#     ... )
-#     >>> check_response(response, status_code=400, content_includes='Invalid signature')
-#     >>> response = client.post(url, callback_data, content_type='application/json',
-#     ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
-#     ... )
-#     >>> check_response(response, content_includes='ok')
-#     >>> user.refresh_from_db()
-#     >>> assert user.archives.count() == 2
-
-#     Hashes are calculated if not supplied by the POSTed data.
-#     >>> assert all(key not in callback_data for key in ['hash', 'hash_algorithm'])
-#     >>> assert all(archive.hash and archive.hash_algorithm for archive in user.archives.all())
-
-#     If we send a timestamp with our initial request and receive it back, we store that value:
-#     >>> assert str(user.archives.last().requested_at.timestamp()) == callback_data['user_data_field']
-
-#     If we do not send a timestamp with our initial request, or if the webhook
-#     payload does not include it, we default to 00:00:00 UTC 1 January 1970.
-#     >>> del callback_data['user_data_field']
-#     >>> response = client.post(url, callback_data, content_type='application/json',
-#     ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
-#     ... )
-#     >>> check_response(response)
-#     >>> assert user.archives.last().requested_at.timestamp() == 0.000000
-
-#     The POSTed `userid` must match the id of a registered user.
-#     >>> callback_data['userid'] = User.objects.last().id + 1
-#     >>> assert not User.objects.filter(id=callback_data['userid']).exists()
-#     >>> response = client.post(url, callback_data, content_type='application/json',
-#     ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
-#     ... )
-#     >>> check_response(response, status_code=400, content_includes=['user', 'Invalid', 'does not exist'])
-
-#     Note: though jobid and hash should be unique, it is not enforced by this application
-#     (as is clear from the examples above).
-
-#     Finally: let's demonstrate that DRF is indeed handling camelcase conversion for us.
-#     >>> response_from_snake_case_post = client.post(url, callback_data, content_type='application/json',
-#     ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
-#     ... )
-#     >>> response_from_camel_case_post = client.post(url, humps.camelize(callback_data), content_type='application/json',
-#     ...     HTTP_X_HOOK_SIGNATURE=sign_data(humps.camelize(callback_data), django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY, django_settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM)
-#     ... )
-#     >>> assert response_from_snake_case_post.data == response_from_camel_case_post.data
-#     >>> assert humps.camelize(response_from_snake_case_post.data) == response_from_snake_case_post.data
-#     """
-#     if settings.VERIFY_WEBHOOK_SIGNATURE:
-#         # DRF will have deserialized the request data and decamelized all the keys...
-#         # which messes up the signature check. We recamelize here, just for that check.
-#         camelcase_data = humps.camelize(request.data)
-#         if not is_valid_signature(
-#             request.headers.get('x-hook-signature', ''),
-#             camelcase_data,
-#             settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY,
-#             settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM
-#         ):
-#             raise serializers.ValidationError('Invalid signature.')
-
-#     # for now, calculate file hash, if not included in POST
-#     # (hashing is not yet a feature of the capture service)
-#     hash = request.data.get('hash')
-#     hash_algorithm = request.data.get('hash_algorithm')
-#     if request.data.get('access_url') and (not hash or not hash_algorithm):
-#         if settings.OVERRIDE_DOWNLOAD_URL_NETLOC:
-#             url = override_access_url_netloc(request.data['access_url'], internal=True)
-#         else:
-#             url = request.data['access_url']
-#         hash, hash_algorithm = get_file_hash(url)
-
-#     # retrieve the datetime from our user_data_field
-#     ts = float(request.data.get('user_data_field', '0.000000'))
-#     requested_at = datetime.datetime.fromtimestamp(ts, tz(settings.TIME_ZONE))
-
-#     # validate and save
-#     serializer = ArchiveSerializer(data={
-#         'user': request.data.get('userid'),
-#         'jobid': request.data.get('jobid'),
-#         'requested_at': requested_at,
-#         'hash': hash,
-#         'hash_algorithm': hash_algorithm
-#     })
-#     if serializer.is_valid():
-#         serializer.save()
-#         if not ts:
-#             logger.warning(f'No requested_at timestamp received for archive {serializer.instance.id}; defaulting to Unix Epoch.')
-#         return ApiResponse({'status': 'ok'}, status=status.HTTP_200_OK)
-#     return ApiResponse(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 @perms_test({'results': {200: ['user', None]}})
 def index(request):
     """
@@ -859,43 +739,12 @@ def account(request):
 # Internal Use Only
 #
 
-@perms_test({'args': ['user.id', 'random_webhook_event.name'], 'results': {403: ['user'], 200: ['admin_user'], 'login': [None]}})
-@user_passes_test_or_403(lambda user: user.is_staff)
-def webhooks_test(request, user_id, event):  # pragma: no cover
-    """
-    For development and testing only: trigger a webhook for a user.
-    """
-    user = get_object_or_404(User, pk=user_id)
-
-    payload = {}
-    if event == WebhookSubscription.EventType.ARCHIVE_CREATED:
-        payload = {
-            'userid': user.id,
-            'jobid': str(uuid.uuid4()),
-            'url': request.GET.get('url'),
-            'user_data_field': timezone.now().timestamp()
-        }
-    else:
-        raise NotImplementedError()
-
-    camel_case_payload = humps.camelize(payload)
-    subscriptions = user.webhook_subscriptions.filter(event_type=event)
-    responses = []
-    for subscription in subscriptions:
-        try:
-            responses.append(requests.post(
-                subscription.callback_url,
-                json=camel_case_payload,
-                headers={'x-hook-signature': sign_data(camel_case_payload, subscription.signing_key, subscription.signing_key_algorithm)}
-            ))
-        except requests.exceptions.RequestException as e:
-            responses.append({'status_code': None, 'url': subscription.callback_url, 'text': e})
-
-    return render(request, 'manage/webhook-test.html', {
-        'user': user,
-        'event': event,
-        'responses': responses
-    })
+@no_perms_test
+@api_view(['POST'])
+@permission_classes([])  # no auth required
+def webhook_test(request, format=None):
+    logger.debug(request.data)
+    return ApiResponse(status=status.HTTP_204_NO_CONTENT)
 
 
 @perms_test({'results': {403: ['user'], 200: ['admin_user'], 'login': [None]}})

@@ -1,0 +1,7 @@
+Heads up: we're having trouble contacting your webhook callback, {{ subscription.callback_url }}. Delivery of our message about capture job {{ capture_job.id }} permanently failed.
+
+(There should be some more helpful information included here.)
+
+Let us know if we can be of assistance.
+
+The {{ APP_NAME }} Team

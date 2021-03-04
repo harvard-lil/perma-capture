@@ -139,6 +139,11 @@ class WebhookSubscription(TimestampedModel):
     signing_key = models.CharField(max_length=512)
     signing_key_algorithm = models.CharField(max_length=32)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'event_type'])
+        ]
+
     def save(self, *args, **kwargs):
         """
         On creation, generate a signing key if not provided:

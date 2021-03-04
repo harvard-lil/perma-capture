@@ -23,7 +23,7 @@ INSTALLED_APPS = [
     'whitenoise.runserver_nostatic',
 
     # apps
-    'main',
+    'main.apps.MainConfig',
 
     # third party
     'django_extensions',
@@ -127,12 +127,6 @@ REST_FRAMEWORK = {
 ALLOW_SIGNUPS = False
 PASSWORD_RESET_TIMEOUT = 24 * 60 * 60
 
-VERIFY_WEBHOOK_SIGNATURE = False
-CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY = ''
-CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM = None
-
-SEND_WEBHOOK_DATA_TO_CAPTURE_SERVICE = False
-EXPOSE_WEBHOOK_TEST_ROUTE = False
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
@@ -311,19 +305,11 @@ BROWSERTRIX_TIMEOUT_SECONDS = 10
 
 LAUNCH_CAPTURE_JOBS = True
 
-# Capture Service
-BACKEND_API = "http://capture-service"
-# We have discussed the possibility that the capture service might communicate
-# with this application via a private network connection, rather than over
-# the public internet or using the service's public name. If that's the case,
-# use this setting to specify the netloc to which the capture service should POST
-# it's webhook callback, on completing an archive (since build_absolute_uri, which
-# we use otherwise, will return the public-facing address).
-# This can also be used in development, to direct the traffic to host.docker.internal
-# instead of localhost.
-# Example:
-# "http://host.docker.internal:8000"
-CALLBACK_PREFIX = None
+# Webhooks
+DISPATCH_WEBHOOKS = True
+WEBHOOK_DELIVERY_TIMEOUT = 10
+WEBHOOK_MAX_RETRIES = 11
+EXPOSE_WEBHOOK_TEST_ROUTE = True
 
 # Playback
 RWP_BASE_URL = "https://cdn.jsdelivr.net/npm/replaywebpage@1.3.8"

@@ -16,6 +16,7 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 CELERY_TASK_ROUTES['main.tasks.demo_scheduled_task'] = {'queue': 'background'}
+CELERY_TASK_ROUTES['main.tasks.dispatch_webhook'] = {'queue': 'background'}
 
 # don't check password quality locally, since it's annoying
 AUTH_PASSWORD_VALIDATORS = []
@@ -50,6 +51,5 @@ ADMINS = [('John', 'john@example.com'), ('Mary', 'mary@example.com')]
 # Override the netloc during serialization, so download links work.
 OVERRIDE_DOWNLOAD_URL_NETLOC = 'localhost:9000'
 
-
-SEND_WEBHOOK_DATA_TO_CAPTURE_SERVICE = True
-EXPOSE_WEBHOOK_TEST_ROUTE = True
+DISPATCH_WEBHOOKS = True
+WEBHOOK_MAX_RETRIES = 2

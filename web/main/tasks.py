@@ -1,4 +1,5 @@
 from celery import shared_task
+from celery.exceptions import MaxRetriesExceededError
 from celery.signals import task_failure
 import requests
 import socket
@@ -9,11 +10,13 @@ import uuid
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.mail import mail_admins
+from django.db.models.functions import Now
 
-from .models import CaptureJob, Archive
+from .models import CaptureJob, Archive, WebhookSubscription
+from .serializers import ReadOnlyCaptureJobSerializer, SimpleWebhookSubscriptionSerializer
 from .storages import get_storage
 from .utils import (validate_and_clean_url, get_file_hash, parse_querystring,
-    datetime_from_timestamp
+    datetime_from_timestamp, sign_data, send_template_email
 )
 
 import logging
@@ -186,7 +189,7 @@ def run_next_capture():
     archive = Archive(capture_job=capture_job)
     with open(f'/app/services/browsertrix/data/{filename}' , 'rb') as file:
         inc_progress(capture_job, 1, "Processing archive.")
-        archive.hash, archive.hash_algorith = get_file_hash(file)
+        archive.hash, archive.hash_algorithm = get_file_hash(file)
         assert not file.read()
         archive.warc_size = file.tell()
 
@@ -195,13 +198,51 @@ def run_next_capture():
         storage = get_storage()
         filename = storage.save(filename, file)
         archive.download_url = storage.url(filename)
-        archive.download_expires = datetime_from_timestamp(parse_querystring(archive.download_url)['Expires'][0])
+        archive.download_expiration_timestamp = datetime_from_timestamp(parse_querystring(archive.download_url)['Expires'][0])
     archive.save()
 
-    # inc_progress(capture_job, 1, "Sending webhooks.")
-
     capture_job.status = CaptureJob.Status.COMPLETED
+    capture_job.capture_end_time = Now()
     capture_job.save()
 
     run_next_capture.apply_async()
 
+
+@shared_task(bind=True, max_retries=settings.WEBHOOK_MAX_RETRIES)
+def dispatch_webhook(self, subscription_id, capture_job_id):
+    """
+    """
+    if not settings.DISPATCH_WEBHOOKS:
+        logger.debug(f'Webhooks notifications are disabled: not sending POST for subscription {subscription_id}, capture job {capture_job_id}.')
+        return
+
+    subscription = WebhookSubscription.objects.get(id=subscription_id)
+    capture_job = CaptureJob.objects.filter(id=capture_job_id).select_related('archive').first()
+
+    payload = {
+        "webhook": SimpleWebhookSubscriptionSerializer(subscription).data,
+        "capture_job": ReadOnlyCaptureJobSerializer(capture_job).data
+    }
+    try:
+        response = requests.post(
+            url=subscription.callback_url,
+            json=payload,
+            headers={'x-hook-signature': sign_data(payload, subscription.signing_key, subscription.signing_key_algorithm)},
+            timeout=20,
+            allow_redirects=False
+        )
+        assert response.status_code in [200, 204], response.status_code
+    except (requests.RequestException, AssertionError):
+        logger.info(f'Delivery of webhook notification for subscription {subscription_id}, capture job {capture_job_id} failed ({self.request.retries}/{self.max_retries}).')
+        try:
+            # retry with exponential backoff, up to settings.WEBHOOK_MAX_RETRIES times
+            self.retry(countdown=2**self.request.retries)
+        except MaxRetriesExceededError:
+            logger.warning(f'Delivery of webhook notification for subscription {subscription_id}, capture job {capture_job_id} permanently failed.')
+            send_template_email(
+                f"[ALERT] Your {settings.APP_NAME} webhook notification failed.",
+                'email/webhook_failed.txt',
+                {"subscription": subscription, "capture_job": capture_job},
+                settings.DEFAULT_FROM_EMAIL,
+                [subscription.user.email],
+            )

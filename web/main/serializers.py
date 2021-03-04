@@ -2,16 +2,8 @@ from rest_framework import serializers
 
 from django.conf import settings
 
-from main.models import WebhookSubscription, CaptureJob, Archive
-from main.utils import override_access_url_netloc
-
-
-class WebhookSubscriptionSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = WebhookSubscription
-        fields = '__all__'
-        read_only_fields = ('id', 'user', 'signing_key', 'signing_key_algorithm')
+from .models import WebhookSubscription, CaptureJob, Archive
+from .utils import override_access_url_netloc
 
 
 class ArchiveSerializer(serializers.ModelSerializer):
@@ -42,3 +34,17 @@ class ReadOnlyCaptureJobSerializer(CaptureJobSerializer):
     class Meta(CaptureJobSerializer.Meta):
         read_only_fields =  ('user', 'id', 'requested_url', 'capture_oembed_view', 'headless', 'human', 'label', 'webhook_data', 'status', 'message', 'order', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')
 
+
+class WebhookSubscriptionSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = WebhookSubscription
+        fields = '__all__'
+        read_only_fields = ('id', 'user', 'signing_key', 'signing_key_algorithm')
+
+
+class SimpleWebhookSubscriptionSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = WebhookSubscription
+        read_only_fields = fields = ('id', 'event_type')
