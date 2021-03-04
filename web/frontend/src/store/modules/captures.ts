@@ -8,14 +8,36 @@ const state = {
   all: []
 }
 
+const defaultSortLogic = (desc, a, b) => {
+  // swap the argument order if descending
+  if(desc) {
+    const originalA = a
+    a = b
+    b = originalA
+  }
+
+  return a < b ? -1
+    : a > b ? 1
+    : 0
+}
+
+const defaultSort = (prop) => (desc) => ({ [prop]: a }, { [prop]: b }) => defaultSortLogic(desc, a, b)
+
+const customSorts = {
+  created_at: (desc) => (a, b) =>
+    defaultSortLogic(desc, new Date(a.created_at), new Date(b.created_at)),
+}
+
 const getters = {
   getByProperties: state => (props) =>
     state.all.find(
       obj => Object.keys(props).reduce((t, key) => t && props[key] == obj[key], true)
     ),
 
-  createdAtDesc: state => state.all.sort((a, b) =>
-    new Date(b.created_at) - new Date(a.created_at)),
+  sortBy: (state) => (prop, desc = true) =>
+    state.all.sort(
+      (customSorts[prop] || defaultSort(prop))(desc)
+    ),
 
   processing: state => state.all.filter(obj =>
     snakeToPascal(obj.status) in TransitionalStates)
