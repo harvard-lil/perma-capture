@@ -14,6 +14,7 @@ import os
 from copy import deepcopy
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SERVICES_DIR = os.path.abspath(os.path.join(BASE_DIR, '../../services'))
 ALLOWED_HOSTS = []
 
 
@@ -309,7 +310,7 @@ LAUNCH_CAPTURE_JOBS = True
 DISPATCH_WEBHOOKS = True
 WEBHOOK_DELIVERY_TIMEOUT = 10
 WEBHOOK_MAX_RETRIES = 11
-EXPOSE_WEBHOOK_TEST_ROUTE = True
+EXPOSE_WEBHOOK_TEST_ROUTE = False
 
 # Playback
 RWP_BASE_URL = "https://cdn.jsdelivr.net/npm/replaywebpage@1.3.8"

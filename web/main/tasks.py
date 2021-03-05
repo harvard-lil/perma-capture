@@ -1,6 +1,7 @@
 from celery import shared_task
-from celery.exceptions import MaxRetriesExceededError
+from celery.exceptions import MaxRetriesExceededError, SoftTimeLimitExceeded
 from celery.signals import task_failure
+import os
 import requests
 import socket
 import threading
@@ -10,7 +11,6 @@ import uuid
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.mail import mail_admins
-from django.db.models.functions import Now
 
 from .models import CaptureJob, Archive, WebhookSubscription
 from .serializers import ReadOnlyCaptureJobSerializer, SimpleWebhookSubscriptionSerializer
@@ -68,9 +68,11 @@ The contents of the full traceback was:
 
 ### CAPTURE HELPERS ###
 
-def inc_progress(capture_job, inc, description):
-    capture_job.inc_progress(inc, description)
-    logger.info(f"{capture_job} step {capture_job.step_count}: {capture_job.step_description}")
+class HaltCaptureException(Exception):
+    """
+    An exception we can trigger to halt capture and release all involved resources.
+    """
+    pass
 
 
 class BrowsertrixLifeCycleThread(threading.Thread):
@@ -80,7 +82,7 @@ class BrowsertrixLifeCycleThread(threading.Thread):
         self.container = container
         self.timeout = timeout
         self.timedout = False
-        self.result = None
+        self.result = {}
         self.status = None
         self.exit_code = None
         self.stderr = None
@@ -90,19 +92,35 @@ class BrowsertrixLifeCycleThread(threading.Thread):
         try:
             self.result = self.container.wait(timeout=self.timeout)
         except requests.exceptions.ReadTimeout:
-            self.timedout= True
-            # For now, just kill the container. In real life, we'll want something gentler,
-            # that will preserve whatever partial capture results we have.
+            self.timedout = True
+            # For now, just kill the container. We likely want something gentler,
+            # that requests Browsertrix stop recording and finalize the record,
+            # and then a second timeout, so as to preserve partial capture results.
             self.container.stop(timeout=0)
             self.result = self.container.wait(timeout=1)
+        finally:
+            self.container.reload()
+            self.status = self.container.status
+            self.exit_code = self.result.get('StatusCode')
+            self.stderr = self.container.logs(stdout=False)
 
-        self.container.reload()
 
-        self.status = self.container.status
-        self.exit_code = self.result['StatusCode']
-        self.stderr = self.container.logs(stdout=False)
+def inc_progress(capture_job, inc, description):
+    capture_job.inc_progress(inc, description)
+    logger.info(f"{capture_job} step {capture_job.step_count}: {capture_job.step_description}")
 
-        self.container.remove()
+
+def clean_up_failed_captures():
+    """
+    Clean up any existing jobs that are marked in_progress but must have timed out by now, based on our hard timeout
+    setting.
+    """
+    # use database time with a custom where clause to ensure consistent time across workers
+    for capture_job in CaptureJob.objects.filter(status=CaptureJob.Status.IN_PROGRESS).extra(
+            where=[f"capture_start_time < now() - make_interval(secs => {settings.CELERY_TASK_TIME_LIMIT})"]
+    ):
+        capture_job.mark_failed("Timed out.")
+
 
 ### TASKS ###
 
@@ -121,92 +139,123 @@ def demo_scheduled_task(pause_for_seconds=0):
 def run_next_capture():
     """
     """
+    clean_up_failed_captures()
+
     capture_job = CaptureJob.get_next_job(reserve=True)
     if not capture_job:
         logger.debug('No jobs waiting!')
-        return  # no jobs waiting
-
-    inc_progress(capture_job, 0, "Validating.")
-    try:
-        capture_job.validated_url = validate_and_clean_url(capture_job.requested_url)
-    except ValidationError as e:
-        capture_job.message = {"requested_url": e.messages}
-        capture_job.status = CaptureJob.Status.INVALID
-        capture_job.save()
         return
-    capture_job.save()
 
-    inc_progress(capture_job, 1, "Connecting to Docker.")
-    import docker  # noqa: import docker here, so that in only needs to be running on capture workers
-    client = docker.from_env()
+    try:
+        inc_progress(capture_job, 0, "Validating.")
+        try:
+            capture_job.validated_url = validate_and_clean_url(capture_job.requested_url)
+        except ValidationError as e:
+            capture_job.mark_invalid({"requested_url": e.messages})
+            raise HaltCaptureException
+        capture_job.save()
 
-    inc_progress(capture_job, 1, "Creating browsertrix container.")
-    filename = f'{uuid.uuid4()}.wacz'
-    container = client.containers.create(
-        'busybox',
-        environment=[
-            f'DATA_DIR={settings.BROWSERTRIX_INTERNAL_DATA_DIR}'
-        ],
-        volumes={
-            settings.BROWSERTRIX_HOST_DATA_DIR : {
-                'bind': settings.BROWSERTRIX_INTERNAL_DATA_DIR,
+        # basic setup
+        client = None
+        container = None
+        browsertrix_life_cycle_thread = None
+        have_archive = False
+        filename = f'{uuid.uuid4()}.wacz'
+        browsertrix_outputfile = f'{settings.SERVICES_DIR}/browsertrix/data/{filename}'
+
+        inc_progress(capture_job, 1, "Connecting to Docker.")
+        import docker  # noqa: import docker here, so that it only needs to be running on capture workers
+        client = docker.from_env()
+
+        inc_progress(capture_job, 1, "Creating browsertrix container.")
+        container = client.containers.create(
+            settings.BROWSERTRIX_IMAGE,
+            environment=[
+                f'DATA_DIR={settings.BROWSERTRIX_INTERNAL_DATA_DIR}'
+            ],
+            volumes={
+                settings.BROWSERTRIX_HOST_DATA_DIR : {
+                    'bind': settings.BROWSERTRIX_INTERNAL_DATA_DIR,
+                },
+                settings.BROWSERTRIX_ENTRYPOINT : {
+                    'bind': '/entrypoint.sh'
+                }
             },
-            settings.BROWSERTRIX_ENTRYPOINT : {
-                'bind': '/entrypoint.sh'
-            }
-        },
-        entrypoint='/entrypoint.sh',
-        command=f'for i in 1 2 3 4 5; do (echo status $i; sleep 1); done; cp {settings.BROWSERTRIX_INTERNAL_DATA_DIR}/examples/$(ls {settings.BROWSERTRIX_INTERNAL_DATA_DIR}/examples | shuf -n 1) {settings.BROWSERTRIX_INTERNAL_DATA_DIR}/{filename}',
-        detach=True
-    )
+            entrypoint='/entrypoint.sh',
+            command=f'for i in 1 2 3 4 5; do (echo status $i; sleep 1); done; cp {settings.BROWSERTRIX_INTERNAL_DATA_DIR}/examples/$(ls {settings.BROWSERTRIX_INTERNAL_DATA_DIR}/examples | shuf -n 1) {settings.BROWSERTRIX_INTERNAL_DATA_DIR}/{filename}',
+            detach=True
+        )
 
-    inc_progress(capture_job, 1, "Starting browsertrix.")
-    container.start()
-    browsertrix_life_cycle_thread = BrowsertrixLifeCycleThread(container, settings.BROWSERTRIX_TIMEOUT_SECONDS, name="browsertrix_return")
-    browsertrix_life_cycle_thread.start()
-    stdout_stream = container.logs(stderr=False, stream=True)
-    for msg in stdout_stream:
-        # the life cycle thread should take care of killing browsertrix, so this isn't infinite...
-        # but let's definitely ensure that's the case, including in weird hanging conditions.
-        # should also look into whether the browsertrix container needs init, and whether it passes signals correctly, etc.
-        msg = str(msg, 'utf-8').strip()
-        if True:
-            # if the msg matches some expectation (I'm presuming output will be noisy),
-            # indicate we've reached the next step of the capture
-            inc_progress(capture_job, 1, f"Browsertrix: {msg}.")
-        else:
-            logger.debug(msg)
-    browsertrix_life_cycle_thread.join()
-    if browsertrix_life_cycle_thread.exit_code != 0:
-        # uh oh, spaghettios....
-        # see if there's anything we can salvage. if yes, continue. if not, mark the capture job as failed and return
-        if False:
+        inc_progress(capture_job, 1, "Starting browsertrix.")
+        container.start()
+        browsertrix_life_cycle_thread = BrowsertrixLifeCycleThread(container, settings.BROWSERTRIX_TIMEOUT_SECONDS, name="browsertrix_return")
+        browsertrix_life_cycle_thread.start()
+        stdout_stream = container.logs(stderr=False, stream=True)
+        for msg in stdout_stream:
+            # the life cycle thread should take care of killing browsertrix, so this isn't infinite...
+            # but let's definitely ensure that's the case, including in weird hanging conditions.
+            # should also look into whether the browsertrix container needs init, and whether it passes signals correctly, etc.
+            # see also https://github.com/moby/moby/issues/37663.
+            msg = str(msg, 'utf-8').strip()
+            if True:
+                # if the msg matches some expectation (I'm presuming output will be noisy),
+                # indicate we've reached the next step of the capture
+                inc_progress(capture_job, 1, f"Browsertrix: {msg}.")
+            else:
+                logger.debug(msg)
+
+        browsertrix_life_cycle_thread.join()
+        if browsertrix_life_cycle_thread.exit_code != 0:
+            # see there's anything we can salvage
+            if os.path.isfile(browsertrix_outputfile):
+                # should probably also make sure its a valid wacz?
+                # a likely advantage of warcs over wacz is that you can still play back a truncated warc
+                have_archive = True
+            # this is NOT how we want to handle the verbose output of stderr. What's the best way to log?
+            # send a special error email?
             logger.error(f"Browsertrix exited with {browsertrix_life_cycle_thread.exit_code}: {browsertrix_life_cycle_thread.stderr}")
-            capture_job.status = CaptureJob.Status.FAILED
-            capture_job.save()
-            return
+            raise HaltCaptureException
+        have_archive = True
 
-    archive = Archive(capture_job=capture_job)
-    with open(f'/app/services/browsertrix/data/{filename}' , 'rb') as file:
-        inc_progress(capture_job, 1, "Processing archive.")
-        archive.hash, archive.hash_algorithm = get_file_hash(file)
-        assert not file.read()
-        archive.warc_size = file.tell()
+    except HaltCaptureException:
+        logger.info("HaltCaptureException thrown.")
+    except SoftTimeLimitExceeded:
+        logger.warning(f"Soft timeout while capturing job {capture_job.id}.")
+        # might include code here for politely asking Browsertrix to stop recording.
+    except:  # noqa
+        logger.exception(f"Exception while capturing job {capture_job.id}:")
+    finally:
+        try:
+            if container:
+                # For now, just kill the container. We might want something gentler.
+                container.remove(force=True)
+            if client:
+                client.close()
+            if have_archive:
+                archive = Archive(capture_job=capture_job)
+                with open(browsertrix_outputfile , 'rb') as file:
+                    inc_progress(capture_job, 1, "Processing archive.")
+                    archive.hash, archive.hash_algorithm = get_file_hash(file)
+                    assert not file.read()
+                    archive.warc_size = file.tell()
 
-        inc_progress(capture_job, 1, "Saving archive.")
-        file.seek(0)
-        storage = get_storage()
-        filename = storage.save(filename, file)
-        archive.download_url = storage.url(filename)
-        archive.download_expiration_timestamp = datetime_from_timestamp(parse_querystring(archive.download_url)['Expires'][0])
-    archive.save()
-
-    capture_job.status = CaptureJob.Status.COMPLETED
-    capture_job.capture_end_time = Now()
-    capture_job.save()
-
+                    inc_progress(capture_job, 1, "Saving archive.")
+                    file.seek(0)
+                    storage = get_storage()
+                    filename = storage.save(filename, file)
+                    archive.download_url = storage.url(filename)
+                    archive.download_expiration_timestamp = datetime_from_timestamp(parse_querystring(archive.download_url)['Expires'][0])
+                archive.save()
+                capture_job.mark_completed()
+                logger.info("Capture succeeded.")
+            else:
+                logger.info("Capture failed.")
+        except:  # noqa
+            logger.exception(f"Exception while finishing job {capture_job.id}:")
+        finally:
+            if capture_job.status == CaptureJob.Status.IN_PROGRESS:
+                capture_job.mark_failed('Failed during capture.')
     run_next_capture.apply_async()
-
 
 @shared_task(bind=True, max_retries=settings.WEBHOOK_MAX_RETRIES)
 def dispatch_webhook(self, subscription_id, capture_job_id):
