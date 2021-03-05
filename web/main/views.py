@@ -256,7 +256,7 @@ class CaptureListView(APIView):
         >>> read_only_fields = {
         ...    'status': 'complete',
         ...    'message': {'foo': 'bar'},
-        ...    'order': 1.0,
+        ...    'queue_position': 0,
         ...    'step_count': 5,
         ...    'step_description': 'foo',
         ...    'capture_start_time': "2014-06-16T19:23:24Z",

@@ -348,6 +348,22 @@ class CaptureJob(TimestampedModel):
         self.message = message_dict
         self.mark_completed(CaptureJob.Status.INVALID)
 
+    def queue_time(self):
+        try:
+            delta = self.capture_start_time - self.created_at
+            return delta.seconds
+        except (ObjectDoesNotExist, TypeError):
+            return None
+    queue_time.short_description = 'queue time (s)'
+
+    def capture_time(self):
+        try:
+            delta = self.capture_end_time - self.capture_start_time
+            return delta.seconds
+        except TypeError:
+            return None
+    capture_time.short_description = 'capture time (s)'
+
 
 
 class Archive(TimestampedModel):
