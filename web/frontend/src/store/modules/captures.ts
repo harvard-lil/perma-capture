@@ -1,8 +1,15 @@
 import Axios from '../../config/axios'
 import { TransitionalStates } from '../../constants/captures'
-import { snakeToPascal } from '../../lib/helpers'
+import { snakeToPascal, objectSubset } from '../../lib/helpers'
 
 const URL_ROOT = '/captures/'
+const LIMIT = 100
+
+let apiListContext = {
+  count: null,
+  next: null,
+  previous: null
+}
 
 const state = {
   all: []
@@ -34,20 +41,19 @@ const getters = {
       obj => Object.keys(props).reduce((t, key) => t && props[key] == obj[key], true)
     ),
 
-  sortBy: (state) => (prop, desc = true) =>
-    state.all.sort(
-      (customSorts[prop] || defaultSort(prop))(desc)
-    ),
+  sortedBy: (state) => (prop, desc = true) =>
+    state.all.sort((customSorts[prop] || defaultSort(prop))(desc)),
 
   processing: state => state.all.filter(obj =>
     snakeToPascal(obj.status) in TransitionalStates)
 }
 
 const actions = {
-  list: ({ commit }, payload) =>
+  list: ({ commit }, params = {ordering: '-created_at'}) =>
     Axios
-      .get(URL_ROOT)
+      .get(URL_ROOT, {params: params})
       .then(resp => {
+        apiListContext = objectSubset(Object.keys(apiListContext), resp.data)
         commit('replace', resp.data.results);
       }),
 

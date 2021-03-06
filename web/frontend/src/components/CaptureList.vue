@@ -5,7 +5,7 @@
       <th v-for="(heading, prop) in headings" scope="col">
         <a @click="changeSort(prop)" role="button" :class="sortBy == prop ? 'active' : ''" class="sortButton">
           {{ heading }}
-          <span :class="`bi-sort-${sortDesc ? 'down' : 'up'}`" class="sortIcon bi"></span>
+          <span :class="`bi-sort-${sortDesc || sortBy != prop ? 'down' : 'up'}`" class="sortIcon bi"></span>
         </a>
       </th>
       <th scope="col">Actions</th>
@@ -45,9 +45,12 @@ export default {
   }),
   computed: {
     ...mapGetters({
-      captures: 'sortBy',
+      captures: 'sortedBy',
       processing: 'processing'
-    })
+    }),
+    apiParams() {
+      return {ordering: (this.sortDesc ? '-' : '') + this.sortBy}
+    }
   },
   methods: {
     ...mapActions([
@@ -72,6 +75,12 @@ export default {
     }
   },
   watch: {
+    apiParams: {
+      deep: true,
+      handler(){
+        this.list(this.apiParams)
+      }
+    },
     processing(current, previous) {
       if(this.$options.poller){
         if(!current.length) this.clearProcessingPoll()

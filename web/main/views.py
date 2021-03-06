@@ -19,7 +19,7 @@ import django_filters
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import ValidationError
-# from rest_framework.filters import OrderingFilter  # comment in if we need support for ordering
+from rest_framework.filters import OrderingFilter  # comment in if we need support for ordering
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response as ApiResponse
 from rest_framework import status
@@ -114,10 +114,10 @@ class CaptureListView(APIView):
 
     filter_backends = (
         django_filters.rest_framework.DjangoFilterBackend,  # subclasses can be filtered by keyword if filterset_class is set
-        # OrderingFilter        # can be ordered by order_by= if ordering_fields is set
+        OrderingFilter        # can be ordered by order_by= if ordering_fields is set
     )
     filterset_class = CaptureJobFilter
-    # ordering_fields = ()      # lock down order_by fields -- security risk if unlimited
+    ordering_fields = ('created_at', 'requested_url', 'label', 'status', 'capture_oembed_view')      # lock down order_by fields -- security risk if unlimited
 
     def filter_queryset(self, queryset):
         """
