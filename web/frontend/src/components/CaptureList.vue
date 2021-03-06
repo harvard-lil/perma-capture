@@ -13,7 +13,7 @@
   </thead>
   <tbody>
     <CaptureListItem
-      v-for="capture in captures(sortBy, sortDesc)"
+      v-for="capture in captures"
       :key="capture.id"
       :capture="capture"
       />
@@ -25,7 +25,7 @@
 import CaptureListItem from './CaptureListItem.vue'
 
 import { createNamespacedHelpers } from 'vuex'
-const { mapGetters, mapActions } = createNamespacedHelpers('captures')
+const { mapGetters, mapActions, mapState } = createNamespacedHelpers('captures')
 
 export default {
   poller: null,
@@ -45,8 +45,10 @@ export default {
   }),
   computed: {
     ...mapGetters({
-      captures: 'sortedBy',
       processing: 'processing'
+    }),
+    ...mapState({
+      captures: 'all'
     }),
     apiParams() {
       return {ordering: (this.sortDesc ? '-' : '') + this.sortBy}
