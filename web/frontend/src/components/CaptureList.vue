@@ -13,7 +13,7 @@
   </thead>
   <tbody ref="tableBody">
     <CaptureListItem
-      v-for="capture in captures"
+      v-for="capture in captures(sortBy, sortDesc)"
       :key="capture.id"
       :capture="capture"
       />
@@ -51,10 +51,10 @@ export default {
   }),
   computed: {
     ...mapGetters({
-      processing: 'processing'
+      processing: 'processing',
+      captures: 'sortedBy'
     }),
     ...mapState({
-      captures: 'all',
       apiContext: 'apiContext'
     }),
     apiParams() {
