@@ -5,14 +5,13 @@ import { snakeToPascal, objectSubset } from '../../lib/helpers'
 const URL_ROOT = '/captures/'
 const LIMIT = 100
 
-let apiListContext = {
-  count: null,
-  next: null,
-  previous: null
-}
-
 const state = {
-  all: []
+  all: [],
+  apiContext: {
+    count: null,
+    next: null,
+    previous: null
+  }
 }
 
 const defaultSortLogic = (desc, a, b) => {
@@ -53,8 +52,16 @@ const actions = {
     Axios
       .get(URL_ROOT, {params: params})
       .then(resp => {
-        apiListContext = objectSubset(Object.keys(apiListContext), resp.data)
+        commit('updateApiContext', resp.data)
         commit('replace', resp.data.results);
+      }),
+
+  pageForward: ({ commit, state }) =>
+    Axios
+      .get(state.apiContext.next)
+      .then(resp => {
+        commit('updateApiContext', resp.data)
+        commit('append', resp.data.results)
       }),
 
   create: ({ commit }, payload) =>
@@ -100,6 +107,9 @@ const actions = {
 }
 
 const mutations = {
+  updateApiContext: (state, apiResponseData) =>
+    Object.assign(state.apiContext, objectSubset(Object.keys(state.apiContext), apiResponseData)),
+
   replace: (state, payload) =>
     state.all = payload,
 

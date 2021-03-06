@@ -11,7 +11,7 @@
       <th scope="col">Actions</th>
     </tr>
   </thead>
-  <tbody>
+  <tbody ref="tableBody">
     <CaptureListItem
       v-for="capture in captures"
       :key="capture.id"
@@ -48,7 +48,8 @@ export default {
       processing: 'processing'
     }),
     ...mapState({
-      captures: 'all'
+      captures: 'all',
+      apiContext: 'apiContext'
     }),
     apiParams() {
       return {ordering: (this.sortDesc ? '-' : '') + this.sortBy}
@@ -57,6 +58,7 @@ export default {
   methods: {
     ...mapActions([
       'list',
+      'pageForward',
       'batchRead'
     ]),
     pollForProcessingChanges() {
@@ -67,6 +69,9 @@ export default {
     clearProcessingPoll() {
       clearInterval(this.$options.poller)
     },
+    clearScrollListener() {
+      window.removeEventListener("scroll", this.handleScroll)
+    },
     changeSort(prop) {
       if(this.sortBy == prop){
         this.sortDesc = !this.sortDesc
@@ -74,6 +79,12 @@ export default {
         this.sortBy = prop
         this.sortDesc = true
       }
+    },
+    handleScroll(e) {
+	  if (this.$refs.tableBody.getBoundingClientRect().bottom < window.innerHeight) {
+        this.clearScrollListener()
+		this.pageForward()
+	  }
     }
   },
   watch: {
@@ -81,6 +92,18 @@ export default {
       deep: true,
       handler(){
         this.list(this.apiParams)
+      }
+    },
+    apiContext: {
+      deep: true,
+      handler(current, previous){
+        if(current.next) {
+          // Don't bother tracking whether it's already been attached
+          // https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener#multiple_identical_event_listeners
+          window.addEventListener("scroll", this.handleScroll)
+        } else {
+          this.clearScrollListener()
+        }
       }
     },
     processing(current, previous) {
@@ -95,6 +118,7 @@ export default {
     this.list()
   },
   unmounted() {
+    this.clearScrollListener()
     this.clearProcessingPoll()
   }
 }
