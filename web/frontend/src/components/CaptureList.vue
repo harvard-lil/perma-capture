@@ -17,6 +17,11 @@
       :key="capture.id"
       :capture="capture"
       />
+    <tr v-if="loading">
+      <td colspan="999">
+        Loading more...
+      </td>
+    </tr>
   </tbody>
 </table>
 </template>
@@ -33,6 +38,7 @@ export default {
     CaptureListItem
   },
   data: () => ({
+    loading: true,
     sortBy: 'created_at',
     sortDesc: true,
     headings: {
@@ -83,7 +89,8 @@ export default {
     handleScroll(e) {
 	  if (this.$refs.tableBody.getBoundingClientRect().bottom < window.innerHeight) {
         this.clearScrollListener()
-		this.pageForward()
+        this.loading = true
+		this.pageForward().then(() => this.loading = false)
 	  }
     }
   },
@@ -115,7 +122,7 @@ export default {
     }
   },
   created() {
-    this.list()
+    this.list().then(() => this.loading = false)
   },
   unmounted() {
     this.clearScrollListener()
