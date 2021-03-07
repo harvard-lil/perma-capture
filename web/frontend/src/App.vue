@@ -1,5 +1,5 @@
 <template>
-  <TheDashboard/>
+<router-view />
 </template>
 
 <script lang="ts">
@@ -7,13 +7,9 @@ import '@popperjs/core'
 import 'bootstrap'
 
 import { defineComponent } from 'vue'
-import TheDashboard from './components/TheDashboard.vue'
 
 export default defineComponent({
-  name: 'App',
-  components: {
-    TheDashboard
-  }
+  name: 'App'
 })
 </script>
 

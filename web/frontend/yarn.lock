@@ -1281,6 +1281,11 @@ vscode-web-custom-data@^0.3.2:
   resolved "https://registry.yarnpkg.com/vscode-web-custom-data/-/vscode-web-custom-data-0.3.3.tgz#9e1f2388c718d6f190038a19d144834a436b876f"
   integrity sha512-orMjjj1r4efP5ocODYZm3orpANakRBsxPZPDoD5UIrFOPKDFtMJQLp6PIH1rb3AYVRD1iYXMhDQoC6tZ+DrigA==
 
+vue-router@4:
+  version "4.0.4"
+  resolved "https://registry.yarnpkg.com/vue-router/-/vue-router-4.0.4.tgz#ad9b4b7bbdad622407b4ff189b1646f48c1e9053"
+  integrity sha512-uN6PDEaYdU9aRO7mU+Dkr1uaY49hV3fucEDG/Vre/Qj8ct3RoJS16vcPrvKVzn69zDDjBV5b9Xw7fZA9r6b/Iw==
+
 vue@^3.0.5:
   version "3.0.5"
   resolved "https://registry.yarnpkg.com/vue/-/vue-3.0.5.tgz#de1b82eba24abfe71e0970fc9b8d4b2babdc3fe1"
