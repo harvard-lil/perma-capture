@@ -14,7 +14,7 @@ const state = {
   }
 }
 
-const defaultSortLogic = (desc, a, b) => {
+const defaultSort = (prop) => (desc) => (a, b) => {
   // swap the argument order if descending
   if(desc) {
     const originalA = a
@@ -22,16 +22,20 @@ const defaultSortLogic = (desc, a, b) => {
     b = originalA
   }
 
-  return a < b ? -1
-    : a > b ? 1
+  // sort first on the property and second on the id
+  return a[prop] < b[prop] ? -1
+    : a[prop] > b[prop] ? 1
+    : a.id < b.id ? -1
+    : a.id > b.id ? 1
     : 0
 }
 
-const defaultSort = (prop) => (desc) => ({ [prop]: a }, { [prop]: b }) => defaultSortLogic(desc, a, b)
-
 const customSorts = {
-  created_at: (desc) => (a, b) =>
-    defaultSortLogic(desc, new Date(a.created_at), new Date(b.created_at)),
+  created_at: (desc) => {
+    const curriedFn = defaultSort('created_at')(desc)
+    return (a, b) =>
+      curriedFn({...a, created_at: new Date(a.created_at)}, {...b, created_at: new Date(b.created_at)})
+  }
 }
 
 const getters = {
