@@ -38,4 +38,10 @@ export default {
 </script>
 
 <style scoped>
+  .dropdown-toggle {
+    background-color: white;
+    color: black;
+    border-color: var(--color-background);
+    padding: 1em;
+  }
 </style>
