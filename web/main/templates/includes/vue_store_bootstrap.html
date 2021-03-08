@@ -1,0 +1,9 @@
+<script>
+  const store_bootstrap = {
+      user: {
+          is_authenticated: {{ request.user.is_authenticated | lower }},
+          is_staff: {{ request.user.is_staff | lower }},
+          first_name: '{{ request.user.first_name }}'
+      }
+  };
+</script>
