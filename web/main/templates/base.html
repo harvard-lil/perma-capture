@@ -17,31 +17,14 @@
   </head>
   <body>
     {% block body %}
-    <div id="nav" class="hidden">
-      {% include 'includes/nav.html' %}
-    </div>
-    <div class="wrapper wrapper-{% block flex %}{% endblock %}flex">
-      <header>
-        <div class="navbar-brand logo">
-          <a href="/">{{ APP_NAME }} <img alt="" class="infinity-logo" src="{% static 'img/eyes.svg' %}"></a>
+    <div class="container">
+      <div id="vue-app"></div>
+      <main>
+        <div class="row mb-5">
+          <h1 class="text-center display-5">{% block heading %}{{ heading }}{% endblock heading %}</h1>
         </div>
-        {% if not request.user.is_authenticated %}
-          <div class="header-right">
-            <a href="{% url 'sign_up' %}">Sign up</a>
-            <a href="{% url 'docs' %}">User Guide</a>
-            <a href="{% url 'login' %}">Log in</a>
-          </div>
-        {% endif %}
-      </header>
-      {% if request.user.is_authenticated %}
-        <button tabindex=1 id="toggle-nav" type="button" aria-label="Navigation" aria-controls="nav" aria-expanded="false"><span aria-hidden="true">&lt;&lt;</span></button>
-      {% endif %}
-      <main class="container wrapper-flex">
-        <div class="row">
-          <h1>{% block heading %}{{ heading }}{% endblock heading %}</h1>
-          {% block content %}
-          {% endblock content %}
-        </div>
+        {% block content %}
+        {% endblock content %}
       </main>
     </div>
     <a class="a11y-policy" href="{{ ACCESSIBILITY_POLICY_URL }}"><span aria-hidden="true">♿</span><span class="sr-only">Accessibility policy</span></a>

@@ -12,27 +12,6 @@ function say(text){
 }
 
 //
-// Toggle Controls
-//
-
-const toggleNav = document.getElementById('toggle-nav');
-const nav = document.getElementById('nav');
-
-toggleNav.addEventListener('click', function(event){
-  event.preventDefault();
-  if(this.getAttribute('aria-expanded') == 'false' ){
-      this.innerHTML = '&gt;&gt;';
-      this.setAttribute('aria-expanded', 'true');
-      nav.classList.remove('hidden');
-  } else {
-      this.innerHTML = '&lt;&lt;';
-      this.setAttribute('aria-expanded', 'false');
-      nav.classList.add('hidden');
-  }
-});
-
-
-//
 // New API token button
 //
 

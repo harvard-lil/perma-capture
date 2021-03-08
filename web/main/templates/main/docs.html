@@ -4,8 +4,13 @@
 {% block html-class%}docs{% endblock %}
 
 {% block header_scripts %}
-  <script src="{{ rwp_base_url }}/ui.js"></script>
+<script src="{{ rwp_base_url }}/ui.js"></script>
+{% include "includes/vue_store_bootstrap.html" %}
+{% include "includes/vite.html" %}
 {% endblock header_scripts %}
+
+{% block css %}
+{% endblock css %}
 
 {% block flex %}no{% endblock %}
 
@@ -15,9 +20,9 @@
 {% block content %}
 {% with base_url=request.scheme|add:"://"|add:request.get_host %}
   <div class="row">
-    <div id="first-column" class="three columns">
+    <div class="col-sm-4">
       <h2>Table of Contents</h2>
-      <ul>
+      <ul class="list-unstyled">
         <li><a href="#capturing-urls">Capturing URLs</a>
           <ul>
             <li><a href="#capturing-ui">Using the Web Interface</a></li>
@@ -54,9 +59,9 @@
       </ul>
     </div>
 
-    <div id="second-column" class="nine columns">
+    <div class="col">
 
-    <p>The Perma.cc capture system is built on <a href="https://github.com/webrecorder">Webrecorder</a> technology and uses an automated browser to produce high-fidelity web archives.</p>
+    <p class="lead">The Perma.cc capture system is built on <a href="https://github.com/webrecorder">Webrecorder</a> technology and uses an automated browser to produce high-fidelity web archives.</p>
     <p>A <a href="https://github.com/webrecorder/wacz-format">web archive file</a> is created for each submitted URL, and each archive can be downloaded, embedded in a web page and displayed ("replayed") by any <a href="https://caniuse.com/serviceworkers">modern browser</a>.</p>
 
 
