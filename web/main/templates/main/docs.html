@@ -340,6 +340,7 @@ function isValidSignature(signature, data, signingKey, signingKeyAlgorithm){
     <replay-web-page
       source="https://permafact-demo.s3.amazonaws.com/twitter.com-2020-09-03.wacz"
       url="https://twitter.com/dog_rates/status/1298052245209006086?s=20"
+      replayBase="{{ rwp_base_url }}/"
     ></replay-web-page>
 
     <p>The service worker is loaded from <a href="{% url 'sw' %}"><code>{% url 'sw' %}</code></a>. Since that's the default path, no further configuration is needed.</p>
@@ -356,7 +357,7 @@ function isValidSignature(signature, data, signingKey, signingKeyAlgorithm){
     <replay-web-page
       source="https://permafact-demo.s3.amazonaws.com/www.youtube.com-2020-09-03.wacz"
       url="https://www.youtube.com/watch?v=dIUwVMDI7yE"
-      replayBase="/replay/"
+      replayBase="{{ rwp_base_url }}/"
     ></replay-web-page>
 
     <p>Here, we redundantly configure <code>replayBase</code> to point to <code>/replay/</code>, the path where <code>sw.js</code></a> for demonstration purposes.</p>
