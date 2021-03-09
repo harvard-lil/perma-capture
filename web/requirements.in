@@ -37,5 +37,9 @@ requests-mock       # mock the requests library
 factory-boy         # create django model fixtures on demand
 pyhumps             # a helper for dealing with camel case and snake case
 
+# Frontend
+django-crispy-forms
+crispy-bootstrap5
+
 # Frontend Dev
 djproxy
