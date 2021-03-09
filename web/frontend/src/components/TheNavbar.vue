@@ -1,7 +1,7 @@
 <template>
 <nav class="navbar navbar-expand-lg mb-3 py-3">
   <div class="container-fluid">
-    <a href="/" class="navbar-brand">{{ app_name }}</a>
+    <router-link :to="{name: 'dashboard'}" class="navbar-brand">{{ app_name }}</router-link>
     <TheMainNav/>
   </div>
 </nav>

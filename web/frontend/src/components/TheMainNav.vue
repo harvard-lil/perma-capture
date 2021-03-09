@@ -5,7 +5,7 @@
   </button>
   <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton1">
     <li><a class="dropdown-item" href="/user/account/">My Account</a></li>
-    <li><a class="dropdown-item" href="/docs/">User Guide</a></li>
+    <li><router-link :to="{name: 'docs'}" class="dropdown-item">User Guide</router-link></li>
     <li><a class="dropdown-item" href="/user/logout/">Log Out</a></li>
     
     <template v-if="is_staff">
