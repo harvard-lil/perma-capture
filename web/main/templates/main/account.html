@@ -1,31 +1,40 @@
-{% extends "base-two-column.html" %}
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block header_scripts %}
+{% include "includes/vue_store_bootstrap.html" %}
+{% include "includes/vite.html" %}
+{% endblock header_scripts %}
+
+{% block css %}{% endblock css %}
 
 {% block title %}My Account{% endblock %}
 {% block heading %}My Account{% endblock %}
 
-{% block column_first %}
-  <h2>Profile</h2>
-  <form method="POST" class="u-full-width">
-    {% csrf_token %}
-    <div class="row">
-      {{ form }}
-    </div>
-    <button type="submit" class="button-primary">Save changes</button>
-  </form>
+{% block content %}
+<div class="row mt-5 gx-5">
+  <div class="col">
+    <h2>Profile</h2>
+    <form method="POST" class="u-full-width">
+      {% csrf_token %}
+      {{ form|crispy }}
+      <button type="submit" class="btn btn-primary">Save changes</button>
+    </form>
 
-  <h2>Password</h2>
-  <p><a href="{% url 'password_change' %}" class="button button-primary">Change my password</a></p>
-{% endblock %}
+    <h2>Password</h2>
+    <p><a href="{% url 'password_change' %}" class="btn btn-primary">Change my password</a></p>
+  </div>
 
-{% block column_second %}
-  <h2>API</h2>
-  <p>
-    <label for="api-key">Your API key</label>
-    <input id="api-key" type="text" value="{{ request.user.auth_token.key }}" readonly class="u-full-width">
-    <button id="api-key-button" type="button" class="button-primary">Get a new key</button>
-  </p>
-{% endblock %}
-
+  <div class="col">
+    <h2>API</h2>
+    <p>
+      <label for="api-key" class="form-label">Your API key</label>
+      <input id="api-key" type="text" value="{{ request.user.auth_token.key }}" readonly class="form-control mb-3">
+      <button id="api-key-button" type="button" class="btn btn-primary">Get a new key</button>
+    </p>
+  </div>
+{% endblock content %}
+  
 {% block scripts %}
   <script>
     const RESET_TOKEN_BUTTON = true;
