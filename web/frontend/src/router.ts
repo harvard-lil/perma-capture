@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import TheDashboard from './components/TheDashboard.vue'
 import TheDocs from './components/TheDocs.vue'
-import TheAccountSettings from './components/TheDocs.vue'
+import TheAccountSettings from './components/TheAccountSettings.vue'
 
 const routes = [
   { path: '/', name: 'dashboard', component: TheDashboard },
