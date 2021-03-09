@@ -1,27 +1,22 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block html-class%}docs{% endblock %}
-
 {% block header_scripts %}
 <script src="{{ rwp_base_url }}/ui.js"></script>
 {% include "includes/vue_store_bootstrap.html" %}
 {% include "includes/vite.html" %}
 {% endblock header_scripts %}
 
-{% block css %}
-{% endblock css %}
-
-{% block flex %}no{% endblock %}
+{% block css %}{% endblock css %}
 
 {% block title %}User Guide{% endblock %}
 {% block heading %}User Guide{% endblock %}
 
 {% block content %}
 {% with base_url=request.scheme|add:"://"|add:request.get_host %}
-  <div class="row">
+  <div class="row mt-5">
     <div class="col-sm-4">
-      <h2>Table of Contents</h2>
+      <h2 class="h4">Table of Contents</h2>
       <ul class="list-unstyled">
         <li><a href="#capturing-urls">Capturing URLs</a>
           <ul>
