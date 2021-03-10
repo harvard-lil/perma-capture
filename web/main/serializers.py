@@ -39,8 +39,8 @@ class WebhookSubscriptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = WebhookSubscription
-        fields = '__all__'
-        read_only_fields = ('id', 'user', 'signing_key', 'signing_key_algorithm')
+        fields = ('id', 'created_at', 'updated_at', 'event_type', 'callback_url', 'signing_key', 'signing_key_algorithm')
+        read_only_fields = ('id', 'created_at', 'updated_at', 'user', 'signing_key', 'signing_key_algorithm')
 
 
 class SimpleWebhookSubscriptionSerializer(serializers.ModelSerializer):

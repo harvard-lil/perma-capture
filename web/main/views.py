@@ -335,12 +335,10 @@ class WebhookSubscriptionListView(APIView):
             "event_type": "ARCHIVE_CREATED",
             "callback_url": "https://webhookservice.com?hookid=1234",
             "signing_key": "128-byte-key",
-            "signing_key_algorithm": "sha256",
-            "user": 1
+            "signing_key_algorithm": "sha256"
         }]
         >>> [subscription] = response.data
         >>> assert subscription['id'] == webhook_subscription.id
-        >>> assert subscription['user'] == webhook_subscription.user.id
         >>> assert subscription['event_type'] == webhook_subscription.event_type == WebhookSubscription.EventType.ARCHIVE_CREATED
         >>> assert subscription['callback_url'] == webhook_subscription.callback_url
         >>> for key in ['created_at', 'updated_at', 'signing_key', 'signing_key_algorithm']:
@@ -374,8 +372,7 @@ class WebhookSubscriptionListView(APIView):
             "event_type": "ARCHIVE_CREATED",
             "callback_url": "https://webhookservice.com?hookid=1234",
             "signing_key": "128-byte-key",
-            "signing_key_algorithm": "sha256",
-            "user": 1
+            "signing_key_algorithm": "sha256"
         }
         >>> assert response.data['callback_url'] == data['callback_url']
         >>> assert response.data['event_type'] == data['event_type']
@@ -404,7 +401,7 @@ class WebhookSubscriptionListView(APIView):
         >>> user.refresh_from_db()
         >>> assert user.webhook_subscriptions.count() == 3
         >>> assert response.data['id'] != disallowed_keys['id']
-        >>> assert response.data['user'] == user.id != disallowed_keys['user']
+        >>> assert WebhookSubscription.objects.get(id=response.data['id']).user_id == user.id != disallowed_keys['user']
         >>> assert response.data['signing_key'] != disallowed_keys['signing_key']
         >>> assert response.data['signing_key_algorithm'] != disallowed_keys['signing_key_algorithm']
 
@@ -449,10 +446,9 @@ class WebhookSubscriptionDetailView(APIView):
         >>> check_response(response)
 
         Sample response:
-        {'id': 1, 'created_at': '2020-09-24T19:16:36.238012Z', 'updated_at': '2020-09-24T19:16:36.238026Z', 'event_type': 'ARCHIVE_CREATED', 'callback_url': 'https://webhookservice.com?hookid=1234', 'user': 1}
+        {'id': 1, 'created_at': '2020-09-24T19:16:36.238012Z', 'updated_at': '2020-09-24T19:16:36.238026Z', 'event_type': 'ARCHIVE_CREATED', 'callback_url': 'https://webhookservice.com?hookid=1234'}
         >>> subscription = response.data
         >>> assert subscription['id'] == webhook_subscription.id
-        >>> assert subscription['user'] == webhook_subscription.user.id
         >>> assert subscription['event_type'] == webhook_subscription.event_type == WebhookSubscription.EventType.ARCHIVE_CREATED
         >>> assert subscription['callback_url'] == webhook_subscription.callback_url
         >>> for key in ['created_at', 'updated_at']:
