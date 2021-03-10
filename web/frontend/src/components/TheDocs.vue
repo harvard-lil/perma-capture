@@ -51,7 +51,7 @@
       <h2 id="capturing-urls">Capturing URLs</h2>
       
       <h3 id="capturing-ui">Using the Web Interface</h3>
-      <p>After logging in, simply <router-link :to="{name: 'dashboard'}">enter the URLs</router-link> you'd like to preserve and click "Capture." A capture job will be launched for each submitted URL.</p>
+      <p>After logging in, simply <router-link :to="{name: 'root'}">enter the URLs</router-link> you'd like to preserve and click "Capture." A capture job will be launched for each submitted URL.</p>
       <p>A list of all your active capture jobs will appear beneath the form. When each job is finished, you can click <img style="width: 1.5em; height: 1.5em; vertical-align: top" alt="the preview button" title="Preview Capture" src="../assets/img/preview.svg"> to preview the capture, and <img style="width: 1.1em; height: 1.1em" alt="the download button" title="Download Capture" src="../assets/img/download.svg"> to download the web archive file.</p>
       <p><img style="max-width: 100%;" src="../assets/img/dashboard-screenshot.png" alt="Screenshot of the dashboard. The 'create a new archive' form is above a list of 2 capture jobs, with their download and preview buttons circled."></p>
       <p>Capture jobs are retained for 4 hours and then are automatically deleted. Deleted capture jobs cannot be recovered from the service.</p>

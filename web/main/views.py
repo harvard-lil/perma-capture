@@ -508,7 +508,7 @@ def index(request):
             'heading': 'Create a new archive'
         })
     else:
-        return render(request, 'generic.html', {
+        return render(request, 'vue_base.html', {
             'heading': settings.APP_NAME,
             'message': "A Witness Server & Suite of Tools for Journalists and Fact Checkers"
         })

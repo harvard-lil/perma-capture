@@ -4,6 +4,7 @@
     {{ first_name }}
   </button>
   <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton1">
+    <li><router-link :to="{name: 'root'}" class="dropdown-item">Dashboard</router-link></li>
     <li><a class="dropdown-item" href="/user/account/">My Account</a></li>
     <li><router-link :to="{name: 'docs'}" class="dropdown-item">User Guide</router-link></li>
     <li><a class="dropdown-item" href="/user/logout/">Log Out</a></li>
@@ -19,7 +20,7 @@
 
 <ul v-else class="navbar-nav">
   <li class="nav-item"><a class="nav-link" href="/sign-up/">Sign up</a></li>
-  <li class="nav-item"><a class="nav-link" href="/docs/">User Guide</a></li>
+  <li class="nav-item"><router-link :to="{name: 'docs'}" class="nav-link">User Guide</router-link></li>
   <li class="nav-item"><a class="nav-link" href="/user/login">Log in</a></li>
 </ul>
 </template>
