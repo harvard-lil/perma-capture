@@ -1,5 +1,5 @@
 const state = {
-  app_name: 'capture.perma.cc'
+  ...store_bootstrap.globals,
 }
 
 const getters = {}

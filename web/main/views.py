@@ -596,9 +596,10 @@ def sign_up(request):
         if form.is_valid():
             form.save()
             return render(request, 'registration/sign_up_success.html')
-    return render(request, 'registration/sign_up.html', {
+    return render(request, 'vue_base.html', {
         'form': form,
-        'allow_signups': settings.ALLOW_SIGNUPS
+        'allow_signups': settings.ALLOW_SIGNUPS,
+        'heading': 'Sign up'
     })
 
 
