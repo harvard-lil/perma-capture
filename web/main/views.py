@@ -598,7 +598,6 @@ def sign_up(request):
             return render(request, 'registration/sign_up_success.html')
     return render(request, 'vue_base.html', {
         'form': form,
-        'allow_signups': settings.ALLOW_SIGNUPS,
         'heading': 'Sign up'
     })
 

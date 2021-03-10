@@ -2,7 +2,8 @@
   const store_bootstrap = {
       globals: {
           app_name: '{{ APP_NAME }}',
-          contact_email: '{{ CONTACT_EMAIL }}'
+          contact_email: '{{ CONTACT_EMAIL }}',
+          allow_signups: {{ ALLOW_SIGNUPS | lower }}
       },
       user: {
           is_authenticated: {{ request.user.is_authenticated | lower }},

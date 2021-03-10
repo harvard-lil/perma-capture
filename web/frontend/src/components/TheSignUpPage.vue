@@ -7,10 +7,20 @@
   
   <div class="row mt-5 gx-5">
     <div class="col">
-      <h2>Interested?</h2>
-      <p>Just <a :href="`mailto:${ contact_email }?subject=Request%20A%20Capturing%20Account`">let us know</a> how you you'd like to use the service, and we can send you an invitation!</p>
-      <p>(While in beta, we are invitation-only, but we plan to be available for general use soon!)</p>
-      <p><router-link :to="{name: 'docs'}">Learn more.</router-link></p>
+      <template v-if="allow_signups">
+        <h2>Sign up for {{ app_name }}</h2>
+        <form method="POST" class="u-full-width">
+          {{ form }}
+          <p class="small">{{ app_name }} is a service of <a href="https://perma.cc/">Perma.cc</a>. By signing up, you agree to the <a href="https://perma.cc/terms-of-service">Perma.cc Terms of Service</a>.</p>
+          <button class="button-primary" type="submit">Sign up</button>
+        </form>
+      </template>
+      <template v-else>
+        <h2>Interested?</h2>
+        <p>Just <a :href="`mailto:${ contact_email }?subject=Request%20A%20Capturing%20Account`">let us know</a> how you you'd like to use the service, and we can send you an invitation!</p>
+        <p>(While in beta, we are invitation-only, but we plan to be available for general use soon!)</p>
+        <p><router-link :to="{name: 'docs'}">Learn more.</router-link></p>
+      </template>
     </div>
     
     <div class="col">
@@ -39,7 +49,8 @@ export default {
   },
   computed: mapState([
     'app_name',
-    'contact_email'
+    'contact_email',
+    'allow_signups'
   ])
 }
 </script>
