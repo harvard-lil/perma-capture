@@ -5,7 +5,6 @@ from distutils.sysconfig import get_python_lib
 import factory
 import humps
 import inspect
-from io import BytesIO
 import pytest
 import random
 import requests
@@ -14,6 +13,7 @@ import re
 from django.conf import settings
 from django.db import connections
 from django.db.backends.base.base import BaseDatabaseWrapper
+from django.db.models import signals
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from django.db.backends import utils as django_db_utils
@@ -255,6 +255,27 @@ def random_webhook_event():
     return random.choice(list(WebhookSubscription.EventType))
 
 
+@pytest.fixture
+def webhook_callback_factory(db, requests_mock):
+    """
+    Given:
+    >>> webhook_callback_factory = getfixture('webhook_callback_factory')
+
+    By default, mock the callback to return HTTP 200.
+    >>> webhook, _ = webhook_callback_factory()
+    >>> assert requests.post(webhook.callback_url).status_code == 200
+
+    Status code can be customized.
+    >>> webhook, _ = webhook_callback_factory(400)
+    >>> assert requests.post(webhook.callback_url).status_code == 400
+    """
+    def func(status_code=200, **kwargs):
+        webhook = WebhookSubscriptionFactory(**kwargs)
+        mock = requests_mock.post(webhook.callback_url, status_code=status_code)
+        return (webhook, mock)
+    return func
+
+
 @register_factory
 class CaptureJobFactory(factory.DjangoModelFactory):
     class Meta:
@@ -354,6 +375,15 @@ class ArchiveFactory(factory.DjangoModelFactory):
     )
 
 
+@register_factory
+@factory.django.mute_signals(signals.post_save)
+class NoSignalsArchiveFactory(ArchiveFactory):
+    """
+    So that we can test manually.
+    """
+    pass
+
+
 # I'm defining this at the top-level scope so that it can be imported and used
 # outside of the contexts of tests, for instance, in local development.
 def create_capture_job(status=None, **kwargs):
@@ -418,77 +448,3 @@ def user_with_capture_jobs_factory(db):
             create_capture_job(user=user, **kwargs)
         return user
     return func
-
-
-###
-### k8s capture service mocks ###
-###
-
-@register_factory
-class CaptureJobData(factory.Factory):
-    class Meta:
-        model = dict
-        exclude = ('user',)
-
-    jobid = factory.Faker('uuid4')
-    user = factory.SubFactory(UserFactory)
-    userid = factory.LazyAttribute(lambda o: str(o.user.id))
-    capture_url = factory.Faker('url')
-    use_embeds = factory.Faker('boolean')
-    user_tag = factory.Faker('text', max_nb_chars=15)
-    start_time = factory.Faker('iso8601', tzinfo=tz.utc)
-    elapsed_time = factory.Faker('iso8601', tzinfo=tz.utc)
-    access_url = factory.LazyAttribute(
-        lambda o: factory.Faker('url').generate() if o.status == 'Complete' else None
-    )
-    status = factory.Faker('random_element', elements=('In progress', 'Failed', 'Complete', 'Unknown'))
-
-
-@register_factory
-class WebhookCallbackFactory(factory.Factory):
-    class Meta:
-        model = dict
-        exclude = ('user', 'capture_job')
-
-    user = factory.SubFactory(UserFactory)
-    capture_job = factory.SubFactory(
-        CaptureJobData,
-        user=factory.SelfAttribute('..user')
-    )
-    jobid = factory.LazyAttribute(lambda o: o.capture_job['jobid'])
-    userid = factory.LazyAttribute(lambda o: str(o.user.id))
-    url = factory.Faker('url')
-    access_url = factory.Faker('url')
-    user_data_field = factory.LazyFunction(lambda: str(timezone.now().timestamp()))
-
-
-class MockResponse:
-
-    def __init__(self, *args, **kwargs):
-        self.code = kwargs.get('code', 200)
-        self.generate_data = kwargs.get('generate_data', lambda: {'key': 'value'})
-
-    @property
-    def status_code(self):
-        return self.code
-
-    def json(self):
-        return self.generate_data()
-
-    def iter_content(self, chunk_size=1, decode_unicode=False):
-        """
-        Adapted from https://github.com/psf/requests/blob/8149e9fe54c36951290f198e90d83c8a0498289c/requests/models.py#L732
-        """
-        file = BytesIO(b'Some file')
-        while True:
-            chunk = file.read(chunk_size)
-            if not chunk:
-                break
-            yield chunk
-
-
-@pytest.fixture()
-def mock_download(monkeypatch):
-    def response(*args, **kwargs):
-        return MockResponse(*args, **kwargs)
-    monkeypatch.setattr(requests, 'get', response)

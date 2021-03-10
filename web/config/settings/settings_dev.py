@@ -51,6 +51,5 @@ ADMINS = [('John', 'john@example.com'), ('Mary', 'mary@example.com')]
 # Override the netloc during serialization, so download links work.
 OVERRIDE_DOWNLOAD_URL_NETLOC = 'localhost:9000'
 
-DISPATCH_WEBHOOKS = True
 WEBHOOK_MAX_RETRIES = 2
 EXPOSE_WEBHOOK_TEST_ROUTE = True

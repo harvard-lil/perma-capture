@@ -1,5 +1,5 @@
 from celery import shared_task
-from celery.exceptions import MaxRetriesExceededError, SoftTimeLimitExceeded
+from celery.exceptions import MaxRetriesExceededError, SoftTimeLimitExceeded, Retry
 from celery.signals import task_failure
 import os
 import requests
@@ -16,8 +16,10 @@ from .models import CaptureJob, Archive, WebhookSubscription
 from .serializers import ReadOnlyCaptureJobSerializer, SimpleWebhookSubscriptionSerializer
 from .storages import get_storage
 from .utils import (validate_and_clean_url, get_file_hash, parse_querystring,
-    datetime_from_timestamp, sign_data, send_template_email
+    datetime_from_timestamp, sign_data, is_valid_signature, send_template_email
 )
+
+from pytest import raises as assert_raises
 
 import logging
 logger = logging.getLogger(__name__)
@@ -39,7 +41,7 @@ def celery_task_failure_email(**kwargs):
     >>> sleep = mocker.patch('main.tasks.sleep')
     >>> mailer = mocker.patch('main.tasks.mail_admins')
 
-    Patch the task so that it errors, and then run in:
+    Patch the task so that it errors, and then run it:
     >>> sleep.side_effect = lambda seconds: 1/0
     >>> _ = demo_scheduled_task.apply_async(kwargs={'pause_for_seconds': 1})
 
@@ -257,12 +259,59 @@ def run_next_capture():
                 capture_job.mark_failed('Failed during capture.')
     run_next_capture.apply_async()
 
+
 @shared_task(bind=True, max_retries=settings.WEBHOOK_MAX_RETRIES)
 def dispatch_webhook(self, subscription_id, capture_job_id):
     """
+    Send a webhook notification to the requested callback.
+
+    Given:
+    >>> archive, webhook_callback_factory, django_settings, mocker, mailoutbox, caplog = [getfixture(i) for i in ['no_signals_archive', 'webhook_callback_factory', 'settings', 'mocker', 'mailoutbox', 'caplog']]
+
+    We send a serialization of the webhook subscription and the capture job, and we
+    include a signature of the payload in the HTTP headers. We expect a response with
+    a status code of 200 or 204.
+
+    >>> for status in [200, 204]:
+    ...     webhook, mock = webhook_callback_factory(status)
+    ...     _ = dispatch_webhook.apply([webhook.id, archive.capture_job.id])
+    ...     payload =  mock.last_request.json()
+    ...     assert all(key in payload for key in ['webhook', 'capture_job'])
+    ...     assert is_valid_signature(mock.last_request.headers['x-hook-signature'], payload, webhook.signing_key, webhook.signing_key_algorithm)
+    ...     assert f'Webhook notification for subscription {webhook.id}, capture job {archive.capture_job.id} delivered.' in caplog.text
+    ...     caplog.clear()
+
+    We retry if the callback sends an unexpected status code.
+
+    >>> for status in [301, 302, 400, 401, 413, 500, 502]:
+    ...     webhook, mock = webhook_callback_factory(status)
+    ...     with assert_raises(Retry):
+    ...         dispatch_webhook.apply([webhook.id, archive.capture_job.id])
+    ...     assert mock.called
+
+    If we hit the retry limit, we email the user to let them know their hook is
+    failing, including the ID of the archive, so that they can use the API to
+    retrieve its info and recover.
+
+    >>> retry = mocker.patch.object(dispatch_webhook, 'retry')
+    >>> retry.side_effect = MaxRetriesExceededError()
+    >>> webhook, mock = webhook_callback_factory(502)
+    >>> _ = dispatch_webhook.apply([webhook.id, archive.capture_job.id])
+    >>> [email] = mailoutbox
+    >>> assert "webhook notification failed" in email.subject
+    >>> assert f"capture job {archive.capture_job.id}" in email.body
+    >>> mock.reset()
+    >>> caplog.clear()
+
+    If necessary, the sendind of webhook notifications can be disabled via a Django setting.
+
+    >>> django_settings.DISPATCH_WEBHOOKS = False
+    >>> _ = dispatch_webhook.apply([webhook.id, archive.capture_job.id])
+    >>> assert 'Webhooks notifications are disabled' in caplog.text
+    >>> assert not mock.called
     """
     if not settings.DISPATCH_WEBHOOKS:
-        logger.debug(f'Webhooks notifications are disabled: not sending POST for subscription {subscription_id}, capture job {capture_job_id}.')
+        logger.info(f'Webhooks notifications are disabled: not sending POST for subscription {subscription_id}, capture job {capture_job_id}.')
         return
 
     subscription = WebhookSubscription.objects.get(id=subscription_id)
@@ -295,3 +344,5 @@ def dispatch_webhook(self, subscription_id, capture_job_id):
                 settings.DEFAULT_FROM_EMAIL,
                 [subscription.user.email],
             )
+            return
+    logger.info(f'Webhook notification for subscription {subscription_id}, capture job {capture_job_id} delivered.')
