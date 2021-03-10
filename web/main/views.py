@@ -502,9 +502,10 @@ def index(request):
     ... ])
     """
     if request.user.is_authenticated:
-        return render(request, 'main/dashboard.html', {
+        return render(request, 'vue_base.html', {
             'rwp_base_url': settings.RWP_BASE_URL,
-            'api_prefix': settings.API_PREFIX
+            'api_prefix': settings.API_PREFIX,
+            'heading': 'Create a new archive'
         })
     else:
         return render(request, 'generic.html', {
@@ -515,8 +516,9 @@ def index(request):
 
 @perms_test({'results': {200: ['user', None]}})
 def docs(request):
-    return render(request, 'main/docs.html', {
-        'rwp_base_url': settings.RWP_BASE_URL
+    return render(request, 'vue_base.html', {
+        'rwp_base_url': settings.RWP_BASE_URL,
+        'heading': 'User Guide'
     })
 
 
