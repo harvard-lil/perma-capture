@@ -43,26 +43,7 @@ def auth_view_json_response(view_func, allow_redirects=True):
 
         form = response.context_data.get('form')
         if form:
-            data = {
-                'form': {
-                    'is_bound': form.is_bound,
-                    'is_valid': form.is_valid(),
-                    'initial': form.initial,
-                    'data': form.data,
-                    'cleaned_data': getattr(form, 'cleaned_data', {}),
-                    'errors': form.errors.get_json_data(),
-                    'fields': {
-                        key: {
-                            'type': type(field).__name__,
-                            'widget': type(field.widget).__name__,
-                            'required': field.required,
-                            'initial': field.initial,
-                            'help_text': field.help_text,
-                        } for key, field in form.fields.items()
-                    },
-                    'error_messages': getattr(form, 'error_messages', {})
-                }
-            }
+            data = serialize_form(form)
         else:
             data = {'status': 'success'}
         json_response = JsonResponse(
@@ -76,6 +57,27 @@ def auth_view_json_response(view_func, allow_redirects=True):
 
     return wrapper
 
+def serialize_form(form):
+    return {
+        'form': {
+            'is_bound': form.is_bound,
+            'is_valid': form.is_valid(),
+            'initial': form.initial,
+            'data': form.data,
+            'cleaned_data': getattr(form, 'cleaned_data', {}),
+            'errors': form.errors.get_json_data(),
+            'fields': {
+                key: {
+                    'type': type(field).__name__,
+                    'widget': type(field.widget).__name__,
+                    'required': field.required,
+                    'initial': field.initial,
+                    'help_text': field.help_text,
+                } for key, field in form.fields.items()
+            },
+            'error_messages': getattr(form, 'error_messages', {})
+        }
+    }
 
 #
 # Email

@@ -8,7 +8,7 @@ from django.contrib.auth.views import PasswordResetView
 from django.core.exceptions import PermissionDenied, ValidationError as DjangoValidationError
 from django.db.models import Q
 from django.http import (HttpResponseRedirect,  HttpResponseForbidden,
-    HttpResponseServerError, HttpResponseBadRequest
+    HttpResponseServerError, HttpResponseBadRequest, JsonResponse
 )
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
@@ -29,6 +29,8 @@ from .forms import SignupForm, UserForm, PasswordResetForm
 from .models import CaptureJob, User, WebhookSubscription
 from .serializers import CaptureJobSerializer, ReadOnlyCaptureJobSerializer, WebhookSubscriptionSerializer
 from .tasks import run_next_capture
+
+from .utils import sign_data, serialize_form
 
 from test.test_helpers import check_response
 from .test.test_permissions_helpers import no_perms_test, perms_test
@@ -728,6 +730,8 @@ def account(request):
     if request.method == "POST":
         if form.is_valid():
             form.save()
+    if settings.ALL_JSON_RESPONSES:
+        return JsonResponse({'form': serialize_form(form)})
     return render(request, 'main/account.html', {
         'form': form
     })
