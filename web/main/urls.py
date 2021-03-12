@@ -5,6 +5,7 @@ from django.views.generic import TemplateView
 
 from .test.test_permissions_helpers import no_perms_test
 from . import views, forms
+from .utils import auth_view_json_response
 
 
 urlpatterns = [
@@ -24,10 +25,19 @@ urlpatterns = [
     ### user account pages ###
     path('user/account/', views.account, name='account'),
     path('user/token_reset/', views.reset_token, name='token_reset'),
-    # built-in Django auth views, with overrides to replace the form or tweak behavior in some views
-    path('user/password_reset/', no_perms_test(views.reset_password), name='password_reset'),
-    path('user/reset/<uidb64>/<token>/', no_perms_test(auth_views.PasswordResetConfirmView.as_view(form_class=forms.SetPasswordForm)), name='password_reset_confirm'),
-    path('user/', include('django.contrib.auth.urls')),
+    # built-in Django auth views, wrapped to return JSON, with overrides to replace the form or tweak behavior in some views
+    *[path(f'user/{view[0]}/', no_perms_test(auth_view_json_response(view[1])), name=f'{view[2]}')
+        for view in [
+            ('login', auth_views.LoginView.as_view(), 'login'),
+            ('logout', auth_views.LogoutView.as_view(), 'logout'),
+            ('password_change', auth_views.PasswordChangeView.as_view(), 'password_change'),
+            ('password_change/done', auth_views.PasswordChangeDoneView.as_view(), 'password_change_done'),
+            ('password_reset', views.reset_password, 'password_reset'),
+            ('password_reset/done', auth_views.PasswordResetDoneView.as_view(), 'password_reset_done'),
+            ('reset/<uidb64>/<token>', auth_views.PasswordResetConfirmView.as_view(form_class=forms.SetPasswordForm), 'password_reset_confirm'),
+            ('reset/done', auth_views.PasswordResetCompleteView.as_view(), 'password_reset_complete')
+        ]
+    ],
 
     ### internal pages ###
     path('manage/celery/', views.celery_queue_status, name='celery_queue_status'),

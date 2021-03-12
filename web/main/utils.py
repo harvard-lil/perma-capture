@@ -1,4 +1,5 @@
 import datetime
+from functools import wraps
 import hashlib
 import hmac
 from pytz import timezone as tz
@@ -11,7 +12,70 @@ from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.core.validators import URLValidator, ProhibitNullCharactersValidator
 from django.forms.fields import URLField
+from django.http import HttpResponseRedirect, JsonResponse
 from django.template import Context, RequestContext, engines
+
+
+#
+# View helpers
+#
+
+def auth_view_json_response(view_func, allow_redirects=True):
+    """
+    A wrapper for the views supplied by django.contrib.auth, converting the response to JSON.
+    """
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        response = view_func(request, *args, **kwargs)
+
+        if not settings.ALL_JSON_RESPONSES:
+            return response
+
+        if isinstance(response, HttpResponseRedirect):
+            # These views redirect on success. Is the desirable for an SPA?
+            # If not, we don't need the "done" views. The password reset
+            # flow needs careful handling, because on GET it redirects from
+            # the token-bearing URL to a tokenless one after verification.
+            # I also observe that the change password form redirects to login
+            # if you are anonymous: we might want to switch that to 401.
+            if allow_redirects:
+                return response
+
+        form = response.context_data.get('form')
+        if form:
+            data = {
+                'form': {
+                    'is_bound': form.is_bound,
+                    'is_valid': form.is_valid(),
+                    'initial': form.initial,
+                    'data': form.data,
+                    'cleaned_data': getattr(form, 'cleaned_data', {}),
+                    'errors': form.errors.get_json_data(),
+                    'fields': {
+                        key: {
+                            'type': type(field).__name__,
+                            'widget': type(field.widget).__name__,
+                            'required': field.required,
+                            'initial': field.initial,
+                            'help_text': field.help_text,
+                        } for key, field in form.fields.items()
+                    },
+                    'error_messages': getattr(form, 'error_messages', {})
+                }
+            }
+        else:
+            data = {'status': 'success'}
+        json_response = JsonResponse(
+            status=response.status_code,
+            data=data
+        )
+        for header, value in response.items():
+            json_response.setdefault(header, value)
+        json_response.cookies = response.cookies
+        return json_response
+
+    return wrapper
+
 
 #
 # Email
