@@ -9,6 +9,8 @@
           is_authenticated: {{ request.user.is_authenticated | lower }},
           is_staff: {{ request.user.is_staff | lower }},
           first_name: '{{ request.user.first_name }}',
+          last_name: '{{ request.user.last_name }}',
+          email: '{{ request.user.email }}',
           auth_token: {
               key: '{{ request.user.auth_token.key }}'
           }
