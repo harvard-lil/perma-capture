@@ -10,7 +10,7 @@ export default {
     TheNavbar
   }
 }
-</script>
+</script>c
 
 <style>
 </style>
