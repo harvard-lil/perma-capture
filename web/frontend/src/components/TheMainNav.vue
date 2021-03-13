@@ -21,7 +21,7 @@
 <ul v-else class="navbar-nav">
   <li class="nav-item"><router-link :to="{name: 'sign_up'}" class="nav-link" href="/sign-up/">Sign up</router-link></li>
   <li class="nav-item"><router-link :to="{name: 'docs'}" class="nav-link">User Guide</router-link></li>
-  <li class="nav-item"><a class="nav-link" href="/user/login">Log in</a></li>
+  <li class="nav-item"><router-link :to="{name: 'login'}" class="nav-link" href="/user/login">Log in</router-link></li>
 </ul>
 </template>
 
