@@ -6,11 +6,11 @@
   </div>
   <div class="mb-3">
     <label for="last_name" class="form-label">Last name</label>
-    <input v-model="last_name" id="first_name" type="text" class="form-control">
+    <input v-model="last_name" id="last_name" type="text" class="form-control">
   </div>
   <div class="mb-3">
     <label for="email" class="form-label">Email</label>
-    <input v-model="email" id="first_name" type="text" class="form-control">
+    <input v-model="email" id="email" type="text" class="form-control">
   </div>
   <button type="submit" class="btn btn-primary">Save changes</button>
 </form>
