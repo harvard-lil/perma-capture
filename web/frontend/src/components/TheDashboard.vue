@@ -1,29 +1,24 @@
 <template>
-<TheNavbar/>
-<main>
-  <TheMainHeader
-    head="Create a new archive"
-    subhead="Enter any URL to capture it in a downloadable archive."/>
+<TheMainHeader
+  head="Create a new archive"
+  subhead="Enter any URL to capture it in a downloadable archive."/>
 
-  <div class="mt-5">
-    <CaptureForm/>
-  </div>
+<div class="mt-5">
+  <CaptureForm/>
+</div>
 
-  <div class="mt-5">
-    <CaptureList/>
-  </div>
-</main>
+<div class="mt-5">
+  <CaptureList/>
+</div>
 </template>
 
 <script lang="ts">
-import TheNavbar from './TheNavbar.vue'
 import TheMainHeader from './TheMainHeader.vue'
 import CaptureForm from './CaptureForm.vue'
 import CaptureList from './CaptureList.vue'
 
 export default {
   components: {
-    TheNavbar,
     TheMainHeader,
     CaptureForm,
     CaptureList

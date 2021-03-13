@@ -1,13 +1,14 @@
 <template>
-<TheNavbar/>
+<TheMainHeader
+  head="Change password"/>
 </template>
 
 <script lang="ts">
-import TheNavbar from './TheNavbar.vue'
+import TheMainHeader from './TheMainHeader.vue'
 
 export default {
   components: {
-    TheNavbar
+    TheMainHeader
   }
 }
 </script>c

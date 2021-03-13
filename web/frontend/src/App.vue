@@ -1,5 +1,8 @@
 <template>
+<TheNavbar/>
+<main>
 <router-view />
+</main>
 </template>
 
 <script lang="ts">
@@ -7,9 +10,13 @@ import '@popperjs/core'
 import 'bootstrap'
 
 import { defineComponent } from 'vue'
+import TheNavbar from './components/TheNavbar.vue'
 
 export default defineComponent({
-  name: 'App'
+  name: 'App',
+  components: {
+    TheNavbar
+  }
 })
 </script>
 
