@@ -8,7 +8,10 @@
       user: {
           is_authenticated: {{ request.user.is_authenticated | lower }},
           is_staff: {{ request.user.is_staff | lower }},
-          first_name: '{{ request.user.first_name }}'
+          first_name: '{{ request.user.first_name }}',
+          auth_token: {
+              key: '{{ request.user.auth_token.key }}'
+          }
       }
   };
 </script>

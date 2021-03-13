@@ -5,7 +5,7 @@
   </button>
   <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton1">
     <li><router-link :to="{name: 'root'}" class="dropdown-item">Dashboard</router-link></li>
-    <li><a class="dropdown-item" href="/user/account/">My Account</a></li>
+    <li><router-link :to="{name: 'account'}" class="dropdown-item" href="/user/account/">My Account</router-link></li>
     <li><router-link :to="{name: 'docs'}" class="dropdown-item">User Guide</router-link></li>
     <li><a class="dropdown-item" href="/user/logout/">Log Out</a></li>
     
