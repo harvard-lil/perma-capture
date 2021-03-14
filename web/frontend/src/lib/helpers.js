@@ -22,3 +22,7 @@ export function snakeToPascal(str='') {
 export function objectSubset(keys, source) {
     return keys.reduce((a, e) => (a[e] = source[e], a), {});
 }
+
+export function assignOverlap(obj1, obj2) {
+    return Object.assign(obj1, objectSubset(Object.keys(obj1), obj2));
+}

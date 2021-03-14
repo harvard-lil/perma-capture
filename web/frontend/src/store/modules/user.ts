@@ -10,6 +10,13 @@ const getters = {
 }
 
 const actions = {
+  update: ({ commit }, payload) =>
+    Axios
+      .post(`${URL_ROOT}account/`, payload, {headers: {"Content-Type": "multipart/form-data"}})
+      .then(resp => {
+        commit('update', resp.data.form.form.data)
+      }),
+
   resetToken: ({ commit }) =>
     Axios
       .post(`${URL_ROOT}token_reset/`)
@@ -19,6 +26,9 @@ const actions = {
 }
 
 const mutations = {
+  update: (state, payload) =>
+    Object.assign(state, payload),
+
   updateToken: (state, payload) =>
     state.auth_token.key = payload
 }
