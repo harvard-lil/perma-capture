@@ -28,7 +28,7 @@ def auth_view_json_response(view_func, allow_redirects=True):
     def wrapper(request, *args, **kwargs):
         response = view_func(request, *args, **kwargs)
 
-        if not settings.ALL_JSON_RESPONSES:
+        if request.method == 'GET' or not settings.ALL_JSON_RESPONSES:
             return response
 
         if isinstance(response, HttpResponseRedirect):
