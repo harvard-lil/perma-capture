@@ -10,7 +10,8 @@
            v-model="field.value"
            @focus="clearServerError"
            :type="field.type || 'text'"
-           required
+           :required="field.required !== false"
+           :disabled="!field.disabled && !processing"
            class="form-control"
            :class="{'is-invalid': serverErrors[field.name]}"
            :aria-describedby="(serverErrors[field.name] || []).map((error, index) => field.name + 'InvalidFeedback' + index)">
@@ -21,7 +22,12 @@
     </div>
   </template>
   
-  <button type="submit" class="btn btn-primary mt-3">{{ submitText }}</button>
+  <button type="submit"
+          class="btn btn-primary mt-3"
+          :disabled="processing">
+    <span v-if="processing" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+    {{ submitText }}
+  </button>
 </form>
 </template>
 
@@ -39,6 +45,7 @@ export default {
     action: Function
   },
   data: () => ({
+    processing: false,
     displayFrontendValidation: false,
     serverErrors: {}
   }),
@@ -49,10 +56,13 @@ export default {
     },
     submit(event) {
       if(event.target.checkValidity()){
-        this.action(new FormData(event.target)).catch(error => {
-          this.displayFrontendValidation = false
-          this.serverErrors = error
-        })
+        this.processing = true
+        this.action(new FormData(event.target))
+          .catch(error => {
+            this.displayFrontendValidation = false
+            this.serverErrors = error
+          })
+          .then(() => this.processing = false)
       } else {
         this.displayFrontendValidation = true
       }
