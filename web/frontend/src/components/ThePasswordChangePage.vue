@@ -1,32 +1,34 @@
 <template>
 <TheMainHeader
   head="Change password"/>
-<form>
-  <div class="mb-3">
-    <label for="old_password" class="form-label">Old password</label>
-    <input v-model="old_password" id="old_password" type="text" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label for="new_password1" class="form-label">New password</label>
-    <input v-model="new_password1" id="new_password1" type="text" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label for="new_password2" class="form-label">New password confirmation</label>
-    <input v-model="new_password2" id="new_password2" type="text" class="form-control">
-  </div>
-  <button type="submit" class="btn btn-primary">Change my password</button>
-</form>
+<Form :fields="fields"
+      :action="changePassword"/>
 </template>
 
 <script lang="ts">
+import { createNamespacedHelpers } from 'vuex'
+const { mapActions } = createNamespacedHelpers('user')
+
 import TheMainHeader from './TheMainHeader.vue'
+import Form from './Form.vue'
 
 export default {
   components: {
-    TheMainHeader
+    TheMainHeader,
+    Form
+  },
+  data: () => ({
+    fields: [
+      {name: 'old_password', type: 'password'},
+      {name: 'new_password1', label: 'New password', type: 'password'},
+      {name: 'new_password2', label: 'New password confirmation', type: 'password'}
+    ]
+  }),
+  methods: {
+    ...mapActions(['changePassword'])
   }
 }
 </script>
 
-<style>
+<style scoped>
 </style>

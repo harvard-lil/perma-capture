@@ -14,8 +14,12 @@ const actions = {
     Axios
       .post(`${URL_ROOT}account/`, payload, {headers: {"Content-Type": "multipart/form-data"}})
       .then(resp => {
-        commit('update', resp.data.form.form.data)
+        commit('update', resp.data.form.data)
       }),
+
+  changePassword: ({ commit }, payload) =>
+    Axios
+      .post(`${URL_ROOT}password_change/`, payload, {headers: {"Content-Type": "multipart/form-data"}}),
 
   resetToken: ({ commit }) =>
     Axios
