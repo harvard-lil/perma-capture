@@ -12,7 +12,8 @@
            :type="field.type || 'text'"
            required
            class="form-control"
-           :class="{'is-invalid': formServerErrors[field.name]}">
+           :class="{'is-invalid': serverErrors[field.name]}">
+    <div v-for="error in serverErrors[field.name]" class="invalid-feedback">{{ error.message }}</div>
   </template>
   
   <button type="submit" class="btn btn-primary mt-3">{{ submitText }}</button>
@@ -34,18 +35,18 @@ export default {
   },
   data: () => ({
     wasValidated: false,
-    formServerErrors: {}
+    serverErrors: {}
   }),
   methods: {
     ...mapActions(['changePassword']),
     clearServerError(event) {
-      delete this.formServerErrors[event.target.name]
+      delete this.serverErrors[event.target.name]
     },
     submit(event) {
       if(event.target.checkValidity()){
         this.action(new FormData(event.target)).catch(error => {
           this.wasValidated = false
-          this.formServerErrors = error
+          this.serverErrors = error
         })
       } else {
         this.wasValidated = true
