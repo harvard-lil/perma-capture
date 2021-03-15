@@ -5,29 +5,31 @@
     <TheUserForm/>
     
     <h2>Password</h2>
-    <p><router-link :to="{name: 'password_change'}" class="btn btn-primary">Change my password</router-link></p>
+    <router-link :to="{name: 'password_change'}" class="btn btn-primary mt-3">
+      Change my password
+    </router-link>
   </div>
   
   <div class="col">
     <h2>API</h2>
-    <p>
-      <label for="api-key" class="form-label">Your API key</label>
-      <input id="api-key" type="text" v-model="auth_token.key" class="form-control mb-3" readonly>
-      <button type="button" class="btn btn-primary" @click="resetToken">Get a new key</button>
-    </p>
+    <BaseForm :fields="[{name: 'api-key', label: 'Your API key', value: auth_token.key, readonly: true}]"
+          :action="resetToken"
+          submitText="Get a new key"/>
   </div>
 </div>
 </template>
 
 <script lang="ts">
-  import { createNamespacedHelpers } from 'vuex'
+import { createNamespacedHelpers } from 'vuex'
 const { mapState, mapActions } = createNamespacedHelpers('user')
 
+import BaseForm from './BaseForm.vue'
 import TheUserForm from './TheUserForm.vue'
 
 export default {
   components: {
-    TheUserForm
+    TheUserForm,
+    BaseForm
   },
   computed: mapState([
     'auth_token'
@@ -38,5 +40,5 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
 </style>
