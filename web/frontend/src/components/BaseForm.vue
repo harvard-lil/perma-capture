@@ -11,7 +11,7 @@
            @focus="clearServerError"
            :type="field.type || 'text'"
            :required="field.required !== false"
-           :disabled="field.disabled !== true && !processing"
+           :disabled="field.disabled === true || processing"
            :readonly="field.readonly === true"
            class="form-control"
            :class="{'is-invalid': serverErrors[field.name]}"
