@@ -2,7 +2,7 @@
 <TheMainHeader
   head="Change password"/>
 <div class="row justify-content-center">
-<Form :fields="fields"
+<BaseForm :fields="fields"
       :action="changePassword"
       class="col-4"/>
 </div>
@@ -13,12 +13,12 @@ import { createNamespacedHelpers } from 'vuex'
 const { mapActions } = createNamespacedHelpers('user')
 
 import TheMainHeader from './TheMainHeader.vue'
-import Form from './Form.vue'
+import BaseForm from './BaseForm.vue'
 
 export default {
   components: {
     TheMainHeader,
-    Form
+    BaseForm
   },
   data: () => ({
     fields: [

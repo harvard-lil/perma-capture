@@ -1,17 +1,17 @@
 <template>
-<Form :fields="fields"
-      :action="update"/>
+<BaseForm :fields="fields"
+          :action="update"/>
 </template>
 
 <script lang="ts">
 import { createNamespacedHelpers } from 'vuex'
 const { mapActions } = createNamespacedHelpers('user')
 
-import Form from './Form.vue'
+import BaseForm from './BaseForm.vue'
 
 export default {
   components: {
-    Form
+    BaseForm
   },
   data: () => ({
     fields: [
