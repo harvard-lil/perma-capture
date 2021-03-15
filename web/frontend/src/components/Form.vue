@@ -1,6 +1,6 @@
 <template>
 <form @submit.prevent="submit"
-      :class="{'was-validated': wasValidated}"
+      :class="{'was-validated': displayFrontendValidation}"
       novalidate>
 
   <template v-for="field in fields">
@@ -39,7 +39,7 @@ export default {
     action: Function
   },
   data: () => ({
-    wasValidated: false,
+    displayFrontendValidation: false,
     serverErrors: {}
   }),
   methods: {
@@ -50,11 +50,11 @@ export default {
     submit(event) {
       if(event.target.checkValidity()){
         this.action(new FormData(event.target)).catch(error => {
-          this.wasValidated = false
+          this.displayFrontendValidation = false
           this.serverErrors = error
         })
       } else {
-        this.wasValidated = true
+        this.displayFrontendValidation = true
       }
     }
   }
