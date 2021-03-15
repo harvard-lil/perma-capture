@@ -2,21 +2,33 @@
 <TheMainHeader
   head="Forgot your password?"
   subhead="We'll email you instructions for setting a new one."/>
-<form>
-  <div class="mb-3">
-    <label for="username" class="form-label">Email</label>
-    <input v-model="username" id="username" type="text" class="form-control">
-  </div>
-  <button type="submit" class="btn btn-primary">Reset my password</button>
-</form>
+<div class="row justify-content-center">
+  <BaseForm :fields="fields"
+            :action="resetPassword"
+            submitText="Reset my password"
+            class="col-4"/>
+</div>
 </template>
 
 <script lang="ts">
+import { createNamespacedHelpers } from 'vuex'
+const { mapActions } = createNamespacedHelpers('user')
+
 import TheMainHeader from './TheMainHeader.vue'
+import BaseForm from './BaseForm.vue'
 
 export default {
   components: {
-    TheMainHeader
+    TheMainHeader,
+    BaseForm
+  },
+  data: () => ({
+    fields: [
+      {name: 'email', type: 'email'}
+    ]
+  }),
+  methods: {
+    ...mapActions(['resetPassword'])
   }
 }
 </script>
