@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import TheRoot from './components/TheRoot.vue'
-import TheDocs from './components/TheDocs.vue'
+import TheDocsPage from './components/TheDocsPage.vue'
 import TheSignUpPage from './components/TheSignUpPage.vue'
 import TheLoginPage from './components/TheLoginPage.vue'
 import TheAccountSettingsPage from './components/TheAccountSettingsPage.vue'
@@ -9,7 +9,7 @@ import ThePasswordResetPage from './components/ThePasswordResetPage.vue'
 
 const routes = [
   { path: '/', name: 'root', component: TheRoot },
-  { path: '/docs/', name: 'docs', component: TheDocs },
+  { path: '/docs/', name: 'docs', component: TheDocsPage },
   { path: '/sign-up/', name: 'sign_up', component: TheSignUpPage },
   { path: '/user/login/', name: 'login', component: TheLoginPage },
   { path: '/user/account/', name: 'account', component: TheAccountSettingsPage },
