@@ -3,17 +3,9 @@
   head="Log in"/>
 <div class="row justify-content-center">
   <div class="col-4">
-    <form>
-      <div class="mb-3">
-        <label for="username" class="form-label">Email</label>
-        <input v-model="username" id="username" type="text" class="form-control">
-      </div>
-      <div class="mb-3">
-        <label for="password" class="form-label">Password</label>
-        <input v-model="password" id="password" type="text" class="form-control">
-      </div>
-      <button type="submit" class="btn btn-primary">Log in</button>
-    </form>
+    <BaseForm :fields="fields"
+              submitText="Log in"
+              :action="doLogin"/>
     
     <hr>
     
@@ -30,14 +22,31 @@
 </template>
 
 <script lang="ts">
+import { createNamespacedHelpers } from 'vuex'
+const { mapActions } = createNamespacedHelpers('user')
+
 import TheMainHeader from './TheMainHeader.vue'
+import BaseForm from './BaseForm.vue'
 
 export default {
   components: {
-    TheMainHeader
+    TheMainHeader,
+    BaseForm
+  },
+  data: () => ({
+    fields: [
+      {name: 'username', label: 'Email'},
+      {name: 'password', type: 'password'}
+    ]
+  }),
+  methods: {
+    ...mapActions(['login']),
+    doLogin(params) {
+      return this.login(params).then(() => window.location = '/')
+    }
   }
 }
 </script>
 
-<style>
+<style scoped>
 </style>
