@@ -2,36 +2,18 @@
 <form @submit.prevent="submit"
       :class="{'was-validated': wasValidated}"
       novalidate>
-
-  <label for="first_name" class="form-label">First name</label>
-  <input name="first_name"
-         id="first_name"
-         v-model="formData.first_name"
-         @focus="clearServerError"
-         type="text"
-         required="required"
-         class="form-control"
-         :class="{'is-invalid': formServerErrors.first_name}">
   
-  <label for="last_name" class="form-label mt-3">Last name</label>
-  <input name="last_name"
-         id="last_name"
-         v-model="formData.last_name"
-         @focus="clearServerError"
-         type="text"
-         required="required"
-         class="form-control"
-         :class="{'is-invalid': formServerErrors.last_name}">
-  
-  <label for="email" class="form-label mt-3">Email</label>
-  <input name="email"
-         id="email"
-         v-model="formData.email"
-         @focus="clearServerError"
-         type="email"
-         required="required"
-         class="form-control"
-         :class="{'is-invalid': formServerErrors.email}">
+  <template v-for="field in fields">
+    <label :for="field.name" class="form-label mt-3">{{ field.label || field.name.replace('_', ' ') }}</label>
+    <input :name="field.name"
+           :id="field.name"
+           v-model="field.value"
+           @focus="clearServerError"
+           :type="field.type || 'text'"
+           required
+           class="form-control"
+           :class="{'is-invalid': formServerErrors[field.name]}">
+  </template>
 
   <button type="submit" class="btn btn-primary mt-3">Save changes</button>
 
@@ -46,12 +28,12 @@ import { assignOverlap } from '../lib/helpers'
 
 export default {
   data: () => ({
+    fields: [
+      {name: 'first_name'},
+      {name: 'last_name'},
+      {name: 'email', type: 'email'}
+    ],
     wasValidated: false,
-    formData: {
-      first_name: null,
-      last_name: null,
-      email: null
-    },
     formServerErrors: {}
   }),
   methods: {
@@ -71,10 +53,15 @@ export default {
     }
   },
   created() {
-    assignOverlap(this.formData, this.$store.state.user)
+    for(const field of this.fields){
+      field.value = this.$store.state.user[field.name]
+    }
   }
 }
 </script>
 
-<style>
+<style scoped>
+.form-label {
+  text-transform: capitalize;
+}
 </style>
