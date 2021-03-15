@@ -354,7 +354,12 @@
 </template>
 
 <script lang="ts">
+import TheMainHeader from './TheMainHeader.vue'
+
 export default {
+  components: {
+    TheMainHeader
+  },
   data: () => ({
     rwp_base_url: '',
     sw_path: '',
