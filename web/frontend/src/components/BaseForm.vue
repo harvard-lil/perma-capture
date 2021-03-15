@@ -3,6 +3,11 @@
       :class="{'was-validated': displayFrontendValidation}"
       novalidate>
 
+  <div v-for="error in serverErrors.__all__"
+       class="invalid-feedback d-block">
+    {{ error.message }}
+  </div>
+
   <template v-for="field in fields">
     <label :for="field.name" class="form-label mt-3">{{ field.label || field.name.replace('_', ' ') }}</label>
     <input :name="field.name"
