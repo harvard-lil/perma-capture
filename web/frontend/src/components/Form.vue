@@ -12,8 +12,13 @@
            :type="field.type || 'text'"
            required
            class="form-control"
-           :class="{'is-invalid': serverErrors[field.name]}">
-    <div v-for="error in serverErrors[field.name]" class="invalid-feedback">{{ error.message }}</div>
+           :class="{'is-invalid': serverErrors[field.name]}"
+           :aria-describedby="(serverErrors[field.name] || []).map((error, index) => field.name + 'InvalidFeedback' + index)">
+    <div v-for="(error, index) in serverErrors[field.name]"
+         :id="field.name + 'InvalidFeedback' + index"
+         class="invalid-feedback">
+      {{ error.message }}
+    </div>
   </template>
   
   <button type="submit" class="btn btn-primary mt-3">{{ submitText }}</button>
