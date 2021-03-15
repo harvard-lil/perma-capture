@@ -2,9 +2,9 @@
 <TheMainHeader
   head="Change password"/>
 <div class="row justify-content-center">
-<BaseForm :fields="fields"
-      :action="changePassword"
-      class="col-4"/>
+  <BaseForm :fields="fields"
+            :action="changePassword"
+            class="col-4"/>
 </div>
 </template>
 
