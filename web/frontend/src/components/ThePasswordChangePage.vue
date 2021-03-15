@@ -1,8 +1,11 @@
 <template>
 <TheMainHeader
   head="Change password"/>
+<div class="row justify-content-center">
 <Form :fields="fields"
-      :action="changePassword"/>
+      :action="changePassword"
+      class="col-4"/>
+</div>
 </template>
 
 <script lang="ts">
