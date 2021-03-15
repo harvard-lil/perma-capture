@@ -16,9 +16,12 @@ const Axios = AxiosConfig.create({
 });
 
 // Handle django.contrib.auth form validation errors
-Axios.interceptors.response.use(response =>
-    response.data?.form?.form?.is_valid === false
-        ? Promise.reject(response.data.form.form.errors)
-        : response);
+Axios.interceptors.response.use(response => {
+    const nestedForm = response.data?.form?.form;
+    if(nestedForm) response.data.form = nestedForm;
+    return response.data?.form?.is_valid === false
+        ? Promise.reject(response.data.form.errors)
+        : response;
+});
 
 export default Axios;
