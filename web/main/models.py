@@ -1,5 +1,6 @@
 import itertools
 import time
+import urllib.parse
 
 from rest_framework.authtoken.models import Token
 from rest_framework.settings import api_settings
@@ -10,6 +11,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.db.models.functions import Now
+from django.db.models.query import QuerySet
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.encoding import force_bytes
@@ -365,6 +367,10 @@ class CaptureJob(TimestampedModel):
     capture_time.short_description = 'capture time (s)'
 
 
+class ArchiveQuerySet(QuerySet):
+    def expired(self):
+        return self.filter(download_url__isnull=False, download_expiration_timestamp__lt=timezone.now())
+
 
 class Archive(TimestampedModel):
     """
@@ -388,6 +394,12 @@ class Archive(TimestampedModel):
         null=True,
         blank=True
     )
+
+    objects = ArchiveQuerySet.as_manager()
+
+    @property
+    def filename(self):
+        return f"job-{self.capture_job.id}-{urllib.parse.urlparse(self.capture_job.validated_url).netloc}.wacz"
 
 
 class UserManager(BaseUserManager):
