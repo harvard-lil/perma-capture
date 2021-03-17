@@ -1,4 +1,5 @@
 from django.test.testcases import SimpleTestCase
+from functools import wraps
 from rest_framework.response import Response
 from urllib.parse import urljoin, urlsplit
 
@@ -60,10 +61,11 @@ def raise_on_call(func, call_count=1, exc=Exception):
     >>> with assert_raises(ValueError):
     ...     bomb()
     """
-    def call_counter(*args, **kwargs):
-        call_counter.calls += 1
-        if call_counter.calls == call_count:
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        wrapper.calls += 1
+        if wrapper.calls == call_count:
             raise exc
         return func(*args, **kwargs)
-    call_counter.calls = 0
-    return call_counter
+    wrapper.calls = 0
+    return wrapper
