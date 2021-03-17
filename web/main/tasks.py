@@ -1,6 +1,7 @@
 from celery import shared_task
 from celery.exceptions import MaxRetriesExceededError, SoftTimeLimitExceeded, Retry
 from celery.signals import task_failure
+import docker
 import os
 import requests
 import socket
@@ -20,6 +21,8 @@ from .utils import (validate_and_clean_url, get_file_hash, parse_querystring,
 )
 
 from pytest import raises as assert_raises
+
+from test.test_helpers import raise_on_call
 
 import logging
 logger = logging.getLogger(__name__)
@@ -93,7 +96,7 @@ class BrowsertrixLifeCycleThread(threading.Thread):
     def run(self):
         try:
             self.result = self.container.wait(timeout=self.timeout)
-        except requests.exceptions.ReadTimeout:
+        except requests.exceptions.ConnectionError:
             self.timedout = True
             # For now, just kill the container. We likely want something gentler,
             # that requests Browsertrix stop recording and finalize the record,
@@ -101,10 +104,15 @@ class BrowsertrixLifeCycleThread(threading.Thread):
             self.container.stop(timeout=0)
             self.result = self.container.wait(timeout=1)
         finally:
-            self.container.reload()
-            self.status = self.container.status
+            try:
+                # If the container has been forceably shut down by the main thread,
+                # these calls will fail.
+                self.container.reload()
+                self.stderr = str(self.container.logs(stdout=False), 'utf-8')
+            except requests.exceptions.RequestException:
+                pass
             self.exit_code = self.result.get('StatusCode')
-            self.stderr = self.container.logs(stdout=False)
+            self.status = self.container.status
 
 
 def inc_progress(capture_job, inc, description):
@@ -140,13 +148,109 @@ def demo_scheduled_task(pause_for_seconds=0):
 @shared_task
 def run_next_capture():
     """
+    Given:
+    >>> pending_capture_job_factory, docker_client, django_settings, mocker, caplog = [getfixture(i) for i in ['pending_capture_job_factory', 'docker_client', 'settings', 'mocker', 'caplog']]
+
+    Helpers:
+    >>> orig_clean_up_failed = clean_up_failed_captures
+    >>> mock_clean_up_failed = mocker.patch('main.tasks.clean_up_failed_captures')
+    >>> mock_clean_up_failed.side_effect = orig_clean_up_failed
+
+    >>> orig_inc_progress = inc_progress
+    >>> mock_inc_progress = mocker.patch('main.tasks.inc_progress')
+    >>> def run_test_capture(url, stop_before_step=None, throw=None):
+    ...     if stop_before_step:
+    ...         mock_inc_progress.side_effect = raise_on_call(orig_inc_progress, stop_before_step + 1, HaltCaptureException)
+    ...     else:
+    ...         mock_inc_progress.side_effect = orig_inc_progress
+    ...     job = pending_capture_job_factory(requested_url=url)
+    ...     _ = run_next_capture.apply()
+    ...     job.refresh_from_db()
+    ...     return job
+
+    NO JOBS
+
+    If there are no pending capture jobs, the task simply returns.
+    >>> _ = run_next_capture.apply()
+    >>> assert "No jobs" in caplog.text
+    >>> caplog.clear()
+
+    VALIDATION
+
+    We perform some simple validation on the submitted URL.
+    >>> invalid_urls = [
+    ...     '',
+    ...     'examplecom',
+    ...     'https://www.ntanet.org/some-article.pdf\x01',
+    ...     'file:///etc/passwd',
+    ... ]
+    >>> for url in invalid_urls:
+    ...     job = run_test_capture(url)
+    ...     assert job.status == CaptureJob.Status.INVALID
+    ...     assert job.message['requested_url']
+    ...     assert job.step_count == 0
+    ...     assert job.step_description == 'Validating.'
+    ...     assert job.capture_end_time
+
+
+    We tidy up submitted URLs: stripping whitespace...
+    >>> job = run_test_capture('   http://example.com   ', stop_before_step=1)
+    >>> assert job.validated_url == 'http://example.com'
+
+    ...and add http if the protocol is omitted.
+    >>> job = run_test_capture('example.com', stop_before_step=1)
+    >>> assert job.validated_url == 'http://example.com'
+
+    SUCCESS
+
+    >>> job = run_test_capture('example.com')
+    >>> assert job.status == CaptureJob.Status.COMPLETED
+    >>> assert job.step_description == 'Saving archive.'
+    >>> assert job.capture_end_time
+    >>> assert job.archive.warc_size
+    >>> assert job.archive.hash and job.archive.hash_algorithm
+    >>> assert requests.get(job.archive.download_url).status_code == 200
+
+    FAILURE
+
+    If an exception is thrown in the main thread while Browsertrix is working, we stop and clean up.
+    >>> caplog.clear()
+    >>> job = run_test_capture('example.com', stop_before_step=6)
+    >>> assert job.status == CaptureJob.Status.FAILED
+    >>> assert job.step_count == 5
+    >>> assert job.step_description == 'Browsertrix: status 2.'
+    >>> assert job.capture_end_time
+    >>> assert caplog.records[-1].message == 'No jobs waiting!'
+    >>> assert not docker_client.containers.list(all=True, filters={'ancestor': settings.BROWSERTRIX_IMAGE})
+
+    If Browsertrix exceeds the maximum permitted time limit, we stop and clean up.
+    >>> caplog.clear()
+    >>> django_settings.BROWSERTRIX_TIMEOUT_SECONDS = 1
+    >>> job = run_test_capture('example.com')
+    >>> assert job.status == CaptureJob.Status.FAILED
+    >>> assert 'Browsertrix exited with 137: \\nSession terminated, killing shell...' in caplog.text  #  137 means SIGKILL
+    >>> assert not docker_client.containers.list(all=True, filters={'ancestor': settings.BROWSERTRIX_IMAGE})
+
+    We clean up failed jobs before we get started.
+    >>> assert mock_clean_up_failed.call_count > 0
     """
+
+    # First, clean up failed captures, because their presence might affect the queue order.
     clean_up_failed_captures()
 
+    # Retrieve the next job in the queue
     capture_job = CaptureJob.get_next_job(reserve=True)
     if not capture_job:
-        logger.debug('No jobs waiting!')
+        logger.info('No jobs waiting!')
         return
+
+    # Basic Setup
+    client = None
+    container = None
+    browsertrix_life_cycle_thread = None
+    have_archive = False
+    filename = f'{uuid.uuid4()}.wacz'
+    browsertrix_outputfile = f'{settings.SERVICES_DIR}/browsertrix/data/{filename}'
 
     try:
         inc_progress(capture_job, 0, "Validating.")
@@ -157,16 +261,7 @@ def run_next_capture():
             raise HaltCaptureException
         capture_job.save()
 
-        # basic setup
-        client = None
-        container = None
-        browsertrix_life_cycle_thread = None
-        have_archive = False
-        filename = f'{uuid.uuid4()}.wacz'
-        browsertrix_outputfile = f'{settings.SERVICES_DIR}/browsertrix/data/{filename}'
-
         inc_progress(capture_job, 1, "Connecting to Docker.")
-        import docker  # noqa: import docker here, so that it only needs to be running on capture workers
         client = docker.from_env()
 
         inc_progress(capture_job, 1, "Creating browsertrix container.")
@@ -194,9 +289,7 @@ def run_next_capture():
         browsertrix_life_cycle_thread.start()
         stdout_stream = container.logs(stderr=False, stream=True)
         for msg in stdout_stream:
-            # the life cycle thread should take care of killing browsertrix, so this isn't infinite...
-            # but let's definitely ensure that's the case, including in weird hanging conditions.
-            # should also look into whether the browsertrix container needs init, and whether it passes signals correctly, etc.
+            # we should look into whether the browsertrix container needs init, and whether it passes signals correctly, etc.
             # see also https://github.com/moby/moby/issues/37663.
             msg = str(msg, 'utf-8').strip()
             if True:

@@ -2,6 +2,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from datetime import timezone as tz, timedelta
 from distutils.sysconfig import get_python_lib
+import docker
 import factory
 import humps
 import inspect
@@ -207,6 +208,13 @@ def celery_config():
     return {
         'broker_url': settings.CELERY_BROKER_URL
     }
+
+
+@pytest.fixture(scope='session')
+def docker_client():
+    client = docker.from_env()
+    yield client
+    client.close()
 
 
 ### model factories ###

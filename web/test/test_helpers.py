@@ -2,6 +2,7 @@ from django.test.testcases import SimpleTestCase
 from rest_framework.response import Response
 from urllib.parse import urljoin, urlsplit
 
+from pytest import raises as assert_raises
 
 _default = object()
 def check_response(response, status_code=200, content_type=_default, content_includes=None, content_excludes=None):
@@ -47,3 +48,22 @@ def assert_url_equal(response, expected_url):
         url = urljoin(response.request['PATH_INFO'], url)
 
     SimpleTestCase().assertURLEqual(url, expected_url)
+
+
+def raise_on_call(func, call_count=1, exc=Exception):
+    """
+    Raise an exception, after a function is called a certain number of times.
+    >>> def f(): pass
+    >>> bomb = raise_on_call(f, 3, ValueError('I exploded'))
+    >>> bomb()
+    >>> bomb()
+    >>> with assert_raises(ValueError):
+    ...     bomb()
+    """
+    def call_counter(*args, **kwargs):
+        call_counter.calls += 1
+        if call_counter.calls == call_count:
+            raise exc
+        return func(*args, **kwargs)
+    call_counter.calls = 0
+    return call_counter
