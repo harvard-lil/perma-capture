@@ -14,7 +14,9 @@ import pytest
 
 
 def test_job_queue_order(user_factory, pending_capture_job_factory):
-    """ Jobs should be processed round-robin, one per user. """
+    """
+    Jobs should be processed round-robin, one per user.
+    """
 
     user_one = user_factory()
     user_two = user_factory()
@@ -54,7 +56,9 @@ def test_job_queue_order(user_factory, pending_capture_job_factory):
 
 @pytest.mark.django_db(transaction=True)
 def test_race_condition_prevented(pending_capture_job_factory):
-    """ Fetch two jobs at the same time in threads and make sure same job isn't returned to both. """
+    """
+    Fetch two jobs at the same time in threads and make sure same job isn't returned to both.
+    """
     jobs = [
         pending_capture_job_factory(),
         pending_capture_job_factory()
@@ -77,8 +81,8 @@ def test_race_condition_prevented(pending_capture_job_factory):
 @pytest.mark.django_db(transaction=True)
 def test_race_condition_not_prevented(pending_capture_job_factory):
     """
-        Make sure that test_race_condition_prevented is passing for the right reason --
-        should fail if race condition protection is disabled.
+    Make sure that test_race_condition_prevented is passing for the right reason --
+    should fail if race condition protection is disabled.
     """
     CaptureJob.TEST_ALLOW_RACE = True
     with pytest.raises(AssertionError, match="Extra items in the left set"):
