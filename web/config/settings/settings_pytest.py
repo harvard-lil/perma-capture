@@ -16,4 +16,4 @@ TESTING = True
 LAUNCH_CAPTURE_JOBS = False
 WEBHOOK_MAX_RETRIES = 1
 
-BROWSERTRIX_IMAGE = 'busybox'
+BROWSERTRIX_IMAGE = 'registry.lil.tools/library/busybox'

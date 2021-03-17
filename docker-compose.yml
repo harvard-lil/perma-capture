@@ -1,17 +1,17 @@
 version: '3'
 services:
   redis:
-    image: redis:5.0.6
+    image: registry.lil.tools/library/redis:5.0.6
     volumes:
       - redis_data:/data:delegated
   db:
-    image: postgres:11.9
+    image: registry.lil.tools/library/postgres:11.9
     environment:
       POSTGRES_PASSWORD: password
     volumes:
       - db_data:/var/lib/postgresql/data:delegated
   minio:
-    image: minio/minio:RELEASE.2021-02-19T04-38-02Z
+    image: registry.lil.tools/minio/minio:RELEASE.2021-02-19T04-38-02Z
     entrypoint:
       - "/entrypoint.sh"
     command:

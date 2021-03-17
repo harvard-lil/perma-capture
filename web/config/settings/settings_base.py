@@ -298,7 +298,7 @@ TMP_S3_STORAGE = {
 OVERRIDE_DOWNLOAD_URL_NETLOC = None
 
 # Browsertrix
-BROWSERTRIX_IMAGE = 'webrecorder/browsertrix-crawler:0.1.5'
+BROWSERTRIX_IMAGE = 'registry.lil.tools/library/webrecorder/browsertrix-crawler:0.1.5'
 BROWSERTRIX_HOST_DATA_DIR = os.environ.get('BROWSERTRIX_HOST_DATA_DIR')
 BROWSERTRIX_INTERNAL_DATA_DIR = os.environ.get('BROWSERTRIX_INTERNAL_DATA_DIR')
 BROWSERTRIX_ENTRYPOINT = os.environ.get('BROWSERTRIX_ENTRYPOINT')
