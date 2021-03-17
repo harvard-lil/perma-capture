@@ -315,6 +315,9 @@ class InProgressCaptureJobFactory(PendingCaptureJobFactory):
     capture_start_time = factory.Faker('future_datetime', end_date='+1m', tzinfo=tz.utc)
     step_count = factory.Faker('pyfloat', min_value=1, max_value=10)
     step_description = factory.Faker('text', max_nb_chars=15)
+    validated_url = factory.LazyAttribute(
+        lambda o: o.requested_url
+    )
 
 
 @register_factory

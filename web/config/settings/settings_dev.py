@@ -14,9 +14,15 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'main.tasks.demo_scheduled_task',
         'schedule': crontab(minute='*'),
     },
+    'clean-up-all-expired_archives': {
+        'task': 'main.tasks.clean_up_all_expired_archives',
+        'schedule': crontab(minute='*/15'),
+    },
 }
 CELERY_TASK_ROUTES['main.tasks.demo_scheduled_task'] = {'queue': 'background'}
 CELERY_TASK_ROUTES['main.tasks.dispatch_webhook'] = {'queue': 'background'}
+CELERY_TASK_ROUTES['main.tasks.clean_up_all_expired_archives'] = {'queue': 'background'}
+CELERY_TASK_ROUTES['main.tasks.clean_up_archive'] = {'queue': 'background'}
 
 # don't check password quality locally, since it's annoying
 AUTH_PASSWORD_VALIDATORS = []

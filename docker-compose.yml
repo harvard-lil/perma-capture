@@ -44,7 +44,7 @@ services:
       # Grant the container access to your host's Docker daemon, so that it can launch browsertrix.
       - /var/run/docker.sock:/var/run/docker.sock
       # Grant the container access to BROWSERTRIX_HOST_DATA_DIR.
-      - ./services/browsertrix/data:/app/services/browsertrix/data:ro
+      - ./services/browsertrix/data:/app/services/browsertrix/data
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:

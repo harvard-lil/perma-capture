@@ -1,6 +1,7 @@
 from celery import shared_task
 from celery.exceptions import MaxRetriesExceededError, SoftTimeLimitExceeded, Retry
 from celery.signals import task_failure
+from datetime import timedelta
 import docker
 import os
 import requests
@@ -12,6 +13,7 @@ import uuid
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.mail import mail_admins
+from django.utils import timezone
 
 from .models import CaptureJob, Archive, WebhookSubscription
 from .serializers import ReadOnlyCaptureJobSerializer, SimpleWebhookSubscriptionSerializer
@@ -21,6 +23,7 @@ from .utils import (validate_and_clean_url, get_file_hash, parse_querystring,
 )
 
 from pytest import raises as assert_raises
+from unittest.mock import call
 
 from test.test_helpers import raise_on_call
 
@@ -337,11 +340,19 @@ def run_next_capture():
                     inc_progress(capture_job, 1, "Saving archive.")
                     file.seek(0)
                     storage = get_storage()
-                    filename = storage.save(filename, file)
-                    archive.download_url = storage.url(filename)
+                    real_filename = storage.save(archive.filename, file)
+                    try:
+                        assert real_filename == archive.filename
+                    except AssertionError:
+                        # This would only happen if we accidentally produce duplicate filenames, which
+                        # shouldn't happen, since we include the capture job id. But, if it does, we'll
+                        # want to know about it, so we can manually clean up the file after it expires.
+                        logger.error(f'The archive for capture job {capture_job.id} has been saved as {real_filename}, not {archive.filename}.')
+                    archive.download_url = storage.url(real_filename)
                     archive.download_expiration_timestamp = datetime_from_timestamp(parse_querystring(archive.download_url)['Expires'][0])
                 archive.save()
                 capture_job.mark_completed()
+                os.remove(browsertrix_outputfile)
                 logger.info("Capture succeeded.")
             else:
                 logger.info("Capture failed.")
@@ -439,3 +450,74 @@ def dispatch_webhook(self, subscription_id, capture_job_id):
             )
             return
     logger.info(f'Webhook notification for subscription {subscription_id}, capture job {capture_job_id} delivered.')
+
+
+@shared_task(acks_late=True)
+def clean_up_all_expired_archives(limit=None):
+    """
+    Launch jobs to clean up expired archives.
+
+    Given:
+    >>> archive_factory, mocker, caplog = [getfixture(i) for i in ['no_signals_archive_factory', 'mocker', 'caplog']]
+    >>> fresh = archive_factory()
+    >>> already_cleaned_up = archive_factory(expired=True)
+    >>> ready_to_clean_up1 = archive_factory(expired=False, download_expiration_timestamp=timezone.now() - timedelta(seconds=5))
+    >>> ready_to_clean_up2 = archive_factory(expired=False, download_expiration_timestamp=timezone.now() - timedelta(hours=1))
+    >>> mock_clean_up = mocker.patch('main.tasks.clean_up_archive')
+
+    Launch one job per expired archive....
+    >>> _ = clean_up_all_expired_archives.apply()
+    >>> assert 'Queued 2 expired archives' in caplog.text
+    >>> assert mock_clean_up.mock_calls == [call.apply_async([ready_to_clean_up1.id]), call.apply_async([ready_to_clean_up2.id])]
+    >>> caplog.clear()
+    >>> mock_clean_up.reset_mock()
+
+    ... optionally limiting the total number.
+    >>> _ = clean_up_all_expired_archives.apply(kwargs={"limit": 1})
+    >>> assert 'Queued 1 expired archive' in caplog.text
+    >>> assert mock_clean_up.mock_calls == [call.apply_async([ready_to_clean_up1.id])]
+    """
+    archives = Archive.objects.expired()
+    if limit:
+        archives = archives[:limit]
+    queued = 0
+    for archive_id in archives.values_list('id', flat=True).iterator():
+        clean_up_archive.apply_async([archive_id])
+        queued = queued + 1
+    logger.info(f"Queued {queued} expired archives for cleanup.")
+
+
+@shared_task(acks_late=True)
+def clean_up_archive(archive_id):
+    """
+    Delete the archive from storage and unset its download_url.
+
+    Given:
+    >>> archive_factory, mocker, caplog = [getfixture(i) for i in ['no_signals_archive_factory', 'mocker', 'caplog']]
+    >>> archive = archive_factory()
+    >>> already_cleaned_up_archive = archive_factory(expired=True)
+    >>> mock_storage = mocker.patch('main.tasks.get_storage')
+
+    Delete the archive from storage and unset its download_url.
+    >>> _ = clean_up_archive.apply([archive.id])
+    >>> archive.refresh_from_db()
+    >>> assert mock_storage.mock_calls[-1] ==  ('().delete', (archive.filename,), {})
+    >>> assert not archive.download_url
+    >>> mock_storage.reset_mock()
+    >>> caplog.clear()
+
+    If the archive has already been cleaned up, this is a noop.
+    >>> _ = clean_up_archive.apply([already_cleaned_up_archive.id])
+    >>> assert 'already cleaned up' in caplog.text
+    >>> assert mock_storage.call_count == 0
+    """
+    archive = Archive.objects.get(id=archive_id)
+    if not archive.download_url:
+        logger.info(f"Archive {archive_id} already cleaned up.")
+        return
+
+    storage = get_storage()
+    storage.delete(archive.filename)
+
+    archive.download_url = None
+    archive.save()
