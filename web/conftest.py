@@ -212,7 +212,9 @@ def celery_config():
 
 @pytest.fixture(scope='session')
 def docker_client():
+    image_details = settings.BROWSERTRIX_IMAGE.split(':')
     client = docker.from_env()
+    client.images.pull(image_details[0], tag=image_details[1] if len(image_details) == 2 else None)
     yield client
     client.close()
 

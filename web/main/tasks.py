@@ -228,7 +228,7 @@ def run_next_capture():
     >>> django_settings.BROWSERTRIX_TIMEOUT_SECONDS = 1
     >>> job = run_test_capture('example.com')
     >>> assert job.status == CaptureJob.Status.FAILED
-    >>> assert 'Browsertrix exited with 137: \\nSession terminated, killing shell...' in caplog.text  #  137 means SIGKILL
+    >>> assert 'Browsertrix exited with 137' in caplog.text  #  137 means SIGKILL
     >>> assert not docker_client.containers.list(all=True, filters={'ancestor': settings.BROWSERTRIX_IMAGE})
 
     We clean up failed jobs before we get started.
