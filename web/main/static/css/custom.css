@@ -411,3 +411,9 @@ html.docs replay-web-page {
   display: flex;
   margin-bottom: 1.75em;
 }
+
+/* Celery page customizations */
+
+p.finished {
+  margin-bottom: 0;
+}

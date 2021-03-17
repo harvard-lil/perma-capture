@@ -14,3 +14,6 @@ MIDDLEWARE.remove('whitenoise.middleware.WhiteNoiseMiddleware')
 TESTING = True
 
 LAUNCH_CAPTURE_JOBS = False
+WEBHOOK_MAX_RETRIES = 1
+
+BROWSERTRIX_IMAGE = 'registry.lil.tools/library/busybox'

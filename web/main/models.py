@@ -2,6 +2,7 @@ import itertools
 import time
 
 from rest_framework.authtoken.models import Token
+from rest_framework.settings import api_settings
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
@@ -17,6 +18,9 @@ from django.utils.http import urlsafe_base64_encode
 from .utils import send_template_email, generate_hmac_signing_key
 
 from pytest import raises as assert_raises
+
+import logging
+logger = logging.getLogger(__name__)
 
 
 #
@@ -139,6 +143,11 @@ class WebhookSubscription(TimestampedModel):
     signing_key = models.CharField(max_length=512)
     signing_key_algorithm = models.CharField(max_length=32)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'event_type'])
+        ]
+
     def save(self, *args, **kwargs):
         """
         On creation, generate a signing key if not provided:
@@ -230,7 +239,7 @@ class CaptureJob(TimestampedModel):
         if not self.order:
 
             # get all pending jobs, in reverse priority order
-            pending_jobs = CaptureJob.objects.filter(status='pending', human=self.human).order_by('-order')
+            pending_jobs = CaptureJob.objects.filter(status=CaptureJob.Status.PENDING, human=self.human).order_by('-order')
             # narrow down to just the jobs that come *after* the most recent job submitted by this user
             pending_jobs = list(itertools.takewhile(lambda x: x.user_id != self.user_id, pending_jobs))
             # flip the list of jobs back around to the order they'll be processed in
@@ -269,7 +278,7 @@ class CaptureJob(TimestampedModel):
         """
 
         while True:
-            next_job = cls.objects.filter(status='pending').order_by('-human', 'order', 'pk').first()
+            next_job = cls.objects.filter(status=cls.Status.PENDING).order_by('-human', 'order', 'pk').first()
 
             if reserve and next_job:
                 if cls.TEST_PAUSE_TIME:
@@ -277,11 +286,11 @@ class CaptureJob(TimestampedModel):
 
                 # update the returned job to be in_progress instead of pending, so it won't be returned again
                 # set time using database time, so timeout comparisons will be consistent across worker servers
-                update_count = CaptureJob.objects.filter(
-                    status='pending',
+                update_count = cls.objects.filter(
+                    status=cls.Status.PENDING,
                     pk=next_job.pk
                 ).update(
-                    status='in_progress',
+                    status=cls.Status.IN_PROGRESS,
                     capture_start_time=Now()
                 )
 
@@ -300,19 +309,60 @@ class CaptureJob(TimestampedModel):
         before this one?
         Returns 0 if job is not pending.
         """
-        if self.status != 'pending':
+        if self.status != CaptureJob.Status.PENDING:
             return 0
 
-        queue_position = CaptureJob.objects.filter(status='pending', order__lte=self.order, human=self.human).count()
+        queue_position = CaptureJob.objects.filter(status=CaptureJob.Status.PENDING, order__lte=self.order, human=self.human).count()
         if not self.human:
-            queue_position += CaptureJob.objects.filter(status='pending', human=True).count()
+            queue_position += CaptureJob.objects.filter(status=CaptureJob.Status.PENDING, human=True).count()
 
         return queue_position
 
     def inc_progress(self, inc, description):
         self.step_count = int(self.step_count) + inc
         self.step_description = description
-        self.save(update_fields=['step_count', 'step_description'])
+        self.save(update_fields=['step_count', 'step_description', 'updated_at'])
+
+    def mark_completed(self, status=Status.COMPLETED):
+        """
+        Record completion time and status for this job.
+        """
+        if status == CaptureJob.Status.COMPLETED and not self.archive:
+            logger.error(f"To investigate: Capture Job {self.id} has no archive, but was being marked completed.")
+            status = CaptureJob.Status.FAILED
+        self.status = status
+        self.capture_end_time = Now()
+        self.save(update_fields=['status', 'message', 'capture_end_time', 'updated_at'])
+
+    def mark_failed(self, message):
+        """
+        Mark job as failed, and record message in format for front-end display.
+        """
+        self.message = {api_settings.NON_FIELD_ERRORS_KEY: [message]}
+        self.mark_completed(CaptureJob.Status.FAILED)
+
+    def mark_invalid(self, message_dict):
+        """
+        Mark job as invalid, and record message in format for front-end display.
+        """
+        self.message = message_dict
+        self.mark_completed(CaptureJob.Status.INVALID)
+
+    def queue_time(self):
+        try:
+            delta = self.capture_start_time - self.created_at
+            return delta.seconds
+        except (ObjectDoesNotExist, TypeError):
+            return None
+    queue_time.short_description = 'queue time (s)'
+
+    def capture_time(self):
+        try:
+            delta = self.capture_end_time - self.capture_start_time
+            return delta.seconds
+        except TypeError:
+            return None
+    capture_time.short_description = 'capture time (s)'
 
 
 
