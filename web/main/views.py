@@ -730,7 +730,7 @@ def account(request):
     if request.method == "POST":
         if form.is_valid():
             form.save()
-        return JsonResponse({'form': serialize_form(form)})
+        return JsonResponse(serialize_form(form))
     return render(request, 'vue_base.html')
 
 
