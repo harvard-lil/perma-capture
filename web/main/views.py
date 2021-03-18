@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import PasswordResetView
 from django.core.exceptions import PermissionDenied, ValidationError as DjangoValidationError
 from django.db.models import Q
+from django.db.models.functions import Coalesce
 from django.http import (HttpResponseRedirect,  HttpResponseForbidden,
     HttpResponseServerError, HttpResponseBadRequest, JsonResponse
 )
@@ -119,7 +120,7 @@ class CaptureListView(APIView):
         OrderingFilter        # can be ordered by order_by= if ordering_fields is set
     )
     filterset_class = CaptureJobFilter
-    ordering_fields = ('created_at', 'requested_url', 'label', 'status', 'capture_oembed_view')      # lock down order_by fields -- security risk if unlimited
+    ordering_fields = ('created_at', 'url', 'requested_url', 'label', 'status', 'capture_oembed_view')      # lock down order_by fields -- security risk if unlimited
 
     def filter_queryset(self, queryset):
         """
@@ -208,7 +209,11 @@ class CaptureListView(APIView):
 
         You can order by pk, and ?should we do any timestamps?
         """
-        queryset = self.filter_queryset(CaptureJob.objects.filter(user=request.user))
+        queryset = self.filter_queryset(CaptureJob.objects.filter(
+            user=request.user
+        ).annotate(
+            url=Coalesce('validated_url', 'requested_url')
+        ))
         paginator = Paginator()
         items = paginator.paginate_queryset(queryset, request, view=self)
         serializer = ReadOnlyCaptureJobSerializer(items, many=True)
