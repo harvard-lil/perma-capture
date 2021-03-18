@@ -43,7 +43,7 @@ export default {
     sortDesc: true,
     headings: {
       status: 'Status',
-      requested_url: 'URL',
+      url: 'URL',
       label: 'Label',
       capture_oembed_view: 'Embedded Version',
       created_at: 'Created At'

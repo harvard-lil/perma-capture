@@ -31,6 +31,11 @@ const defaultSort = (prop) => (desc) => (a, b) => {
 }
 
 const customSorts = {
+  url: (desc) => {
+    const curriedFn = defaultSort('url')(desc)
+    return (a, b) =>
+      curriedFn({...a, url: a.validated_url || a.requested_url}, {...b, url: b.validated_url || b.requested_url})
+  },
   created_at: (desc) => {
     const curriedFn = defaultSort('created_at')(desc)
     return (a, b) =>

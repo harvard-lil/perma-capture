@@ -7,7 +7,7 @@
       <span v-else class="bi bi-check"></span>
     </span>
   </td>
-  <td><a :href=capture.requested_url>{{ capture.requested_url }}</a></td>
+  <td><a :href="url">{{ url }}</a></td>
   <td>{{ capture.label || '-' }}</td>
   <td><input class="form-check-input" type="checkbox" v-model="capture.capture_oembed_view" id="flexCheckDisabled" disabled></td>
   <td>{{ formattedDate }}</td>
@@ -56,6 +56,9 @@ export default {
     },
     hasFailed() {
       return snakeToPascal(this.statusOrDefault) in FailureStates
+    },
+    url() {
+      return this.capture.validated_url || this.capture.requested_url
     },
     formattedDate() {
       return (new Date(this.capture.created_at)).toLocaleDateString()
