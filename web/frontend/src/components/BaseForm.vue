@@ -3,21 +3,34 @@
       :class="{'was-validated': displayFrontendValidation}"
       novalidate>
 
-  <div v-for="error in serverErrors.__all__"
+  <div v-if="errorCount"
        class="invalid-feedback d-block">
-    {{ error.message }}
+    <p>
+      Please correct the following
+      <template v-if="errorCount == 1">error</template>
+      <strong v-else>{{ errorCount }} errors</strong>:
+    </p>
+
+    <ul>
+      <li v-for="(errors, fieldName) in serverErrors">
+        <template v-if="fieldName != '__all__'">
+          <a href="">{{ fieldsWithDefaults.find(field => field.name == fieldName).label }}</a>:
+        </template>
+        {{ errors.map(({message}) => message).join(', ') }}
+      </li>
+    </ul>
   </div>
 
-  <template v-for="field in fields">
-    <label :for="field.name" class="form-label mt-3">{{ field.label || field.name.replace('_', ' ') }}</label>
+  <template v-for="field in fieldsWithDefaults">
+    <label :for="field.name" class="form-label mt-3">{{ field.label }}</label>
     <input :name="field.name"
            :id="field.name"
            v-model="field.value"
            @focus="clearServerError"
-           :type="field.type || 'text'"
-           :required="field.required !== false"
+           :type="field.type"
+           :required="field.required"
            :disabled="field.disabled === true || processing"
-           :readonly="field.readonly === true"
+           :readonly="field.readonly"
            class="form-control"
            :class="{'is-invalid': serverErrors[field.name]}"
            :aria-describedby="(serverErrors[field.name] || []).map((error, index) => field.name + 'InvalidFeedback' + index)">
@@ -55,13 +68,32 @@ export default {
     displayFrontendValidation: false,
     serverErrors: {}
   }),
+  computed: {
+    fieldsWithDefaults() {
+      return this.fields.map(field => ({
+        label: field.name
+          .split('_')
+          .map((val, i) =>
+            !i ? val.charAt(0).toUpperCase() + val.slice(1) : val)
+          .join(' '),
+        type: 'text',
+        readonly: false,
+        disabled: false,
+        required: true,
+        ...field
+      }))
+    },
+    errorCount() {
+      return Object.keys(this.serverErrors).length
+    }
+  },
   methods: {
     ...mapActions(['changePassword']),
     clearServerError(event) {
       delete this.serverErrors[event.target.name]
     },
     submit(event) {
-      if(event.target.checkValidity()){
+      // if(event.target.checkValidity()){
         this.processing = true
         this.action(new FormData(event.target))
           .catch(error => {
@@ -69,16 +101,13 @@ export default {
             this.serverErrors = error
           })
           .then(() => this.processing = false)
-      } else {
-        this.displayFrontendValidation = true
-      }
+      // } else {
+      //   this.displayFrontendValidation = true
+      // }
     }
   }
 }
 </script>
 
 <style scoped>
-  .form-label {
-    text-transform: capitalize;
-  }
 </style>
