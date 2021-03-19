@@ -26,7 +26,6 @@
     <input :name="field.name"
            :id="field.id"
            v-model="field.value"
-           @focus="clearServerError"
            :type="field.type"
            :required="field.required"
            :disabled="field.disabled === true || processing"
@@ -93,10 +92,8 @@ export default {
     getFieldByName(name) {
       return this.fieldsWithDefaults.find(field => field.name == name)
     },
-    clearServerError(event) {
-      delete this.serverErrors[event.target.name]
-    },
     submit(event) {
+      this.serverErrors = {} // clear existing errors
       if(event.target.checkValidity()){
         this.processing = true
         this.action(new FormData(event.target))
