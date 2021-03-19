@@ -32,7 +32,6 @@
            :required="field.required"
            :disabled="field.disabled === true || processing"
            :readonly="field.readonly"
-           :aria-required="field.required"
            :aria-invalid="!!serverErrors[field.name]"
            :aria-describedby="(serverErrors[field.name] || []).map((error, index) => field.id + 'InvalidFeedback' + index)">
     <div v-for="(error, index) in serverErrors[field.name]"
