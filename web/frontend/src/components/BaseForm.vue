@@ -93,7 +93,7 @@ export default {
       delete this.serverErrors[event.target.name]
     },
     submit(event) {
-      // if(event.target.checkValidity()){
+      if(event.target.checkValidity()){
         this.processing = true
         this.action(new FormData(event.target))
           .catch(error => {
@@ -101,9 +101,9 @@ export default {
             this.serverErrors = error
           })
           .then(() => this.processing = false)
-      // } else {
-      //   this.displayFrontendValidation = true
-      // }
+      } else {
+        this.displayFrontendValidation = true
+      }
     }
   }
 }
