@@ -4,12 +4,13 @@
       novalidate>
 
   <div v-if="errorCount"
+       ref="errorsHeader"
+       tabindex="-1"
        class="invalid-feedback d-block">
-    <p>
-      Please correct the following
-      <template v-if="errorCount == 1">error</template>
-      <strong v-else>{{ errorCount }} errors</strong>:
-    </p>
+
+    Please correct the following
+    <template v-if="errorCount == 1">error</template>
+    <strong v-else>{{ errorCount }} errors</strong>:
 
     <ul>
       <li v-for="(errors, fieldName) in serverErrors">
@@ -88,6 +89,12 @@ export default {
       return Object.keys(this.serverErrors).length
     }
   },
+  watch: {
+    errorCount(count) {
+      // use nextTick else the $ref won't be rendered yet
+      if(count) this.$nextTick(() => this.$refs.errorsHeader.focus())
+    }
+  },
   methods: {
     ...mapActions(['changePassword']),
     getFieldByName(name) {
@@ -112,4 +119,7 @@ export default {
 </script>
 
 <style scoped>
+.invalid-feedback {
+  outline: none;
+}
 </style>
