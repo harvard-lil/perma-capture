@@ -14,7 +14,7 @@
     <ul>
       <li v-for="(errors, fieldName) in serverErrors">
         <template v-if="fieldName != '__all__'">
-          <a href="">{{ fieldsWithDefaults.find(field => field.name == fieldName).label }}</a>:
+          <a :href="'#' + getFieldByName(fieldName).id">{{ getFieldByName(fieldName).label }}</a>:
         </template>
         {{ errors.map(({message}) => message).join(', ') }}
       </li>
@@ -24,7 +24,7 @@
   <template v-for="field in fieldsWithDefaults">
     <label :for="field.name" class="form-label mt-3">{{ field.label }}</label>
     <input :name="field.name"
-           :id="field.name"
+           :id="field.id"
            v-model="field.value"
            @focus="clearServerError"
            :type="field.type"
@@ -76,6 +76,7 @@ export default {
           .map((val, i) =>
             !i ? val.charAt(0).toUpperCase() + val.slice(1) : val)
           .join(' '),
+        id: field.name + Date.now(),
         type: 'text',
         readonly: false,
         disabled: false,
@@ -89,6 +90,9 @@ export default {
   },
   methods: {
     ...mapActions(['changePassword']),
+    getFieldByName(name) {
+      return this.fieldsWithDefaults.find(field => field.name == name)
+    },
     clearServerError(event) {
       delete this.serverErrors[event.target.name]
     },
