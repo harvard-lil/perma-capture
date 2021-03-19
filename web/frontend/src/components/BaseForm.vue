@@ -23,15 +23,16 @@
 
   <template v-for="field in fieldsWithDefaults">
     <label :for="field.name" class="form-label mt-3">{{ field.label }}</label>
-    <input :name="field.name"
+    <input v-model="field.value"
+           :name="field.name"
            :id="field.id"
-           v-model="field.value"
            :type="field.type"
+           :class="['form-control', {'is-invalid': serverErrors[field.name]}]"
            :required="field.required"
            :disabled="field.disabled === true || processing"
            :readonly="field.readonly"
-           class="form-control"
-           :class="{'is-invalid': serverErrors[field.name]}"
+           :aria-required="field.required"
+           :aria-invalid="!!serverErrors[field.name]"
            :aria-describedby="(serverErrors[field.name] || []).map((error, index) => field.id + 'InvalidFeedback' + index)">
     <div v-for="(error, index) in serverErrors[field.name]"
          :id="field.id + 'InvalidFeedback' + index"
