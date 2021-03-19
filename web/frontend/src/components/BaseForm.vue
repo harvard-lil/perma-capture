@@ -32,9 +32,9 @@
            :readonly="field.readonly"
            class="form-control"
            :class="{'is-invalid': serverErrors[field.name]}"
-           :aria-describedby="(serverErrors[field.name] || []).map((error, index) => field.name + 'InvalidFeedback' + index)">
+           :aria-describedby="(serverErrors[field.name] || []).map((error, index) => field.id + 'InvalidFeedback' + index)">
     <div v-for="(error, index) in serverErrors[field.name]"
-         :id="field.name + 'InvalidFeedback' + index"
+         :id="field.id + 'InvalidFeedback' + index"
          class="invalid-feedback">
       {{ error.message }}
     </div>
