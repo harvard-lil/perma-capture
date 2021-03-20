@@ -1,9 +1,8 @@
 <template>
 <form @submit.prevent="submit"
-      :class="{'was-validated': displayFrontendValidation}"
       novalidate>
 
-  <div v-if="errorCount"
+  <div v-if="displayValidations && errorCount"
        ref="errorsHeader"
        tabindex="-1"
        class="invalid-feedback d-block">
@@ -13,11 +12,11 @@
     <strong v-else>{{ errorCount }} errors</strong>:
 
     <ul>
-      <li v-for="(errors, fieldName) in serverErrors">
+      <li v-for="(errorsArray, fieldName) in errors">
         <template v-if="fieldName != '__all__'">
           <a :href="'#' + getFieldByName(fieldName).id">{{ getFieldByName(fieldName).label }}</a>:
         </template>
-        {{ errors.map(({message}) => message).join(', ') }}
+        {{ errorsArray.map(({message}) => message).join(', ') }}
       </li>
     </ul>
   </div>
@@ -25,16 +24,18 @@
   <template v-for="field in fieldsWithDefaults">
     <label :for="field.name" class="form-label mt-3">{{ field.label }}</label>
     <input v-model="field.value"
+           @blur="checkValidity"
+           @invalid="onInvalid"
            :name="field.name"
            :id="field.id"
            :type="field.type"
-           :class="['form-control', {'is-invalid': serverErrors[field.name]}]"
+           :class="['form-control', {'is-invalid': displayValidations && errors[field.name], 'is-valid': displayValidations && !errors[field.name]}]"
            :required="field.required"
            :disabled="field.disabled === true || processing"
            :readonly="field.readonly"
-           :aria-invalid="!!serverErrors[field.name]"
-           :aria-describedby="(serverErrors[field.name] || []).map((error, index) => field.id + 'InvalidFeedback' + index)">
-    <div v-for="(error, index) in serverErrors[field.name]"
+           :aria-invalid="!!errors[field.name]"
+           :aria-describedby="(errors[field.name] || []).map((error, index) => field.id + 'InvalidFeedback' + index)">
+    <div v-for="(error, index) in errors[field.name]"
          :id="field.id + 'InvalidFeedback' + index"
          class="invalid-feedback">
       {{ error.message }}
@@ -65,8 +66,8 @@ export default {
   },
   data: () => ({
     processing: false,
-    displayFrontendValidation: false,
-    serverErrors: {}
+    displayValidations: false,
+    errors: {}
   }),
   computed: {
     fieldsWithDefaults() {
@@ -85,13 +86,15 @@ export default {
       }))
     },
     errorCount() {
-      return Object.keys(this.serverErrors).length
+      return Object.keys(this.errors).length
     }
   },
   watch: {
     errorCount(count) {
-      // use nextTick else the $ref won't be rendered yet
-      if(count) this.$nextTick(() => this.$refs.errorsHeader.focus())
+      if(count && this.displayValidations){
+        // use nextTick else the $ref won't be rendered yet
+        this.$nextTick(() => this.$refs.errorsHeader.focus())
+      }
     }
   },
   methods: {
@@ -99,18 +102,28 @@ export default {
     getFieldByName(name) {
       return this.fieldsWithDefaults.find(field => field.name == name)
     },
+    checkValidity(e) {
+      if(e.target.checkValidity()){
+        delete this.errors[e.target.name]
+      }
+    },
+    onInvalid(e) {
+      this.errors[e.target.name] = [{message: e.target.validationMessage}]
+    },
+    collectFrontendErrors() {
+      this.errors = {}
+      this.$el.querySelectorAll(':invalid').forEach((node) =>
+        this.errors[node.name] = [{message: node.validationMessage}])
+    },
     submit(event) {
-      this.serverErrors = {} // clear existing errors
-      if(event.target.checkValidity()){
+      this.collectFrontendErrors()
+      this.displayValidations = true
+      if(this.errorCount == 0){
         this.processing = true
         this.action(new FormData(event.target))
-          .catch(error => {
-            this.displayFrontendValidation = false
-            this.serverErrors = error
-          })
+          .then(() => this.displayValidations = false)
+          .catch(serverErrors => this.errors = serverErrors)
           .then(() => this.processing = false)
-      } else {
-        this.displayFrontendValidation = true
       }
     }
   }
