@@ -22,7 +22,7 @@
   </div>
 
   <template v-for="field in fieldsWithDefaults">
-    <label :for="field.name" class="form-label mt-3">{{ field.label }}</label>
+    <label :for="field.id" class="form-label mt-3">{{ field.label }}</label>
     <input v-model="field.value"
            @blur="checkValidity"
            @invalid="onInvalid"
