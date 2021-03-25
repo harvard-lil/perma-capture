@@ -399,7 +399,7 @@ class Archive(TimestampedModel):
 
     @property
     def filename(self):
-        return f"job-{self.capture_job.id}-{urllib.parse.urlparse(self.capture_job.validated_url).netloc}.wacz"
+        return f"job-{self.capture_job.id}-{urllib.parse.urlparse(self.capture_job.validated_url).netloc.replace('.', '-')}.wacz"
 
 
 class UserManager(BaseUserManager):

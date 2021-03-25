@@ -5,6 +5,7 @@ from datetime import timedelta
 import docker
 import os
 import requests
+import shutil
 import socket
 import threading
 from time import sleep
@@ -118,6 +119,50 @@ class BrowsertrixLifeCycleThread(threading.Thread):
             self.status = self.container.status
 
 
+PUPPETEER_ESCAPE_SEQUENCES = [
+    ''.join(chr(c) for c in [27, 91, 55, 65]),
+    ''.join(chr(c) for c in [27, 91, 56, 65]),
+    ''.join(chr(c) for c in [27, 91, 56, 66]),
+    ''.join(chr(c) for c in [27, 91, 56]),
+    ''.join(chr(c) for c in [27, 91, 75])
+]
+MILESTONES = [
+    'creating pages',
+    'Waiting for behaviors to finish',
+    'All Behaviors Done',
+    'ensure WARCs are finished',
+    'Generating WACZ',
+    'WACZ successfully generated'
+]
+INFO_EVENTS = [
+    'Sys. load'
+]
+def handle_browsertrix_msg(capture_job, msg):
+    """
+    Reformat a logline from Browsertrix and log at the desired level, incrementing
+    the process of the capture job if a "milestone" has been reached.
+    """
+    # the docker library returns stdout as bytes
+    msg = str(msg, 'utf-8')
+
+    # handle puppeteer-cluster's fancy log output
+    for sequence in PUPPETEER_ESCAPE_SEQUENCES:
+        if msg.startswith(sequence):
+            msg = msg[len(sequence):]
+
+    # ensure there's still a meaningful message left
+    msg = msg.strip('=# \n')
+    if msg.startswith('behavior debug'):
+        msg = msg[len('behavior debug: '):].strip('"!')
+    if msg:
+        if any(milestone in msg for milestone in MILESTONES):
+            inc_progress(capture_job, 1, f"Browsertrix: {msg}.")
+        elif any(event in msg for event in INFO_EVENTS):
+            logger.info(f"{capture_job} Browsertrix {msg}")
+        else:
+            logger.debug(msg)
+
+
 def inc_progress(capture_job, inc, description):
     capture_job.inc_progress(inc, description)
     logger.info(f"{capture_job} step {capture_job.step_count}: {capture_job.step_description}")
@@ -153,6 +198,7 @@ def run_next_capture():
     """
     Given:
     >>> pending_capture_job_factory, docker_client, django_settings, mocker, caplog = [getfixture(i) for i in ['pending_capture_job_factory', 'docker_client', 'settings', 'mocker', 'caplog']]
+    >>> output_dir = f'{settings.SERVICES_DIR}/browsertrix/data/'
 
     Helpers:
     >>> orig_clean_up_failed = clean_up_failed_captures
@@ -221,10 +267,11 @@ def run_next_capture():
     >>> job = run_test_capture('example.com', stop_before_step=6)
     >>> assert job.status == CaptureJob.Status.FAILED
     >>> assert job.step_count == 5
-    >>> assert job.step_description == 'Browsertrix: status 2.'
+    >>> assert 'Browsertrix:' in job.step_description
     >>> assert job.capture_end_time
     >>> assert caplog.records[-1].message == 'No jobs waiting!'
     >>> assert not docker_client.containers.list(all=True, filters={'ancestor': settings.BROWSERTRIX_IMAGE})
+    >>> assert [f.name for f in os.scandir(output_dir) if f.is_dir()] == ['examples']
 
     If Browsertrix exceeds the maximum permitted time limit, we stop and clean up.
     >>> caplog.clear()
@@ -233,6 +280,7 @@ def run_next_capture():
     >>> assert job.status == CaptureJob.Status.FAILED
     >>> assert 'Browsertrix exited with 137' in caplog.text  #  137 means SIGKILL
     >>> assert not docker_client.containers.list(all=True, filters={'ancestor': settings.BROWSERTRIX_IMAGE})
+    >>> assert [f.name for f in os.scandir(output_dir) if f.is_dir()] == ['examples']
 
     We clean up failed jobs before we get started.
     >>> assert mock_clean_up_failed.call_count > 0
@@ -252,8 +300,14 @@ def run_next_capture():
     container = None
     browsertrix_life_cycle_thread = None
     have_archive = False
-    filename = f'{uuid.uuid4()}.wacz'
-    browsertrix_outputfile = f'{settings.SERVICES_DIR}/browsertrix/data/{filename}'
+    while True:
+        try:
+            outputdir_uuid = uuid.uuid4()
+            outputdir = f'{settings.SERVICES_DIR}/browsertrix/data/{outputdir_uuid}'
+            os.mkdir(outputdir)
+            break
+        except FileExistsError:
+            pass
 
     try:
         inc_progress(capture_job, 0, "Validating.")
@@ -267,7 +321,10 @@ def run_next_capture():
         inc_progress(capture_job, 1, "Connecting to Docker.")
         client = docker.from_env()
 
-        inc_progress(capture_job, 1, "Creating browsertrix container.")
+        inc_progress(capture_job, 1, "Creating Browsertrix container.")
+        archive = Archive(capture_job=capture_job)
+        collection_name = archive.filename[:-5]
+        browsertrix_outputfile = f'{outputdir}/collections/{collection_name}/{collection_name}.wacz'
         container = client.containers.create(
             settings.BROWSERTRIX_IMAGE,
             environment=[
@@ -282,11 +339,13 @@ def run_next_capture():
                 }
             },
             entrypoint='/entrypoint.sh',
-            command=f'for i in 1 2 3 4 5; do (echo status $i; sleep 1); done; cp {settings.BROWSERTRIX_INTERNAL_DATA_DIR}/examples/$(ls {settings.BROWSERTRIX_INTERNAL_DATA_DIR}/examples | shuf -n 1) {settings.BROWSERTRIX_INTERNAL_DATA_DIR}/{filename}',
+            cap_add=['NET_ADMIN', 'SYS_ADMIN'],
+            shm_size='1GB',
+            command=f'crawl --logging "stats,behaviors-debug" --generateWACZ --limit 1 --cwd {settings.BROWSERTRIX_INTERNAL_DATA_DIR}/{outputdir_uuid} --collection {collection_name} --url {capture_job.validated_url}',
             detach=True
         )
 
-        inc_progress(capture_job, 1, "Starting browsertrix.")
+        inc_progress(capture_job, 1, "Starting Browsertrix.")
         container.start()
         browsertrix_life_cycle_thread = BrowsertrixLifeCycleThread(container, settings.BROWSERTRIX_TIMEOUT_SECONDS, name="browsertrix_return")
         browsertrix_life_cycle_thread.start()
@@ -294,13 +353,7 @@ def run_next_capture():
         for msg in stdout_stream:
             # we should look into whether the browsertrix container needs init, and whether it passes signals correctly, etc.
             # see also https://github.com/moby/moby/issues/37663.
-            msg = str(msg, 'utf-8').strip()
-            if True:
-                # if the msg matches some expectation (I'm presuming output will be noisy),
-                # indicate we've reached the next step of the capture
-                inc_progress(capture_job, 1, f"Browsertrix: {msg}.")
-            else:
-                logger.debug(msg)
+            handle_browsertrix_msg(capture_job, msg)
 
         browsertrix_life_cycle_thread.join()
         if browsertrix_life_cycle_thread.exit_code != 0:
@@ -330,7 +383,6 @@ def run_next_capture():
             if client:
                 client.close()
             if have_archive:
-                archive = Archive(capture_job=capture_job)
                 with open(browsertrix_outputfile , 'rb') as file:
                     inc_progress(capture_job, 1, "Processing archive.")
                     archive.hash, archive.hash_algorithm = get_file_hash(file)
@@ -352,10 +404,10 @@ def run_next_capture():
                     archive.download_expiration_timestamp = datetime_from_timestamp(parse_querystring(archive.download_url)['Expires'][0])
                 archive.save()
                 capture_job.mark_completed()
-                os.remove(browsertrix_outputfile)
                 logger.info("Capture succeeded.")
             else:
                 logger.info("Capture failed.")
+            shutil.rmtree(outputdir)
         except:  # noqa
             logger.exception(f"Exception while finishing job {capture_job.id}:")
         finally:
