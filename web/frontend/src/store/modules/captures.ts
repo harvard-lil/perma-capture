@@ -124,7 +124,7 @@ const mutations = {
   append: (state, payload) =>
     state.all.push(...payload),
 
-  update: (state, payload) =>
+  update: (_state, payload) =>
     Object.assign(payload.obj, payload.vals),
 
   destroy: (state, payload) =>

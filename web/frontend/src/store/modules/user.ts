@@ -17,15 +17,15 @@ const actions = {
         commit('update', resp.data.form.data)
       }),
 
-  login: ({ commit }, payload) =>
+  login: (_context, payload) =>
     Axios
       .post(`${URL_ROOT}login/`, payload, {headers: {"Content-Type": "multipart/form-data"}}),
 
-  resetPassword: ({ commit }, payload) =>
+  resetPassword: (_context, payload) =>
     Axios
       .post(`${URL_ROOT}password_reset/`, payload, {headers: {"Content-Type": "multipart/form-data"}}),
 
-  changePassword: ({ commit }, payload) =>
+  changePassword: (_context, payload) =>
     Axios
       .post(`${URL_ROOT}password_change/`, payload, {headers: {"Content-Type": "multipart/form-data"}}),
 
