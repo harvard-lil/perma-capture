@@ -3,7 +3,6 @@ import { TransitionalStates } from '../../constants/captures'
 import { snakeToPascal, objectSubset } from '../../lib/helpers'
 
 const URL_ROOT = '/captures/'
-const LIMIT = 100
 
 const state = {
   all: [],
