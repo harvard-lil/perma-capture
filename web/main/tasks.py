@@ -303,7 +303,12 @@ def run_next_capture():
     while True:
         try:
             outputdir_uuid = uuid.uuid4()
-            outputdir = f'{settings.BROWSERTRIX_HOST_DATA_DIR}/{outputdir_uuid}'
+            if os.environ.get('DOCKERIZED'):
+                # see docker-compose.yaml: this is where BROWSERTRIX_HOST_DATA_DIR is mounted in this container.
+                # this setup and these config variables need rethinking: we shouldn't need to interpolate here.
+                outputdir = f'{settings.SERVICES_DIR}/browsertrix/data/{outputdir_uuid}'
+            else:
+                outputdir = f'{settings.BROWSERTRIX_HOST_DATA_DIR}/{outputdir_uuid}'
             os.mkdir(outputdir)
             break
         except FileExistsError:
