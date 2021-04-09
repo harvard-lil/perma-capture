@@ -303,7 +303,7 @@ def run_next_capture():
     while True:
         try:
             outputdir_uuid = uuid.uuid4()
-            outputdir = f'{settings.SERVICES_DIR}/browsertrix/data/{outputdir_uuid}'
+            outputdir = f'{settings.BROWSERTRIX_HOST_DATA_DIR}/{outputdir_uuid}'
             os.mkdir(outputdir)
             break
         except FileExistsError:
