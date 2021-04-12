@@ -1,13 +1,13 @@
-export const enum TransitionalStates {
+export enum TransitionalStates {
   Pending,
   InProgress
 }
 
-export const enum FailureStates {
+export enum FailureStates {
   Invalid,
   Failed
 }
 
-export const enum SuccessStates {
+export enum SuccessStates {
   Completed
 }
