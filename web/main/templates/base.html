@@ -7,12 +7,8 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% if heading and heading == APP_NAME %}{{ heading }}{% else %}{% block title %}{{ heading }}{% endblock title %} | {{ APP_NAME }}{% endif %}</title>
-    <link rel="shortcut icon" type="image/x-icon" href="{% static 'img/favicon.png' %}">
-    {% block css %}
-    <link rel="stylesheet" href="{% static 'css/normalize.css' %}">
-    <link rel="stylesheet" href="{% static 'css/skeleton.css' %}">
-    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
-    {% endblock css %}
+    <link rel="shortcut icon" type="image/x-icon" href="{% static 'favicon.png' %}">
+    {% block css %}{% endblock css %}
     {% block header_scripts %}{% endblock %}
   </head>
   <body>
