@@ -13,6 +13,8 @@ export default defineConfig(({ command, mode }) => {
       }
     })],
     build: {
+      outDir: '../main/static/',
+      assetsDir: 'vite',
       // generate manifest.json in outDir
       manifest: true,
       rollupOptions: {

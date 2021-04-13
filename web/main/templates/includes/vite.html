@@ -2,9 +2,9 @@
 {% load vite_manifest %}
 {% with main=VITE_ENTRY_PATH|vite_manifest %}
 {% for path in main.css %}
-<link rel="stylesheet" href="{{ path }}" />
+<link rel="stylesheet" href="/static/{{ path }}" />
 {% endfor %}
-<script type="module" src="{{ main.file }}"></script>
+<script type="module" src="/static/{{ main.file }}"></script>
 {% endwith %}
 {% else %}
 <script type="module" src="/vite/@vite/client"></script>
