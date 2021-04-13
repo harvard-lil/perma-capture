@@ -1,0 +1,45 @@
+{
+  "src/main.ts": {
+    "file": "vite/main.5d1fd0f0.js",
+    "src": "src/main.ts",
+    "isEntry": true,
+    "imports": [
+      "_vendor.2a1b1931.js"
+    ],
+    "css": [
+      "vite/main.fc6d6e0c.css"
+    ],
+    "assets": [
+      "vite/preview.e6fb6c31.svg",
+      "vite/download.757723f9.svg",
+      "vite/dashboard-screenshot.fe6ece90.png",
+      "vite/slack-screenshot.46ab25e6.png",
+      "vite/bootstrap-icons.856b3f9e.woff2",
+      "vite/bootstrap-icons.492cc153.woff",
+      "vite/roboto-cyrillic-ext-300-normal.4f12c41d.woff2",
+      "vite/roboto-all-300-normal.b229babd.woff",
+      "vite/roboto-cyrillic-300-normal.081f44d9.woff2",
+      "vite/roboto-greek-300-normal.dd1862ad.woff2",
+      "vite/roboto-vietnamese-300-normal.14b442bf.woff2",
+      "vite/roboto-latin-ext-300-normal.996da675.woff2",
+      "vite/roboto-latin-300-normal.29f6da0a.woff2",
+      "vite/roboto-cyrillic-ext-400-normal.7aa3c7e4.woff2",
+      "vite/roboto-all-400-normal.71aa99e2.woff",
+      "vite/roboto-cyrillic-400-normal.49115861.woff2",
+      "vite/roboto-greek-400-normal.a223f1cb.woff2",
+      "vite/roboto-vietnamese-400-normal.67afba35.woff2",
+      "vite/roboto-latin-ext-400-normal.4c846294.woff2",
+      "vite/roboto-latin-400-normal.48c3fa6f.woff2",
+      "vite/roboto-cyrillic-ext-900-normal.18e3ec2c.woff2",
+      "vite/roboto-all-900-normal.851072ef.woff",
+      "vite/roboto-cyrillic-900-normal.1a229106.woff2",
+      "vite/roboto-greek-900-normal.322a26e3.woff2",
+      "vite/roboto-vietnamese-900-normal.440e14e0.woff2",
+      "vite/roboto-latin-ext-900-normal.568fcde2.woff2",
+      "vite/roboto-latin-900-normal.edcdf3f6.woff2"
+    ]
+  },
+  "_vendor.2a1b1931.js": {
+    "file": "vite/vendor.2a1b1931.js"
+  }
+}
