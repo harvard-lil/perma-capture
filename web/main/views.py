@@ -32,7 +32,7 @@ from .models import CaptureJob, User, WebhookSubscription
 from .serializers import CaptureJobSerializer, ReadOnlyCaptureJobSerializer, WebhookSubscriptionSerializer
 from .tasks import run_next_capture
 
-from .utils import sign_data, serialize_form
+from .utils import serialize_form
 
 from test.test_helpers import check_response
 from .test.test_permissions_helpers import no_perms_test, perms_test
