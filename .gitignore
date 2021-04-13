@@ -10,6 +10,3 @@ settings.py
 .pytest_cache
 
 celerybeat-schedule
-/web/main/static/favicon.ico
-/web/main/static/manifest.json
-/web/main/static/vite/
