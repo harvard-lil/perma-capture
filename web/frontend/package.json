@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "vite",
-    "build": "vuedx-typecheck . && vite build --base=/dist",
+    "build": "vuedx-typecheck . && vite build",
     "serve": "vite preview"
   },
   "dependencies": {
