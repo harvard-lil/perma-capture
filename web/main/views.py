@@ -15,6 +15,7 @@ from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.clickjacking import xframe_options_exempt
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 import django_filters
 
@@ -487,6 +488,7 @@ class WebhookSubscriptionDetailView(APIView):
         return ApiResponse(status=status.HTTP_204_NO_CONTENT)
 
 
+@ensure_csrf_cookie
 @perms_test({'results': {200: ['user', None]}})
 def index(request):
     """
@@ -554,6 +556,7 @@ def replay_error(request):
 # User Management
 #
 
+@ensure_csrf_cookie
 @no_perms_test
 def sign_up(request):
     """
@@ -690,6 +693,7 @@ def reset_token(request, format=None):
     })
 
 
+@ensure_csrf_cookie
 @perms_test({'results': {200: ['user'], 'login': [None]}})
 @login_required
 def account(request):
