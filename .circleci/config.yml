@@ -28,7 +28,7 @@ jobs:
       # This block shaves a minute or two off of the test runtime by using cached docker images.
       # Otherwise we could omit this step entirely and let `docker-compose run` build what it needs to.
       - restore_cache:
-          key: docker-images-{{ checksum "docker-compose.yml" }}
+          key: docker-images-{{ checksum "docker-compose.yml" }}-{{ checksum "docker/web/Dockerfile" }}-{{ checksum "web/requirements.txt" }}-{{ checksum "web/frontend/yarn.lock" }}
       - run:
           name: "Build docker images"
           command: |
@@ -41,7 +41,7 @@ jobs:
               docker save -o ~/docker-cache.tar perma-capture
             fi
       - save_cache:
-          key: docker-images-{{ checksum "docker-compose.yml" }}
+          key: docker-images-{{ checksum "docker-compose.yml" }}-{{ checksum "docker/web/Dockerfile" }}-{{ checksum "web/requirements.txt" }}-{{ checksum "web/frontend/yarn.lock" }}
           paths:
             - "~/docker-cache.tar"
 
@@ -51,6 +51,8 @@ jobs:
           command: |
             docker-compose up -d
             docker-compose exec web ./manage.py collectstatic --noinput   # collect static files
+            docker-compose exec web bash -c "cd frontend && yarn install"
+            docker-compose exec web bash -c "cd frontend && yarn build"
             mkdir -p junit/pytest                            # storage for circleci test info
             docker-compose exec web pytest \
               --junitxml=junit/pytest/test-results.xml       `# write test results so they can be displayed by circleci` \
@@ -78,4 +80,16 @@ jobs:
                 export DEPLOY_CONTENT='{"CIRCLE_BUILD_NUM":"'$CIRCLE_BUILD_NUM'","CIRCLE_SHA1":"'$CIRCLE_SHA1'","CIRCLE_BRANCH":"'$CIRCLE_BRANCH'","CIRCLE_PROJECT_REPONAME":"'$CIRCLE_PROJECT_REPONAME'","CIRCLE_PROJECT_USERNAME":"'$CIRCLE_PROJECT_USERNAME'"}' ;
                 export DEPLOY_SIG="sha1=`echo -n "$DEPLOY_CONTENT" | openssl sha1 -hmac $DEPLOY_KEY | sed 's/^.* //'`" ;
                 curl -X POST "$DEPLOY_URL" --data "$DEPLOY_CONTENT" -H "Content-Type: application/json" -H "X-Circle-Signature: $DEPLOY_SIG" ;
+            fi
+            if [[ "$CIRCLE_PULL_REQUEST" == "" && "$CIRCLE_BRANCH" == "new-arch-with-vue" ]] ; then
+                if [[ `git status web/main/static/ --porcelain` ]] ; then
+                    git config user.email "lil@law.harvard.edu"
+                    git config user.name "Circle CI"
+                    git add web/main/static/
+                    git commit -m 'Add built JS [skip ci]'
+                    git push origin develop || exit 1
+                fi
+                export DEPLOY_CONTENT='{"CIRCLE_BUILD_NUM":"'$CIRCLE_BUILD_NUM'","CIRCLE_SHA1":"'$CIRCLE_SHA1'","CIRCLE_BRANCH":"'$CIRCLE_BRANCH'","CIRCLE_PROJECT_REPONAME":"'$CIRCLE_PROJECT_REPONAME'","CIRCLE_PROJECT_USERNAME":"'$CIRCLE_PROJECT_USERNAME'"}' ;
+                export DEPLOY_SIG="sha1=`echo -n "$DEPLOY_CONTENT" | openssl sha1 -hmac $DEPLOY_KEY | sed 's/^.* //'`" ;
+                curl -X POST "$INTERIM_DEPLOY_URL" --data "$DEPLOY_CONTENT" -H "Content-Type: application/json" -H "X-Circle-Signature: $DEPLOY_SIG" ;
             fi
