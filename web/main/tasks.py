@@ -3,7 +3,6 @@ from celery.exceptions import MaxRetriesExceededError, SoftTimeLimitExceeded, Re
 from celery.signals import task_failure
 from datetime import timedelta
 import docker
-import os
 import requests
 import socket
 import tarfile
