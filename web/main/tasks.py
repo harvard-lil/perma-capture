@@ -5,11 +5,11 @@ from datetime import timedelta
 import docker
 import os
 import requests
-import shutil
 import socket
+import tarfile
+import tempfile
 import threading
 from time import sleep
-import uuid
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -271,7 +271,6 @@ def run_next_capture():
     >>> assert job.capture_end_time
     >>> assert caplog.records[-1].message == 'No jobs waiting!'
     >>> assert not docker_client.containers.list(all=True, filters={'ancestor': settings.BROWSERTRIX_IMAGE})
-    >>> assert [f.name for f in os.scandir(output_dir) if f.is_dir()] == ['examples']
 
     If Browsertrix exceeds the maximum permitted time limit, we stop and clean up.
     >>> caplog.clear()
@@ -280,7 +279,6 @@ def run_next_capture():
     >>> assert job.status == CaptureJob.Status.FAILED
     >>> assert 'Browsertrix exited with 137' in caplog.text  #  137 means SIGKILL
     >>> assert not docker_client.containers.list(all=True, filters={'ancestor': settings.BROWSERTRIX_IMAGE})
-    >>> assert [f.name for f in os.scandir(output_dir) if f.is_dir()] == ['examples']
 
     We clean up failed jobs before we get started.
     >>> assert mock_clean_up_failed.call_count > 0
@@ -299,15 +297,6 @@ def run_next_capture():
     client = None
     container = None
     browsertrix_life_cycle_thread = None
-    have_archive = False
-    while True:
-        try:
-            outputdir_uuid = uuid.uuid4()
-            outputdir = f'{settings.SERVICES_DIR}/browsertrix/data/{outputdir_uuid}'
-            os.mkdir(outputdir)
-            break
-        except FileExistsError:
-            pass
 
     try:
         inc_progress(capture_job, 0, "Validating.")
@@ -324,16 +313,14 @@ def run_next_capture():
         inc_progress(capture_job, 1, "Creating Browsertrix container.")
         archive = Archive(capture_job=capture_job)
         collection_name = archive.filename[:-5]
-        browsertrix_outputfile = f'{outputdir}/collections/{collection_name}/{collection_name}.wacz'
+        browsertrix_output_filename = f'{collection_name}.wacz'
+        browsertrix_output_path = f'{settings.BROWSERTRIX_INTERNAL_DATA_DIR}/collections/{collection_name}/{browsertrix_output_filename}'
         container = client.containers.create(
             settings.BROWSERTRIX_IMAGE,
             environment=[
                 f'DATA_DIR={settings.BROWSERTRIX_INTERNAL_DATA_DIR}'
             ],
             volumes={
-                settings.BROWSERTRIX_HOST_DATA_DIR : {
-                    'bind': settings.BROWSERTRIX_INTERNAL_DATA_DIR,
-                },
                 settings.BROWSERTRIX_ENTRYPOINT : {
                     'bind': '/entrypoint.sh'
                 }
@@ -341,7 +328,7 @@ def run_next_capture():
             entrypoint='/entrypoint.sh',
             cap_add=['NET_ADMIN', 'SYS_ADMIN'],
             shm_size='1GB',
-            command=f'crawl --logging "stats,behaviors-debug" --generateWACZ --limit 1 --cwd {settings.BROWSERTRIX_INTERNAL_DATA_DIR}/{outputdir_uuid} --collection {collection_name} --url {capture_job.validated_url}',
+            command=f'crawl --logging "stats,behaviors-debug" --generateWACZ --limit 1 --cwd {settings.BROWSERTRIX_INTERNAL_DATA_DIR} --collection {collection_name} --url {capture_job.validated_url}',
             detach=True
         )
 
@@ -357,16 +344,10 @@ def run_next_capture():
 
         browsertrix_life_cycle_thread.join()
         if browsertrix_life_cycle_thread.exit_code != 0:
-            # see there's anything we can salvage
-            if os.path.isfile(browsertrix_outputfile):
-                # should probably also make sure its a valid wacz?
-                # a likely advantage of warcs over wacz is that you can still play back a truncated warc
-                have_archive = True
             # this is NOT how we want to handle the verbose output of stderr. What's the best way to log?
             # send a special error email?
             logger.error(f"Browsertrix exited with {browsertrix_life_cycle_thread.exit_code}: {browsertrix_life_cycle_thread.stderr}")
             raise HaltCaptureException
-        have_archive = True
 
     except HaltCaptureException:
         logger.info("HaltCaptureException thrown.")
@@ -378,36 +359,56 @@ def run_next_capture():
     finally:
         try:
             if container:
+
                 # For now, just kill the container. We might want something gentler.
+                container.stop()
+
+                try:
+                    # mode set to 'ab+' as a workaround for https://bugs.python.org/issue25341
+                    with tempfile.TemporaryFile('ab+') as tmpfile:
+                        stream, _ = container.get_archive(browsertrix_output_path)
+
+                        inc_progress(capture_job, 1, "Fetching archive.")
+                        for chunk in stream:
+                            tmpfile.write(chunk)
+                        tmpfile.seek(0)
+                        tar = tarfile.open(fileobj=tmpfile)
+                        file = tar.extractfile(browsertrix_output_filename)
+
+                        # should probably also make sure its a valid wacz?
+                        # unlike a truncated warc, I don't think a truncated wacz can be played back
+
+                        inc_progress(capture_job, 1, "Processing archive.")
+                        archive.hash, archive.hash_algorithm = get_file_hash(file)
+                        assert not file.read()
+                        archive.warc_size = file.tell()
+
+                        inc_progress(capture_job, 1, "Saving archive.")
+                        file.seek(0)
+                        storage = get_storage()
+                        real_filename = storage.save(archive.filename, file)
+                        file.close()
+                        tar.close()
+                        try:
+                            assert real_filename == archive.filename
+                        except AssertionError:
+                            # This would only happen if we accidentally produce duplicate filenames, which
+                            # shouldn't happen, since we include the capture job id. But, if it does, we'll
+                            # want to know about it, so we can manually clean up the file after it expires.
+                            logger.error(f'The archive for capture job {capture_job.id} has been saved as {real_filename}, not {archive.filename}.')
+                        archive.download_url = storage.url(real_filename)
+                        archive.download_expiration_timestamp = datetime_from_timestamp(parse_querystring(archive.download_url)['Expires'][0])
+                    archive.save()
+                    capture_job.mark_completed()
+                    logger.info("Capture succeeded.")
+                except docker.errors.NotFound:
+                    logger.info("Capture failed.")
+
                 container.remove(force=True)
+
             if client:
                 client.close()
-            if have_archive:
-                with open(browsertrix_outputfile , 'rb') as file:
-                    inc_progress(capture_job, 1, "Processing archive.")
-                    archive.hash, archive.hash_algorithm = get_file_hash(file)
-                    assert not file.read()
-                    archive.warc_size = file.tell()
 
-                    inc_progress(capture_job, 1, "Saving archive.")
-                    file.seek(0)
-                    storage = get_storage()
-                    real_filename = storage.save(archive.filename, file)
-                    try:
-                        assert real_filename == archive.filename
-                    except AssertionError:
-                        # This would only happen if we accidentally produce duplicate filenames, which
-                        # shouldn't happen, since we include the capture job id. But, if it does, we'll
-                        # want to know about it, so we can manually clean up the file after it expires.
-                        logger.error(f'The archive for capture job {capture_job.id} has been saved as {real_filename}, not {archive.filename}.')
-                    archive.download_url = storage.url(real_filename)
-                    archive.download_expiration_timestamp = datetime_from_timestamp(parse_querystring(archive.download_url)['Expires'][0])
-                archive.save()
-                capture_job.mark_completed()
-                logger.info("Capture succeeded.")
-            else:
-                logger.info("Capture failed.")
-            shutil.rmtree(outputdir)
         except:  # noqa
             logger.exception(f"Exception while finishing job {capture_job.id}:")
         finally:
