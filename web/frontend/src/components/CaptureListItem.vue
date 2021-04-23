@@ -27,7 +27,7 @@
       </div>
       <replay-web-page v-if="downloadUrl"
         :source="downloadUrl"
-        :url="capture.requested_url"
+        :url="url"
         replaybase="/vite/src/config/"
         class="replay contextItem"/>
     </td>

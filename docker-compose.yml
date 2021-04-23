@@ -36,15 +36,12 @@ services:
     command: bash
     environment:
       - DOCKERIZED=true
-      - BROWSERTRIX_HOST_DATA_DIR=${PWD}/services/browsertrix/data
       - BROWSERTRIX_INTERNAL_DATA_DIR=/tmp/data
       - BROWSERTRIX_ENTRYPOINT=${PWD}/docker/browsertrix/entrypoint.sh
     volumes:
       - ./web:/app/web:delegated
       # Grant the container access to your host's Docker daemon, so that it can launch browsertrix.
       - /var/run/docker.sock:/var/run/docker.sock
-      # Grant the container access to BROWSERTRIX_HOST_DATA_DIR.
-      - ./services/browsertrix/data:/app/services/browsertrix/data
     ports:
       - "127.0.0.1:8000:8000"
       - "127.0.0.1:3000:3000"
