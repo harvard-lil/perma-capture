@@ -21,7 +21,8 @@ services:
       - MINIO_ACCESS_KEY=accesskey
       - MINIO_SECRET_KEY=secretkey
       - DATA_DIR=/data
-      - BUCKET=archives
+      - BUCKET=perma-capture
+      - BUCKET_SUBPATH=archives
     volumes:
       - ./docker/minio/entrypoint.sh:/entrypoint.sh
       - minio_data:/data:delegated

@@ -17,7 +17,7 @@ from django.utils import timezone
 
 from .models import CaptureJob, Archive, WebhookSubscription
 from .serializers import ReadOnlyCaptureJobSerializer, SimpleWebhookSubscriptionSerializer
-from .storages import get_storage
+from .storages import get_archive_storage
 from .utils import (validate_and_clean_url, get_file_hash, parse_querystring,
     datetime_from_timestamp, sign_data, is_valid_signature, send_template_email
 )
@@ -384,7 +384,7 @@ def run_next_capture():
 
                         inc_progress(capture_job, 1, "Saving archive.")
                         file.seek(0)
-                        storage = get_storage()
+                        storage = get_archive_storage()
                         real_filename = storage.save(archive.filename, file)
                         file.close()
                         tar.close()
@@ -548,7 +548,7 @@ def clean_up_archive(archive_id):
     >>> archive_factory, mocker, caplog = [getfixture(i) for i in ['no_signals_archive_factory', 'mocker', 'caplog']]
     >>> archive = archive_factory()
     >>> already_cleaned_up_archive = archive_factory(expired=True)
-    >>> mock_storage = mocker.patch('main.tasks.get_storage')
+    >>> mock_storage = mocker.patch('main.tasks.get_archive_storage')
 
     Delete the archive from storage and unset its download_url.
     >>> _ = clean_up_archive.apply([archive.id])
@@ -568,7 +568,7 @@ def clean_up_archive(archive_id):
         logger.info(f"Archive {archive_id} already cleaned up.")
         return
 
-    storage = get_storage()
+    storage = get_archive_storage()
     storage.delete(archive.filename)
 
     archive.download_url = None

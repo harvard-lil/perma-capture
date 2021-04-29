@@ -293,11 +293,11 @@ API_PREFIX = 'api'
 
 # Storage
 ARCHIVE_EXPIRES_AFTER_MINUTES = 4 * 60
-TMP_S3_STORAGE = {
+DEFAULT_S3_STORAGE = {
     'endpoint_url': 'http://minio:9000',
     'access_key': 'accesskey',
     'secret_key': 'secretkey',
-    'bucket_name': 'archives'
+    'bucket_name': 'perma-capture'
 }
 OVERRIDE_DOWNLOAD_URL_NETLOC = None
 

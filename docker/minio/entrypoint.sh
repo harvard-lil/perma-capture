@@ -3,7 +3,7 @@
 set -e
 
 # Initialize a default bucket
-mkdir -p "$DATA_DIR/$BUCKET"
+mkdir -p "$DATA_DIR/$BUCKET/$BUCKET_SUBPATH"
 
 # Pass the Docker CMD to the image's original entrypoint script.
 exec su -c "/usr/bin/docker-entrypoint.sh $*"
