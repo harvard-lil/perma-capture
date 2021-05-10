@@ -5,21 +5,21 @@ from datetime import timedelta
 import docker
 import requests
 import socket
-import tarfile
-import tempfile
 import threading
 from time import sleep
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.files import File
 from django.core.mail import mail_admins
 from django.utils import timezone
+from django.views.decorators.debug import sensitive_variables
 
-from .models import CaptureJob, Archive, WebhookSubscription
+from .models import CaptureJob, Archive, WebhookSubscription, ProfileCaptureJob, Profile
 from .serializers import ReadOnlyCaptureJobSerializer, SimpleWebhookSubscriptionSerializer
 from .storages import get_archive_storage
-from .utils import (validate_and_clean_url, get_file_hash, parse_querystring,
-    datetime_from_timestamp, sign_data, is_valid_signature, send_template_email
+from .utils import (validate_and_clean_url, extract_file_from_container, get_file_hash,
+    parse_querystring, datetime_from_timestamp, sign_data, is_valid_signature, send_template_email
 )
 
 from pytest import raises as assert_raises
@@ -102,8 +102,8 @@ class BrowsertrixLifeCycleThread(threading.Thread):
         except requests.exceptions.ConnectionError:
             self.timedout = True
             # For now, just kill the container. We likely want something gentler,
-            # that requests Browsertrix stop recording and finalize the record,
-            # and then a second timeout, so as to preserve partial capture results.
+            # that politely requests Browsertrix stop and finish up what it's doing,
+            # and then a second timeout, so we can, for instance, preserve partial capture results.
             self.container.stop(timeout=0)
             self.result = self.container.wait(timeout=1)
         finally:
@@ -125,18 +125,7 @@ PUPPETEER_ESCAPE_SEQUENCES = [
     ''.join(chr(c) for c in [27, 91, 56]),
     ''.join(chr(c) for c in [27, 91, 75])
 ]
-MILESTONES = [
-    'creating pages',
-    'Waiting for behaviors to finish',
-    'All Behaviors Done',
-    'ensure WARCs are finished',
-    'Generating WACZ',
-    'WACZ successfully generated'
-]
-INFO_EVENTS = [
-    'Sys. load'
-]
-def handle_browsertrix_msg(capture_job, msg):
+def handle_browsertrix_msg(capture_job, msg, milestones='', info_events=''):
     """
     Reformat a logline from Browsertrix and log at the desired level, incrementing
     the process of the capture job if a "milestone" has been reached.
@@ -154,9 +143,9 @@ def handle_browsertrix_msg(capture_job, msg):
     if msg.startswith('behavior debug'):
         msg = msg[len('behavior debug: '):].strip('"!')
     if msg:
-        if any(milestone in msg for milestone in MILESTONES):
+        if any(milestone in msg for milestone in milestones):
             inc_progress(capture_job, 1, f"Browsertrix: {msg}.")
-        elif any(event in msg for event in INFO_EVENTS):
+        elif any(event in msg for event in info_events):
             logger.info(f"{capture_job} Browsertrix {msg}")
         else:
             logger.debug(msg)
@@ -339,7 +328,19 @@ def run_next_capture():
         for msg in stdout_stream:
             # we should look into whether the browsertrix container needs init, and whether it passes signals correctly, etc.
             # see also https://github.com/moby/moby/issues/37663.
-            handle_browsertrix_msg(capture_job, msg)
+            handle_browsertrix_msg(capture_job, msg,
+                milestones=(
+                    'creating pages',
+                    'Waiting for behaviors to finish',
+                    'All Behaviors Done',
+                    'ensure WARCs are finished',
+                    'Generating WACZ',
+                    'WACZ successfully generated'
+                ),
+                info_events=(
+                    'Sys. load',
+                )
+            )
 
         browsertrix_life_cycle_thread.join()
         if browsertrix_life_cycle_thread.exit_code != 0:
@@ -363,18 +364,8 @@ def run_next_capture():
                 container.stop()
 
                 try:
-                    # mode set to 'ab+' as a workaround for https://bugs.python.org/issue25341
-                    with tempfile.TemporaryFile('ab+') as tmpfile:
-                        stream, _ = container.get_archive(browsertrix_output_path)
-
-                        inc_progress(capture_job, 1, "Fetching archive.")
-                        for chunk in stream:
-                            tmpfile.write(chunk)
-                        tmpfile.seek(0)
-                        tar = tarfile.open(fileobj=tmpfile)
-                        file = tar.extractfile(browsertrix_output_filename)
-
-                        # should probably also make sure its a valid wacz?
+                    with extract_file_from_container(browsertrix_output_filename, browsertrix_output_path, container) as file:
+                        # should probably make sure its a valid wacz?
                         # unlike a truncated warc, I don't think a truncated wacz can be played back
 
                         inc_progress(capture_job, 1, "Processing archive.")
@@ -386,8 +377,6 @@ def run_next_capture():
                         file.seek(0)
                         storage = get_archive_storage()
                         real_filename = storage.save(archive.filename, file)
-                        file.close()
-                        tar.close()
                         try:
                             assert real_filename == archive.filename
                         except AssertionError:
@@ -395,8 +384,9 @@ def run_next_capture():
                             # shouldn't happen, since we include the capture job id. But, if it does, we'll
                             # want to know about it, so we can manually clean up the file after it expires.
                             logger.error(f'The archive for capture job {capture_job.id} has been saved as {real_filename}, not {archive.filename}.')
-                        archive.download_url = storage.url(real_filename)
-                        archive.download_expiration_timestamp = datetime_from_timestamp(parse_querystring(archive.download_url)['Expires'][0])
+
+                    archive.download_url = storage.url(real_filename)
+                    archive.download_expiration_timestamp = datetime_from_timestamp(parse_querystring(archive.download_url)['Expires'][0])
                     archive.save()
                     capture_job.mark_completed()
                     logger.info("Capture succeeded.")
@@ -573,3 +563,113 @@ def clean_up_archive(archive_id):
 
     archive.download_url = None
     archive.save()
+
+
+@sensitive_variables('user', 'password')
+@shared_task(acks_late=True)
+def create_browser_profile(profile_capture_job_id):
+
+    # Basic Setup
+    client = None
+    container = None
+    browsertrix_life_cycle_thread = None
+    capture_job = ProfileCaptureJob.get_job(profile_capture_job_id)
+
+    profile_filename = 'profile.tar.gz'
+    browsertrix_profile_path = f'/tmp/{profile_filename}'
+    screenshot_filename = 'screenshot.png'
+    browsertrix_screenshot_path = f'/tmp/{screenshot_filename}'
+
+    user = settings.PROFILE_SECRETS[capture_job.netloc]['user']
+    password = settings.PROFILE_SECRETS[capture_job.netloc]['password']
+    url = settings.PROFILE_SECRETS[capture_job.netloc]['log_in_url']
+
+    try:
+
+        inc_progress(capture_job, 1, "Connecting to Docker.")
+        client = docker.from_env()
+
+        inc_progress(capture_job, 1, "Creating Browsertrix container.")
+        container = client.containers.create(
+            settings.BROWSERTRIX_IMAGE,
+            cap_add=['NET_ADMIN', 'SYS_ADMIN'],
+            shm_size='1GB',
+            command=f'create-login-profile --url {url} --user {user} {"--headless" if capture_job.headless else ""}--filename {browsertrix_profile_path} --debugScreenshot {browsertrix_screenshot_path}',
+            detach=True,
+            stdin_open = True
+        )
+
+        inc_progress(capture_job, 1, "Starting Browsertrix.")
+        container.start()
+
+        inc_progress(capture_job, 1, "Sending password to Browsertrix.")
+        s = container.attach_socket(params={'stdin': 1, 'stream': 1})
+        s._sock.send(bytes(password, 'utf-8') + b'\n')
+        s.close()  # see https://github.com/docker/docker-py/issues/1507: we may need to close more thoroughly
+
+        browsertrix_life_cycle_thread = BrowsertrixLifeCycleThread(container, settings.BROWSERTRIX_TIMEOUT_SECONDS, name="browsertrix_return")
+        browsertrix_life_cycle_thread.start()
+        stdout_stream = container.logs(stderr=False, stream=True)
+        for msg in stdout_stream:
+            handle_browsertrix_msg(capture_job, msg,
+                milestones=(
+                    'Launching XVFB',
+                    'loading',
+                    'loaded',
+                    'creating profile'
+                )
+            )
+
+        browsertrix_life_cycle_thread.join()
+        if browsertrix_life_cycle_thread.exit_code != 0:
+            logger.error(f"Browsertrix exited with {browsertrix_life_cycle_thread.exit_code}: {browsertrix_life_cycle_thread.stderr}")
+            raise HaltCaptureException
+
+        inc_progress(capture_job, 1, "Saving profile.")
+        with extract_file_from_container(profile_filename, browsertrix_profile_path, container) as file:
+            profile = Profile(
+                profile_capture_job=capture_job,
+                netloc=capture_job.netloc,
+                headless=capture_job.headless,
+                username=user,
+                profile = File(file, profile_filename)
+            )
+            profile.save()
+
+    except HaltCaptureException:
+        logger.info("HaltCaptureException thrown.")
+    except SoftTimeLimitExceeded:
+        logger.warning(f"Soft timeout during profile capture job {capture_job.id}.")
+    except:  # noqa
+        logger.exception(f"Exception during profile capture job {capture_job.id}.")
+    finally:
+        try:
+            if container:
+
+                container.stop()
+
+                try:
+                    with extract_file_from_container(screenshot_filename, browsertrix_screenshot_path, container) as file:
+                        inc_progress(capture_job, 1, "Saving screenshot.")
+                        file.seek(0)
+                        capture_job.screenshot = File(file, screenshot_filename)
+                        capture_job.save()
+                except docker.errors.NotFound:
+                    logger.info("No screenshot available.")
+
+                if capture_job.profile:
+                    capture_job.mark_completed()
+                    logger.info("Profile capture job succeeded.")
+                else:
+                    logger.info("Profile capture job failed.")
+
+                container.remove(force=True)
+
+            if client:
+                client.close()
+
+        except:  # noqa
+            logger.exception(f"Exception while finishing profile capture job {capture_job.id}.")
+        finally:
+            if capture_job.status == ProfileCaptureJob.Status.IN_PROGRESS:
+                capture_job.mark_failed('Failed.')

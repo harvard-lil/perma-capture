@@ -37,6 +37,8 @@ def get_profile_storage():
     # For now, configure this way rather than by configuring default storage
     return ProfileStorage(**settings.DEFAULT_S3_STORAGE)
 
+def profile_job_directory(instance, filename):
+    return f'job_{instance.get_job_id()}/{filename}'
 
 def get_archive_storage():
     # We're planning on supporting multiple storage solutions. I'm adding this

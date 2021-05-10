@@ -3,7 +3,7 @@ from rest_framework import serializers
 from django.conf import settings
 
 from .models import WebhookSubscription, CaptureJob, Archive
-from .utils import override_access_url_netloc
+from .utils import override_storage_netloc
 
 
 class ArchiveSerializer(serializers.ModelSerializer):
@@ -16,7 +16,7 @@ class ArchiveSerializer(serializers.ModelSerializer):
 
     def get_download_url(self, archive):
         if archive.download_url:
-            return override_access_url_netloc(archive.download_url) if settings.OVERRIDE_DOWNLOAD_URL_NETLOC else archive.download_url
+            return override_storage_netloc(archive.download_url) if settings.OVERRIDE_STORAGE_NETLOC else archive.download_url
 
 
 class CaptureJobSerializer(serializers.ModelSerializer):

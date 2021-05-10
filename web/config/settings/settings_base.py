@@ -299,7 +299,7 @@ DEFAULT_S3_STORAGE = {
     'secret_key': 'secretkey',
     'bucket_name': 'perma-capture'
 }
-OVERRIDE_DOWNLOAD_URL_NETLOC = None
+OVERRIDE_STORAGE_NETLOC = None
 
 # Browsertrix
 BROWSERTRIX_IMAGE = 'registry.lil.tools/webrecorder/browsertrix-crawler:0.3.0-beta.1'
@@ -318,5 +318,7 @@ EXPOSE_WEBHOOK_TEST_ROUTE = False
 
 # Playback
 RWP_BASE_URL = "https://cdn.jsdelivr.net/npm/replaywebpage@1.3.9"
+
+# Vite/Vue frontend
 VITE_MANIFEST_PATH = "main/static/manifest.json"
 VITE_ENTRY_PATH = "src/main.ts"

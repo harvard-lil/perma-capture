@@ -17,6 +17,7 @@ from django.utils import timezone
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
+from .storages import get_profile_storage, profile_job_directory
 from .utils import send_template_email, generate_hmac_signing_key
 
 from pytest import raises as assert_raises
@@ -173,7 +174,80 @@ class WebhookSubscription(TimestampedModel):
         super().save(*args, **kwargs)
 
 
-class CaptureJob(TimestampedModel):
+class Job(TimestampedModel):
+    """
+    Metadata and helpers for tracking celery. Abstract base class.
+    """
+    class Meta:
+        abstract = True
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'pending'
+        IN_PROGRESS = 'in_progress', 'in_progress'
+        COMPLETED = 'completed', 'completed'
+        FAILED = 'failed', 'failed'
+        INVALID = 'invalid', 'invalid'
+
+    status = models.CharField(
+        max_length=15,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True
+    )
+    # "message" is a field for reporting validation errors or error messages.
+    message = models.JSONField(null=True, blank=True)
+
+    # reporting
+    step_count = models.FloatField(default=0)
+    step_description = models.CharField(max_length=255, blank=True, null=True)
+    capture_start_time = models.DateTimeField(blank=True, null=True)
+    capture_end_time = models.DateTimeField(blank=True, null=True)
+
+    def inc_progress(self, inc, description):
+        self.step_count = int(self.step_count) + inc
+        self.step_description = description
+        self.save(update_fields=['step_count', 'step_description', 'updated_at'])
+
+    def mark_completed(self, status=Status.COMPLETED):
+        """
+        Record completion time and status for this job.
+        """
+        self.status = status
+        self.capture_end_time = Now()
+        self.save(update_fields=['status', 'message', 'capture_end_time', 'updated_at'])
+
+    def mark_failed(self, message):
+        """
+        Mark job as failed, and record message in format for front-end display.
+        """
+        self.message = {api_settings.NON_FIELD_ERRORS_KEY: [message]}
+        self.mark_completed(Job.Status.FAILED)
+
+    def mark_invalid(self, message_dict):
+        """
+        Mark job as invalid, and record message in format for front-end display.
+        """
+        self.message = message_dict
+        self.mark_completed(Job.Status.INVALID)
+
+    def queue_time(self):
+        try:
+            delta = self.capture_start_time - self.created_at
+            return delta.seconds
+        except (ObjectDoesNotExist, TypeError):
+            return None
+    queue_time.short_description = 'queue time (s)'
+
+    def capture_time(self):
+        try:
+            delta = self.capture_end_time - self.capture_start_time
+            return delta.seconds
+        except TypeError:
+            return None
+    capture_time.short_description = 'capture time (s)'
+
+
+class CaptureJob(Job):
     """
     Metadata about capture jobs requested by a user.
     """
@@ -189,35 +263,11 @@ class CaptureJob(TimestampedModel):
         help_text="This string will be included, verbatim, in any webhook \
         notification response that you have subscribed to receive."
     )
-
-    class Status(models.TextChoices):
-        PENDING = 'pending', 'pending'
-        IN_PROGRESS = 'in_progress', 'in_progress'
-        COMPLETED = 'completed', 'completed'
-        FAILED = 'failed', 'failed'
-        INVALID = 'invalid', 'invalid'
-
-    status = models.CharField(
-        max_length=15,
-        choices=Status.choices,
-        default=Status.PENDING,
-        db_index=True
-    )
     validated_url = models.CharField(max_length=2100, blank=True, null=True)
-    # "Message" is a field for reporting validation errors or capture error messages. E.g.
-    # {"url": ["URL cannot be empty."]}
-    # {"url": ["Not a valid URL."]}
-    # {"error": ["Failed during capture."]}
-    message = models.JSONField(null=True, blank=True)
+
     # Record whether a human is actively awaiting the results of the job; may influence queue order.
     human = models.BooleanField(default=False)
     order = models.FloatField(db_index=True)
-
-    # reporting
-    step_count = models.FloatField(default=0)
-    step_description = models.CharField(max_length=255, blank=True, null=True)
-    capture_start_time = models.DateTimeField(blank=True, null=True)
-    capture_end_time = models.DateTimeField(blank=True, null=True)
 
     user = models.ForeignKey(
         'User',
@@ -225,12 +275,12 @@ class CaptureJob(TimestampedModel):
         related_name='capture_jobs'
     )
 
+    def __str__(self):
+        return f"CaptureJob {self.pk}"
+
     # settings to allow our tests to draw out race conditions
     TEST_PAUSE_TIME = 0
     TEST_ALLOW_RACE = False
-
-    def __str__(self):
-        return f"CaptureJob {self.pk}"
 
     def save(self, *args, **kwargs):
 
@@ -314,57 +364,20 @@ class CaptureJob(TimestampedModel):
         if self.status != CaptureJob.Status.PENDING:
             return 0
 
-        queue_position = CaptureJob.objects.filter(status=CaptureJob.Status.PENDING, order__lte=self.order, human=self.human).count()
+        queue_position = CaptureJob.objects.filter(status=Job.Status.PENDING, order__lte=self.order, human=self.human).count()
         if not self.human:
-            queue_position += CaptureJob.objects.filter(status=CaptureJob.Status.PENDING, human=True).count()
+            queue_position += CaptureJob.objects.filter(status=Job.Status.PENDING, human=True).count()
 
         return queue_position
 
-    def inc_progress(self, inc, description):
-        self.step_count = int(self.step_count) + inc
-        self.step_description = description
-        self.save(update_fields=['step_count', 'step_description', 'updated_at'])
-
-    def mark_completed(self, status=Status.COMPLETED):
+    def mark_completed(self, status=Job.Status.COMPLETED):
         """
         Record completion time and status for this job.
         """
         if status == CaptureJob.Status.COMPLETED and not self.archive:
             logger.error(f"To investigate: Capture Job {self.id} has no archive, but was being marked completed.")
             status = CaptureJob.Status.FAILED
-        self.status = status
-        self.capture_end_time = Now()
-        self.save(update_fields=['status', 'message', 'capture_end_time', 'updated_at'])
-
-    def mark_failed(self, message):
-        """
-        Mark job as failed, and record message in format for front-end display.
-        """
-        self.message = {api_settings.NON_FIELD_ERRORS_KEY: [message]}
-        self.mark_completed(CaptureJob.Status.FAILED)
-
-    def mark_invalid(self, message_dict):
-        """
-        Mark job as invalid, and record message in format for front-end display.
-        """
-        self.message = message_dict
-        self.mark_completed(CaptureJob.Status.INVALID)
-
-    def queue_time(self):
-        try:
-            delta = self.capture_start_time - self.created_at
-            return delta.seconds
-        except (ObjectDoesNotExist, TypeError):
-            return None
-    queue_time.short_description = 'queue time (s)'
-
-    def capture_time(self):
-        try:
-            delta = self.capture_end_time - self.capture_start_time
-            return delta.seconds
-        except TypeError:
-            return None
-    capture_time.short_description = 'capture time (s)'
+        super().mark_completed(status)
 
 
 class ArchiveQuerySet(QuerySet):
@@ -400,6 +413,66 @@ class Archive(TimestampedModel):
     @property
     def filename(self):
         return f"job-{self.capture_job.id}-{urllib.parse.urlparse(self.capture_job.validated_url).netloc.replace('.', '-')}.wacz"
+
+
+class ProfileCaptureJob(Job):
+    """
+    Metadata about attempts to create browser profiles.
+    """
+    netloc = models.CharField(max_length=255)
+    headless = models.BooleanField(default=False)
+    screenshot = models.FileField(
+        storage=get_profile_storage,
+        upload_to=profile_job_directory,
+        blank=True,
+        null=True
+    )
+
+    def __str__(self):
+        return f"ProfileCaptureJob {self.pk}"
+
+    def get_job_id(self):
+        return self.id
+
+    @classmethod
+    def get_job(cls, pk):
+        job = cls.objects.get(id=pk)
+        job.status = cls.Status.IN_PROGRESS
+        job.capture_start_time = Now()
+        job.save()
+
+        # load up-to-date time from database
+        job.refresh_from_db()
+
+        return job
+
+
+
+class Profile(TimestampedModel):
+    """
+    Browser profile
+    https://support.mozilla.org/en-US/kb/profiles-where-firefox-stores-user-data#w_what-information-is-stored-in-my-profile
+    """
+    netloc = models.CharField(max_length=255)  # denormalized for easier lookups
+    headless = models.BooleanField(default=False)  # denormalized for easier lookups
+    username = models.CharField(max_length=255)
+    verified = models.BooleanField(default=False)
+    marked_obsolete = models.DateTimeField(blank=True, null=True)
+    profile = models.FileField(storage=get_profile_storage, upload_to=profile_job_directory)
+    profile_capture_job = models.OneToOneField(
+        'ProfileCaptureJob',
+        on_delete=models.CASCADE,
+        related_name='profile'
+    )
+
+    # is this correct or crazy?
+    # class Meta:
+    #     indexes = [
+    #         models.Index(fields=['netloc', 'headless', 'username', 'verified', 'marked_obsolete'])
+    #     ]
+
+    def get_job_id(self):
+        return self.profile_capture_job.id
 
 
 class UserManager(BaseUserManager):

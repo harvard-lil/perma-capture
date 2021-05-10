@@ -55,7 +55,7 @@ ADMINS = [('John', 'john@example.com'), ('Mary', 'mary@example.com')]
 # Minio is available at http://minio:9000 from within this container,
 # but is only available at localhost:9000 from the host.
 # Override the netloc during serialization, so download links work.
-OVERRIDE_DOWNLOAD_URL_NETLOC = 'localhost:9000'
+OVERRIDE_STORAGE_NETLOC = 'localhost:9000'
 
 WEBHOOK_MAX_RETRIES = 2
 EXPOSE_WEBHOOK_TEST_ROUTE = True
