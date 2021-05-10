@@ -5,7 +5,7 @@ from django.contrib.auth.models import Group
 from django.urls import reverse
 from django.utils.html import format_html
 
-from .models import User, WebhookSubscription, CaptureJob, Archive
+from .models import User, WebhookSubscription, CaptureJob, Archive, ProfileCaptureJob, Profile
 
 #
 # Filters
@@ -146,6 +146,12 @@ class ArchiveInline(admin.StackedInline):
     can_delete = False
 
 
+class ProfileInline(admin.StackedInline):
+    model = Profile
+    fields = readonly_fields = ('username', 'verified', 'marked_obsolete', 'created_at', 'updated_at')
+    can_delete = False
+
+
 #
 # Admins
 #
@@ -270,6 +276,50 @@ class ArchiveAdmin(admin.ModelAdmin):
         url = reverse('admin:main_capturejob_change', args=(obj.capture_job_id,))
         return format_html('<a href="{}">{}</a>', url, obj.capture_job_id)
     capture_job_link.short_description = 'capture job'
+
+
+@admin.register(ProfileCaptureJob)
+class ProfileCaptureJobAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'netloc',
+        'headless',
+        'status',
+        'message',
+        'created_at',
+        'updated_at',
+        'queue_time',
+        'capture_time'
+    )
+    list_filter = ['status', 'netloc', 'headless']
+    fieldsets = (
+        (None, {'fields': ('netloc', 'headless')}),
+        ('Progress', {'fields': ( 'status', 'message', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')})
+    )
+    readonly_fields = ('netloc', 'headless', 'status', 'message', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')
+    inlines = [ProfileInline]
+
+
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'netloc',
+        'headless',
+        'username',
+        'verified',
+        'marked_obsolete',
+        'created_at',
+        'updated_at'
+    )
+    list_filter = ['netloc', 'headless', 'verified', 'marked_obsolete']
+    fields = readonly_fields = ('capture_job_link', 'netloc', 'headless', 'username', 'verified', 'marked_obsolete', 'created_at', 'updated_at')
+
+
+    def capture_job_link(self, obj):
+        url = reverse('admin:main_profilecapturejob_change', args=(obj.profile_capture_job_id,))
+        return format_html('<a href="{}">{}</a>', url, obj.profile_capture_job_id)
+    capture_job_link.short_description = 'profile capture job'
 
 
 admin.site.unregister(Group)

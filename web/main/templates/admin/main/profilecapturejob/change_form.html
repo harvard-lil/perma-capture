@@ -1,0 +1,14 @@
+{% extends "admin/change_form.html" %}
+{% load override_storage_netloc %}
+
+{% block after_related_objects %}
+  {{ block.super }}
+  <div class="module aligned">
+    <h2>Screenshot</h2>
+    <div class="form-row">
+      <a href="{{ original.screenshot.url|override_storage_netloc }}">
+        <img src={{ original.screenshot.url|override_storage_netloc }}>
+      </a>
+    </div>
+  </div>
+{% endblock %}
