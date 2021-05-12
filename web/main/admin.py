@@ -1,3 +1,5 @@
+from django import forms
+from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.forms import UserCreationForm
@@ -121,6 +123,44 @@ class ArchiveDownloadableFilter(admin.SimpleListFilter):
         return queryset.filter(download_url__isnull=True)
 
 
+class VerifiedProfileFilter(admin.SimpleListFilter):
+    parameter_name = 'verified_profile'
+    title = 'verified profile'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('True', 'True'),
+            ('False', 'False'),
+        )
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if value == 'True':
+            return queryset.filter(profile__verified=True)
+        elif value == 'False':
+            return queryset.exclude(profile__verified=True)
+        return queryset
+
+
+class ActiveProfileFilter(admin.SimpleListFilter):
+    parameter_name = 'active_profile'
+    title = 'active profile'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('True', 'True'),
+            ('False', 'False'),
+        )
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if value == 'True':
+            return queryset.filter(profile__verified=True, profile__marked_obsolete__isnull=True)
+        elif value == 'False':
+            return queryset.exclude(profile__verified=True, profile__marked_obsolete__isnull=True)
+        return queryset
+
+
 #
 # Forms
 #
@@ -146,10 +186,18 @@ class ArchiveInline(admin.StackedInline):
     can_delete = False
 
 
-class ProfileInline(admin.StackedInline):
+class ProfileInline(admin.TabularInline):
     model = Profile
-    fields = readonly_fields = ('username', 'verified', 'marked_obsolete', 'created_at', 'updated_at')
+    fields = ('username', 'created_at', 'updated_at', 'verified', 'marked_obsolete')
+    readonly_fields = ('username', 'created_at', 'updated_at')
     can_delete = False
+    extra = 0
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 #
@@ -278,6 +326,13 @@ class ArchiveAdmin(admin.ModelAdmin):
     capture_job_link.short_description = 'capture job'
 
 
+class ProfileCaptureJobForm(forms.ModelForm):
+    """
+    Restrict netloc to the currently configured options.
+    """
+    netloc = forms.ChoiceField(choices=[(netloc, netloc) for netloc in settings.PROFILE_SECRETS])
+
+
 @admin.register(ProfileCaptureJob)
 class ProfileCaptureJobAdmin(admin.ModelAdmin):
     list_display = (
@@ -289,15 +344,48 @@ class ProfileCaptureJobAdmin(admin.ModelAdmin):
         'created_at',
         'updated_at',
         'queue_time',
-        'capture_time'
+        'capture_time',
+        'verified_profile',
+        'active_profile'
     )
-    list_filter = ['status', 'netloc', 'headless']
-    fieldsets = (
-        (None, {'fields': ('netloc', 'headless')}),
-        ('Progress', {'fields': ( 'status', 'message', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')})
-    )
-    readonly_fields = ('netloc', 'headless', 'status', 'message', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')
-    inlines = [ProfileInline]
+    list_filter = ['status', 'netloc', 'headless', VerifiedProfileFilter, ActiveProfileFilter]
+    readonly_fields = ('status', 'message', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')
+    form = ProfileCaptureJobForm
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('profile')
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return self.readonly_fields + ('netloc', 'headless')
+        return self.readonly_fields
+
+    def get_fieldsets(self, request, obj=None):
+        if obj is None:
+            return ((None, {'fields': ('netloc', 'headless')}),)
+        return(
+            (None, {'fields': ('netloc', 'headless')}),
+            ('Progress', {'fields': ( 'status', 'message', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')})
+        )
+
+    def get_inlines(self, request, obj=None):
+        if obj:
+           yield ProfileInline
+
+    def verified_profile(self, obj):
+        try:
+            return obj.profile.verified
+        except Profile.DoesNotExist:
+            return False
+    verified_profile.boolean = True
+
+    def active_profile(self, obj):
+        try:
+            return obj.profile.verified and not obj.profile.marked_obsolete
+        except Profile.DoesNotExist:
+            return False
+    active_profile.boolean = True
+
 
 
 @admin.register(Profile)
@@ -323,3 +411,4 @@ class ProfileAdmin(admin.ModelAdmin):
 
 
 admin.site.unregister(Group)
+admin.site.site_header = "Perma Capture"

@@ -565,8 +565,9 @@ def clean_up_archive(archive_id):
     archive.save()
 
 
+
+@shared_task
 @sensitive_variables('user', 'password')
-@shared_task(acks_late=True)
 def create_browser_profile(profile_capture_job_id):
 
     # Basic Setup

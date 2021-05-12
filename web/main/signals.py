@@ -1,5 +1,5 @@
 from .models import WebhookSubscription
-from .tasks import dispatch_webhook
+from .tasks import dispatch_webhook, create_browser_profile
 
 from unittest.mock import call
 
@@ -40,3 +40,13 @@ def dispatch_webhook_receiver(sender, **kwargs):
         )
         for subscription_id in subscriptions.values_list('id', flat=True):
             dispatch_webhook.apply_async(args=[subscription_id, instance.capture_job.id])
+
+
+def launch_profile_capture_job_receiver(sender, **kwargs):
+    """
+    This receiver is notified when ProfileCaptureJob objects are saved. (See apps.py)
+    """
+    created = kwargs['created']
+    instance = kwargs['instance']
+    if created:
+        create_browser_profile.apply_async(args=[instance.id])
