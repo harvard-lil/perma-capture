@@ -8,7 +8,7 @@ from rest_framework.settings import api_settings
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.contrib.auth.tokens import default_token_generator
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.db.models.functions import Now
 from django.db.models.query import QuerySet
@@ -415,11 +415,17 @@ class Archive(TimestampedModel):
         return f"job-{self.capture_job.id}-{urllib.parse.urlparse(self.capture_job.validated_url).netloc.replace('.', '-')}.wacz"
 
 
+def validate_profile_netloc(value):
+    if value not in settings.PROFILE_SECRETS:
+        raise ValidationError(f"We don't currently support the creation of profiles for {value}.")
+    return value
+
+
 class ProfileCaptureJob(Job):
     """
     Metadata about attempts to create browser profiles.
     """
-    netloc = models.CharField(max_length=255)
+    netloc = models.CharField(max_length=255, validators=[validate_profile_netloc])
     headless = models.BooleanField(default=False)
     screenshot = models.FileField(
         storage=get_profile_storage,
