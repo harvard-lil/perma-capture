@@ -473,11 +473,10 @@ class Profile(TimestampedModel):
         related_name='profile'
     )
 
-    # is this correct or crazy?
-    # class Meta:
-    #     indexes = [
-    #         models.Index(fields=['netloc', 'headless', 'verified', 'marked_obsolete'])
-    #     ]
+    class Meta:
+        indexes = [
+            models.Index(fields=['netloc', 'headless', 'verified', 'marked_obsolete'])
+        ]
 
     @classmethod
     def for_url(cls, url, headless):
