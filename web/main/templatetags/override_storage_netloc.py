@@ -3,8 +3,6 @@ from django.conf import settings
 
 from ..utils import override_storage_netloc as override_netloc
 
-
-
 register = template.Library()
 
 @register.filter

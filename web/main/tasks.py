@@ -6,6 +6,7 @@ import docker
 import requests
 import socket
 import threading
+import tempfile
 from time import sleep
 
 from django.conf import settings
@@ -18,8 +19,9 @@ from django.views.decorators.debug import sensitive_variables
 from .models import CaptureJob, Archive, WebhookSubscription, ProfileCaptureJob, Profile
 from .serializers import ReadOnlyCaptureJobSerializer, SimpleWebhookSubscriptionSerializer
 from .storages import get_archive_storage
-from .utils import (validate_and_clean_url, extract_file_from_container, get_file_hash,
-    parse_querystring, datetime_from_timestamp, sign_data, is_valid_signature, send_template_email
+from .utils import (validate_and_clean_url, copy_file_to_container, extract_file_from_container,
+    get_file_hash, parse_querystring, datetime_from_timestamp, sign_data, is_valid_signature,
+    send_template_email
 )
 
 from pytest import raises as assert_raises
@@ -299,7 +301,10 @@ def run_next_capture():
         client = docker.from_env()
 
         inc_progress(capture_job, 1, "Creating Browsertrix container.")
-        archive = Archive(capture_job=capture_job)
+        profile = None
+        if capture_job.log_in_if_supported:
+            profile = Profile.for_url(capture_job.validated_url, capture_job.headless)
+        archive = Archive(capture_job=capture_job, created_with_profile=profile)
         collection_name = archive.filename[:-5]
         browsertrix_output_filename = f'{collection_name}.wacz'
         browsertrix_output_path = f'{settings.BROWSERTRIX_INTERNAL_DATA_DIR}/collections/{collection_name}/{browsertrix_output_filename}'
@@ -309,20 +314,26 @@ def run_next_capture():
                 f'DATA_DIR={settings.BROWSERTRIX_INTERNAL_DATA_DIR}'
             ],
             volumes={
-                settings.BROWSERTRIX_ENTRYPOINT : {
+                settings.BROWSERTRIX_ENTRYPOINT: {
                     'bind': '/entrypoint.sh'
                 }
             },
             entrypoint='/entrypoint.sh',
             cap_add=['NET_ADMIN', 'SYS_ADMIN'],
             shm_size='1GB',
-            command=f'crawl --logging "stats,behaviors-debug" --generateWACZ --limit 1 --cwd {settings.BROWSERTRIX_INTERNAL_DATA_DIR} --collection {collection_name} --url {capture_job.validated_url}',
+            command=f'crawl --logging "stats,behaviors-debug" --generateWACZ --limit 1 --cwd {settings.BROWSERTRIX_INTERNAL_DATA_DIR} --collection {collection_name} --url {capture_job.validated_url} {"--profile /tmp/profile.tar.gz" if profile else ""}',
             detach=True
         )
 
+        if profile:
+            inc_progress(capture_job, 1, "Transferring browser profile.")
+            if not copy_file_to_container(profile.profile, '/tmp', 'profile.tar.gz', container):
+                capture_job.mark_failed('Transfer of browser profile to container failed.')
+                raise HaltCaptureException
+
         inc_progress(capture_job, 1, "Starting Browsertrix.")
         container.start()
-        browsertrix_life_cycle_thread = BrowsertrixLifeCycleThread(container, settings.BROWSERTRIX_TIMEOUT_SECONDS, name="browsertrix_return")
+        browsertrix_life_cycle_thread = BrowsertrixLifeCycleThread(container, settings.BROWSERTRIX_TIMEOUT_SECONDS, name="browsertrix")
         browsertrix_life_cycle_thread.start()
         stdout_stream = container.logs(stderr=False, stream=True)
         for msg in stdout_stream:
@@ -597,7 +608,7 @@ def create_browser_profile(profile_capture_job_id):
             shm_size='1GB',
             command=f'create-login-profile --url {url} --user {user} {"--headless" if capture_job.headless else ""}--filename {browsertrix_profile_path} --debugScreenshot {browsertrix_screenshot_path}',
             detach=True,
-            stdin_open = True
+            stdin_open=True
         )
 
         inc_progress(capture_job, 1, "Starting Browsertrix.")
@@ -608,7 +619,7 @@ def create_browser_profile(profile_capture_job_id):
         s._sock.send(bytes(password, 'utf-8') + b'\n')
         s.close()  # see https://github.com/docker/docker-py/issues/1507: we may need to close more thoroughly
 
-        browsertrix_life_cycle_thread = BrowsertrixLifeCycleThread(container, settings.BROWSERTRIX_TIMEOUT_SECONDS, name="browsertrix_return")
+        browsertrix_life_cycle_thread = BrowsertrixLifeCycleThread(container, settings.BROWSERTRIX_TIMEOUT_SECONDS, name="browsertrix")
         browsertrix_life_cycle_thread.start()
         stdout_stream = container.logs(stderr=False, stream=True)
         for msg in stdout_stream:

@@ -254,10 +254,7 @@ class CaptureJob(Job):
     requested_url = models.CharField(max_length=2100, db_index=True, blank=True, null=False, default='')
     capture_oembed_view = models.BooleanField(default=False)
     headless = models.BooleanField(default=True)
-    # Some captures will be made using a pre-configured browser profile.
-    # We should, in some way, record that here. To be determined, as we
-    # decide how we are going to produce and store profiles.
-    # use_profile = models.SomeField(default=None)
+    log_in_if_supported = models.BooleanField(default=True)
     label = models.CharField(max_length=255, blank=True, null=True, db_index=True)
     webhook_data = models.CharField(max_length=255, blank=True, null=True,
         help_text="This string will be included, verbatim, in any webhook \
@@ -403,7 +400,12 @@ class Archive(TimestampedModel):
     capture_job = models.OneToOneField(
         'CaptureJob',
         on_delete=models.CASCADE,
-        related_name='archive',
+        related_name='archive'
+    )
+    created_with_profile = models.ForeignKey(
+        'Profile',
+        on_delete=models.PROTECT,
+        related_name='archives',
         null=True,
         blank=True
     )
@@ -474,8 +476,23 @@ class Profile(TimestampedModel):
     # is this correct or crazy?
     # class Meta:
     #     indexes = [
-    #         models.Index(fields=['netloc', 'headless', 'username', 'verified', 'marked_obsolete'])
+    #         models.Index(fields=['netloc', 'headless', 'verified', 'marked_obsolete'])
     #     ]
+
+    @classmethod
+    def for_url(cls, url, headless):
+        profile = cls.objects.filter(
+            netloc=urllib.parse.urlparse(url).netloc,
+            headless=headless,
+            verified=True,
+            marked_obsolete__isnull=True
+        ).first()
+
+        if profile:
+            return profile
+
+    def __str__(self):
+        return f"Profile {self.pk}: {self.username} at {self.netloc}"
 
     def get_job_id(self):
         return self.profile_capture_job.id

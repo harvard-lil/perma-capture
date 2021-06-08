@@ -151,6 +151,18 @@ def validate_and_clean_url(url):
     return url_validator.clean(url)
 
 
+def copy_file_to_container(src, dst_path, dst_name, container):
+    # mode set to 'ab+' as a workaround for https://bugs.python.org/issue25341
+    with tempfile.TemporaryFile('ab+') as tmpfile:
+        tar = tarfile.open(fileobj=tmpfile, mode='w')
+        info = tarfile.TarInfo(dst_name)
+        info.size = src.size
+        tar.addfile(info, src)
+        tar.close()
+        tmpfile.seek(0)
+        return container.put_archive(path=dst_path, data=tmpfile)
+
+
 @contextmanager
 def extract_file_from_container(name, path, container):
     # mode set to 'ab+' as a workaround for https://bugs.python.org/issue25341

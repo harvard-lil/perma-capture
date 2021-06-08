@@ -57,7 +57,7 @@ class UserIDFilter(InputFilter):
 
 class RequestedURLFilter(InputFilter):
     parameter_name = 'requested_url'
-    title = 'Requeted URL'
+    title = 'Requested URL'
 
     def queryset(self, request, queryset):
         value = self.value()
@@ -182,8 +182,14 @@ class UserAddForm(UserCreationForm):
 
 class ArchiveInline(admin.StackedInline):
     model = Archive
-    fields = readonly_fields = ('hash', 'hash_algorithm', 'warc_size', 'download_expiration_timestamp', 'download_url', 'created_at', 'updated_at')
+    fields = readonly_fields = ('hash', 'hash_algorithm', 'warc_size', 'download_expiration_timestamp', 'download_url', 'profile_link', 'created_at', 'updated_at')
     can_delete = False
+
+    def profile_link(self, obj):
+        if obj.created_with_profile_id:
+            url = reverse('admin:main_profile_change', args=(obj.created_with_profile_id,))
+            return format_html('<a href="{}">{}</a>', url, obj.created_with_profile_id)
+    profile_link.short_description = 'created with profile'
 
 
 class ProfileInline(admin.TabularInline):
@@ -271,6 +277,7 @@ class CaptureJobAdmin(admin.ModelAdmin):
         'requested_url',
         'capture_oembed_view',
         'headless',
+        'log_in_if_supported',
         'label',
         'status',
         'message',
@@ -282,10 +289,10 @@ class CaptureJobAdmin(admin.ModelAdmin):
     )
     list_filter = [UserEmailFilter, UserIDFilter, RequestedURLFilter, 'status', 'capture_oembed_view', 'headless', 'human']
     fieldsets = (
-        (None, {'fields': ('user_link', 'requested_url', 'capture_oembed_view', 'headless', 'human', 'label')}),
+        (None, {'fields': ('user_link', 'requested_url', 'capture_oembed_view', 'headless', 'log_in_if_supported', 'human', 'label')}),
         ('Progress', {'fields': ( 'status', 'message', 'order', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')})
     )
-    readonly_fields = ('user_link', 'requested_url', 'capture_oembed_view', 'headless', 'human', 'label', 'status', 'message', 'order', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')
+    readonly_fields = ('user_link', 'requested_url', 'capture_oembed_view', 'headless', 'log_in_if_supported', 'human', 'label', 'status', 'message', 'order', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')
     inlines = [ArchiveInline]
 
     def get_queryset(self, request):
@@ -306,14 +313,15 @@ class ArchiveAdmin(admin.ModelAdmin):
         'warc_size',
         'download_expiration_timestamp',
         'download_url',
+        'profile_link',
         'created_at',
         'updated_at'
     )
     list_filter = [ArchiveDownloadableFilter, CaptureJobUserEmailFilter, CaptureJobUserIDFilter]
-    fields = readonly_fields = ('capture_job_link', 'user_link', 'hash', 'hash_algorithm', 'warc_size', 'download_url', 'download_expiration_timestamp', 'created_at', 'updated_at')
+    fields = readonly_fields = ('capture_job_link', 'user_link', 'hash', 'hash_algorithm', 'warc_size', 'download_url', 'download_expiration_timestamp', 'profile_link', 'created_at', 'updated_at')
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('capture_job__user')
+        return super().get_queryset(request).select_related('capture_job__user', 'created_with_profile')
 
     def user_link(self, obj):
         url = reverse('admin:main_user_change', args=(obj.capture_job.user.pk,))
@@ -324,6 +332,12 @@ class ArchiveAdmin(admin.ModelAdmin):
         url = reverse('admin:main_capturejob_change', args=(obj.capture_job_id,))
         return format_html('<a href="{}">{}</a>', url, obj.capture_job_id)
     capture_job_link.short_description = 'capture job'
+
+    def profile_link(self, obj):
+        if obj.created_with_profile_id:
+            url = reverse('admin:main_profile_change', args=(obj.created_with_profile_id,))
+            return format_html('<a href="{}">{}</a>', url, obj.created_with_profile_id)
+    profile_link.short_description = 'created with profile'
 
 
 class ProfileCaptureJobForm(forms.ModelForm):
@@ -385,7 +399,6 @@ class ProfileCaptureJobAdmin(admin.ModelAdmin):
         except Profile.DoesNotExist:
             return False
     active_profile.boolean = True
-
 
 
 @admin.register(Profile)
