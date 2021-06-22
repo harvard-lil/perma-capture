@@ -384,7 +384,7 @@ class ProfileCaptureJobAdmin(admin.ModelAdmin):
 
     def get_inlines(self, request, obj=None):
         if obj:
-           yield ProfileInline
+            yield ProfileInline
 
     def verified_profile(self, obj):
         try:

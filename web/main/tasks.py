@@ -6,7 +6,6 @@ import docker
 import requests
 import socket
 import threading
-import tempfile
 from time import sleep
 
 from django.conf import settings
