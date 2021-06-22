@@ -15,3 +15,5 @@ TESTING = True
 
 LAUNCH_CAPTURE_JOBS = False
 WEBHOOK_MAX_RETRIES = 1
+
+DEFAULT_S3_STORAGE['bucket_name'] += '-test'

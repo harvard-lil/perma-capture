@@ -440,6 +440,9 @@ class ProfileCaptureJob(Job):
         return f"ProfileCaptureJob {self.pk}"
 
     def get_job_id(self):
+        """
+        A method for use by the storage helper `profile_job_directory`. Must be defined on both ProfileCaptureJob and Profile.
+        """
         return self.id
 
     @classmethod
@@ -494,6 +497,9 @@ class Profile(TimestampedModel):
         return f"Profile {self.pk}: {self.username} at {self.netloc}"
 
     def get_job_id(self):
+        """
+        A method for use by the storage helper `profile_job_directory`. Must be defined on both ProfileCaptureJob and Profile.
+        """
         return self.profile_capture_job.id
 
 

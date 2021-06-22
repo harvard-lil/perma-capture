@@ -1,3 +1,4 @@
+import boto3
 from collections import defaultdict
 from contextlib import contextmanager
 from datetime import timezone as tz, timedelta
@@ -70,6 +71,20 @@ def register_factory(cls):
 
 
 ### non-model fixtures ###
+
+@pytest.fixture(autouse=True, scope='function')
+def cleanup_storage():
+    """
+    Empty the configured storage after each test, so that it's fresh each time, just like the test database.
+    """
+    yield
+    storage = boto3.resource('s3',
+        endpoint_url=settings.DEFAULT_S3_STORAGE['endpoint_url'],
+        aws_access_key_id=settings.DEFAULT_S3_STORAGE['access_key'],
+        aws_secret_access_key=settings.DEFAULT_S3_STORAGE['secret_key']
+    ).Bucket(settings.DEFAULT_S3_STORAGE['bucket_name'])
+    storage.objects.delete()
+
 
 @pytest.fixture(scope='function')
 def assert_num_queries(pytestconfig, monkeypatch):
