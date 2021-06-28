@@ -1,3 +1,4 @@
+import base64
 import boto3
 from collections import defaultdict
 from contextlib import contextmanager
@@ -5,8 +6,10 @@ from datetime import timezone as tz, timedelta
 from distutils.sysconfig import get_python_lib
 import docker
 import factory
+from faker import Faker
 import humps
 import inspect
+import os
 import pytest
 import random
 import requests
@@ -20,12 +23,15 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from django.db.backends import utils as django_db_utils
 
-from main.models import User, WebhookSubscription, Archive, CaptureJob
+from main.models import User, WebhookSubscription, Archive, CaptureJob, Profile, ProfileCaptureJob
 
 
 # This file defines test fixtures available to all tests.
 # To see available fixtures run pytest --fixtures
 
+TEST_FILE_DIR = os.path.abspath(os.path.join(settings.BASE_DIR, '../main/test/files'))
+
+fake = Faker()
 
 ### pytest configuration ###
 
@@ -401,6 +407,7 @@ class ArchiveFactory(factory.DjangoModelFactory):
             lambda o: f"https://our-cloud-storage.com/{factory.Faker('uuid4').generate()}.wacz?params=for-presigned-download"
         )
     )
+    created_with_profile = None
 
 
 @register_factory
@@ -476,3 +483,139 @@ def user_with_capture_jobs_factory(db):
             create_capture_job(user=user, **kwargs)
         return user
     return func
+
+
+@register_factory
+@factory.django.mute_signals(signals.post_save)  # mute so that, if a profile capture job is created, the job isn't launched!
+class ProfileFactory(factory.DjangoModelFactory):
+    class Meta:
+        model = Profile
+        exclude = ('create_capture_job', 'obsolete')
+
+    netloc = factory.LazyFunction(
+        lambda: random.choice(list(settings.PROFILE_SECRETS.keys()))
+    )
+    headless = factory.Faker('boolean', chance_of_getting_true=50)
+    username = factory.LazyAttribute(
+        lambda o: settings.PROFILE_SECRETS[o.netloc]['user']
+    )
+    verified = factory.Faker('boolean', chance_of_getting_true=50)
+    obsolete = False
+    marked_obsolete = factory.Maybe(
+        'obsolete',
+        yes_declaration=factory.LazyFunction(
+            lambda:  timezone.now() - timedelta(minutes=factory.Faker('random_int', min=1, max=60).generate())
+        ),
+        no_declaration=None
+    )
+    profile = factory.django.FileField(
+        filename='profile.tar.gz',
+        from_path=os.path.abspath(os.path.join(TEST_FILE_DIR, 'example-profile.tar.gz'))
+    )
+    create_capture_job = True
+    profile_capture_job = factory.Maybe(
+        'create_capture_job',
+        yes_declaration=factory.SubFactory(
+            'conftest.CompletedProfileCaptureJobFactory',
+            netloc=factory.SelfAttribute('..netloc'),
+            headless=factory.SelfAttribute('..headless'),
+            create_profile=False
+        ),
+        no_declaration=None
+    )
+
+
+@register_factory
+class UnverifiedProfileFactory(ProfileFactory):
+    verified = False
+    obsolete = False
+
+
+@register_factory
+class ActiveProfileFactory(ProfileFactory):
+    verified = True
+    obsolete = False
+
+
+@register_factory
+class ObsoleteProfileFactory(ProfileFactory):
+    verified = True
+    obsolete = True
+
+
+@pytest.fixture()
+def target_domains(settings, db):
+    assert len(settings.TEST_CAPTURE_TARGET_DOMAINS) == 4
+    for domain in settings.TEST_CAPTURE_TARGET_DOMAINS[1:]:
+        settings.PROFILE_SECRETS[domain] = {
+            'log_in_url': f'https://{domain}/login',
+            'user': fake.user_name(),
+            'password': fake.password(length=12),
+        }
+    return {
+        'no_profile': settings.TEST_CAPTURE_TARGET_DOMAINS[0],
+        'unverified_profile': (settings.TEST_CAPTURE_TARGET_DOMAINS[1], UnverifiedProfileFactory(netloc=settings.TEST_CAPTURE_TARGET_DOMAINS[1])),
+        'active_profile': (settings.TEST_CAPTURE_TARGET_DOMAINS[2], ActiveProfileFactory(netloc=settings.TEST_CAPTURE_TARGET_DOMAINS[2])),
+        'obsolete_profile': (settings.TEST_CAPTURE_TARGET_DOMAINS[3], ObsoleteProfileFactory(netloc=settings.TEST_CAPTURE_TARGET_DOMAINS[3])),
+    }
+
+
+@register_factory
+@factory.django.mute_signals(signals.post_save)  # mute so that the job isn't launched!
+class ProfileCaptureJobFactory(factory.DjangoModelFactory):
+    class Meta:
+        model = ProfileCaptureJob
+        exclude = ('create_profile', 'has_screenshot')
+
+    create_profile = True
+    netloc = factory.Faker('domain')
+    headless = factory.Faker('boolean', chance_of_getting_true=50)
+    has_screenshot = False
+
+
+@register_factory
+class PendingProfileCaptureJobFactory(ProfileCaptureJobFactory):
+    status = CaptureJob.Status.PENDING
+
+
+@register_factory
+class InProgressProfileCaptureJobFactory(ProfileCaptureJobFactory):
+    status = CaptureJob.Status.IN_PROGRESS
+    capture_start_time = factory.Faker('future_datetime', end_date='+1m', tzinfo=tz.utc)
+    step_count = factory.Faker('pyfloat', min_value=1, max_value=10)
+    step_description = factory.Faker('text', max_nb_chars=15)
+
+
+@register_factory
+class CompletedProfileCaptureJobFactory(InProgressProfileCaptureJobFactory):
+    status = CaptureJob.Status.COMPLETED
+    capture_end_time = factory.LazyAttribute(
+        lambda o: o.capture_start_time + timedelta(seconds=factory.Faker('random_int', min=0, max=settings.CELERY_TASK_TIME_LIMIT).generate())
+    )
+    profile = factory.Maybe(
+        'create_profile',
+        yes_declaration=factory.RelatedFactory(
+            'conftest.ProfileFactory',
+            factory_related_name='profile',
+            create_capture_job=False,
+            obsolete=factory.Faker('boolean', chance_of_getting_true=70)
+        ),
+        no_declaration=None
+    )
+    has_screenshot = factory.Faker('boolean', chance_of_getting_true=90)
+    screenshot = factory.Maybe(
+        'has_screenshot ',
+        yes_declaration=factory.django.FileField(
+            filename='screenshot.png',
+            # 1 pixel transparent PNG
+            data=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=')
+        ),
+        no_declaration=None
+    )
+
+
+@register_factory
+class FailedProfileCaptureJobFactory(CompletedProfileCaptureJobFactory):
+    status = CaptureJob.Status.FAILED
+    message = {'error': ['Failed during capture.']}
+    profile = None

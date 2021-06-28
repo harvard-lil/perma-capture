@@ -186,8 +186,10 @@ def demo_scheduled_task(pause_for_seconds=0):
 def run_next_capture():
     """
     Given:
-    >>> pending_capture_job_factory, docker_client, django_settings, mocker, caplog = [getfixture(i) for i in ['pending_capture_job_factory', 'docker_client', 'settings', 'mocker', 'caplog']]
+    >>> target_domains, pending_capture_job_factory, docker_client, django_settings, mocker, caplog = [getfixture(i) for i in ['target_domains', 'pending_capture_job_factory', 'docker_client', 'settings', 'mocker', 'caplog']]
     >>> output_dir = f'{settings.SERVICES_DIR}/browsertrix/data/'
+    >>> no_profile_domain = target_domains['no_profile']
+    >>> profile_domain, profile = target_domains['active_profile']
 
     Helpers:
     >>> orig_clean_up_failed = clean_up_failed_captures
@@ -196,15 +198,28 @@ def run_next_capture():
 
     >>> orig_inc_progress = inc_progress
     >>> mock_inc_progress = mocker.patch('main.tasks.inc_progress')
-    >>> def run_test_capture(url, stop_before_step=None, throw=None):
+    >>> def run_test_capture(url, stop_before_step=None, throw=None, capture_job_extra_kwargs=None):
     ...     if stop_before_step:
     ...         mock_inc_progress.side_effect = raise_on_call(orig_inc_progress, stop_before_step + 1, HaltCaptureException)
     ...     else:
     ...         mock_inc_progress.side_effect = orig_inc_progress
-    ...     job = pending_capture_job_factory(requested_url=url)
+    ...     job = pending_capture_job_factory(requested_url=url, **capture_job_extra_kwargs if capture_job_extra_kwargs else {})
     ...     _ = run_next_capture.apply()
     ...     job.refresh_from_db()
     ...     return job
+
+    >>> def assert_succeeded(job, with_profile):
+    ...     assert job.status == CaptureJob.Status.COMPLETED
+    ...     assert job.step_description == 'Saving archive.'
+    ...     assert job.capture_end_time
+    ...     assert job.archive.warc_size
+    ...     assert job.archive.hash and job.archive.hash_algorithm
+    ...     assert requests.get(job.archive.download_url).status_code == 200
+    ...     if with_profile:
+    ...         assert job.archive.created_with_profile == with_profile
+    ...     else:
+    ...         assert not job.archive.created_with_profile
+
 
     NO JOBS
 
@@ -241,13 +256,24 @@ def run_next_capture():
 
     SUCCESS
 
-    >>> job = run_test_capture('example.com')
-    >>> assert job.status == CaptureJob.Status.COMPLETED
-    >>> assert job.step_description == 'Saving archive.'
-    >>> assert job.capture_end_time
-    >>> assert job.archive.warc_size
-    >>> assert job.archive.hash and job.archive.hash_algorithm
-    >>> assert requests.get(job.archive.download_url).status_code == 200
+    # A domain where logged-in capture is not supported:
+
+    # >>> job = run_test_capture(no_profile_domain)
+    # >>> assert_succeeded(job, with_profile=None)
+
+    A domain where logged-in capture is supported:
+
+    ... and profile.headless == capture job.headless
+    >>> job = run_test_capture(f'http://{profile_domain}/page', capture_job_extra_kwargs={'headless': profile.headless})
+    >>> assert_succeeded(job, with_profile=profile)
+
+    # ... and profile.headless == capture job.headless, but capture_job.log_in_if_supported == False
+    # >>> job = run_test_capture(f'http://{profile_domain}/page', capture_job_extra_kwargs={'headless': profile.headless, 'log_in_if_supported': False})
+    # >>> assert_succeeded(job, with_profile=None)
+
+    # ... but profile.headless != capture job.headless
+    # >>> job = run_test_capture(f'http://{profile_domain}/page', capture_job_extra_kwargs={'headless': not profile.headless})
+    # >>> assert_succeeded(job, with_profile=None)
 
     FAILURE
 
@@ -321,7 +347,8 @@ def run_next_capture():
             cap_add=['NET_ADMIN', 'SYS_ADMIN'],
             shm_size='1GB',
             command=f'crawl --logging "stats,behaviors-debug" --generateWACZ --limit 1 --cwd {settings.BROWSERTRIX_INTERNAL_DATA_DIR} --collection {collection_name} --url {capture_job.validated_url} {"--profile /tmp/profile.tar.gz" if profile else ""}',
-            detach=True
+            detach=True,
+            network=settings.BROWSERTRIX_DOCKER_NETWORK or ''
         )
 
         if profile:

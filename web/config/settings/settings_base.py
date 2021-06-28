@@ -288,6 +288,7 @@ USE_ANALYTICS = False
 APP_NAME = 'capture.perma.cc'
 
 TESTING = False
+TEST_CAPTURE_TARGET_DOMAINS = ''
 
 API_PREFIX = 'api'
 
@@ -303,6 +304,7 @@ OVERRIDE_STORAGE_NETLOC = None
 
 # Browsertrix
 BROWSERTRIX_IMAGE = 'registry.lil.tools/webrecorder/browsertrix-crawler:0.3.0-beta.1'
+BROWSERTRIX_DOCKER_NETWORK = None
 
 BROWSERTRIX_INTERNAL_DATA_DIR = os.environ.get('BROWSERTRIX_INTERNAL_DATA_DIR')
 BROWSERTRIX_ENTRYPOINT = os.environ.get('BROWSERTRIX_ENTRYPOINT')

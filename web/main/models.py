@@ -439,6 +439,11 @@ class ProfileCaptureJob(Job):
     def __str__(self):
         return f"ProfileCaptureJob {self.pk}"
 
+    def save(self, *args, **kwargs):
+        if self.status == ProfileCaptureJob.Status.INVALID:
+            raise ValidationError("We don't presently allow invalid ProfileCaptureJobs")
+        super().save(*args, **kwargs)
+
     def get_job_id(self):
         """
         A method for use by the storage helper `profile_job_directory`. Must be defined on both ProfileCaptureJob and Profile.
