@@ -1,7 +1,9 @@
 <template>
-  <CaptureForm/>
-  <CaptureList/>
-  <capture-detail v-if="!$store.getters.isMobile && capture" :capture="capture" />
+  <div class="capture-dashboard" :class="{'with-detail': !$store.getters.isMobile && capture}">
+    <CaptureForm/>
+    <CaptureList/>
+    <capture-detail v-if="!$store.getters.isMobile && capture" :capture="capture" />
+  </div>
 </template>
 
 <script lang="ts">

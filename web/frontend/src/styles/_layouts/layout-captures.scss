@@ -1,4 +1,19 @@
-.main {
+.capture-dashboard {
   display: grid;
-  grid-template-columns: "sidebar links-list link-detail";
+  grid-template-areas: "sidebar captures";
+  grid-template-columns: 30% 70%;
+  @include media-breakpoint-up(md) {
+    &.with-detail {
+      grid-template-areas: "sidebar captures capture-detail";
+      grid-template-columns: 20% 50% 30%;
+    }
+  }
+}
+
+.capture-form {
+  grid-area: sidebar;
+}
+
+.captures-list {
+  grid-area: captures;
 }
