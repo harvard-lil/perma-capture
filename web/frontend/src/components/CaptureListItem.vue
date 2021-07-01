@@ -1,51 +1,47 @@
 <template>
-<tr>
-  <td>
-    <span class="status badge" :class="`bg-${statusBG}`">
-      <span v-if="isProcessing" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-      <span v-else-if="hasFailed" class="bi bi-x"></span>
-      <span v-else class="bi bi-check"></span>
-    </span>
-  </td>
-  <td><a :href="url">{{ url }}</a></td>
-  <td>{{ capture.label || '-' }}</td>
-  <td><input class="form-check-input" type="checkbox" v-model="capture.capture_oembed_view" id="flexCheckDisabled" disabled></td>
-  <td>{{ formattedDate }}</td>
-  <td>
+  <li>
+    <!--    <span class="status badge" :class="`bg-${statusBG}`">-->
+    <!--      <span v-if="isProcessing" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>-->
+    <!--      <span v-else-if="hasFailed" class="bi bi-x"></span>-->
+    <!--      <span v-else class="bi bi-check"></span>-->
+    <!--    </span>-->
+    <a :href="url">{{ url }}</a>
+    <label>{{ capture.label || '-' }}</label>
+    <!--      <td><input class="form-check-input" type="checkbox" v-model="capture.capture_oembed_view" id="flexCheckDisabled"-->
+    <!--               disabled></td>-->
+    {{ formattedDate }}
     <template v-if="downloadUrl">
       <a role="button" class="btn btn-primary bi bi-download mx-1" :href="downloadUrl"></a>
-      <a role="button" class="btn btn-primary bi bi-chevron-up mx-1 replayToggle" :class="{active: displayContext}" @click="toggleContext"></a>
+      <a role="button" class="btn btn-primary bi bi-chevron-up mx-1 replayToggle" :class="{active: displayContext}"
+         @click="toggleCaptureDetails(capture)"></a>
     </template>
-    <a v-if="capture.message" role="button" class="btn btn-primary bi bi-question-diamond mx-1" @click="toggleContext"></a>
-  </td>
-</tr>
-<transition name="slide">
-  <tr v-if="displayContext">
-    <td colspan="999" class="p-0">
-      <div v-if="capture.message" class="contextItem">
-        <div class="alert alert-danger">{{ capture.message }}</div>
-      </div>
-      <replay-web-page v-if="downloadUrl"
-        :source="downloadUrl"
-        :url="url"
-        replaybase="/replay/"
-        class="replay contextItem"/>
-    </td>
-  </tr>
-</transition>
+    <a v-if="capture.message" role="button" class="btn btn-primary bi bi-question-diamond mx-1"
+       @click="toggleCaptureDetails(capture)"></a>
+
+    <template v-if="$store.getters.isMobile && displayContext && $store.getters.capture">
+      <capture-detail v-if="capture.id === $store.getters.capture.id" :capture="capture"/>
+    </template>
+
+  </li>
 </template>
 
 <script lang="ts">
-import { createNamespacedHelpers } from 'vuex'
-const { mapActions } = createNamespacedHelpers('captures')
+import {createNamespacedHelpers} from 'vuex'
 
-import { TransitionalStates, FailureStates, SuccessStates } from '../constants/captures'
-import { snakeToPascal } from '../lib/helpers'
+const {mapActions} = createNamespacedHelpers('captures')
+
+import {TransitionalStates, FailureStates, SuccessStates} from '../constants/captures'
+import {snakeToPascal} from '../lib/helpers'
+import store from '../store/index.ts';
+import CaptureDetail from './CaptureDetail.vue'
 
 export default {
+  components: {
+    CaptureDetail
+  },
   props: ['capture'],
   data: () => ({
-    displayContext: false
+    displayContext: false,
   }),
   computed: {
     statusOrDefault() {
@@ -74,14 +70,17 @@ export default {
     },
     downloadUrl() {
       return this.capture.archive ? this.capture.archive.download_url : null
-    }
+    },
   },
   methods: {
     ...mapActions(['read']),
-    toggleContext() {
+    toggleCaptureDetails(capture) {
       this.displayContext = !this.displayContext
+      // set this as capture if toggling to show capture
+      this.displayContext ? store.commit('setCapture', capture) : store.commit('setCapture', undefined)
     }
-  }
+  },
+
 }
 </script>
 
@@ -89,11 +88,13 @@ export default {
 .status {
   font-size: 1em;
 }
+
 .contextItem {
   display: block;
   overflow: hidden;
   max-height: 200px;
 }
+
 .replay {
   min-height: 500px;
   height: 75vh;

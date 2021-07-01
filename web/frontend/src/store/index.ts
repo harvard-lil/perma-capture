@@ -25,7 +25,6 @@ export default createStore({
       state.capture = capture;
     },
     setWindowWidth: (state) => {
-      console.log('setWindowWidth')
       if (window.innerWidth <= state.breakpoints.xs) {
         state.windowWidth = 'xs';
       } else if (window.innerWidth <= state.breakpoints.sm) {
