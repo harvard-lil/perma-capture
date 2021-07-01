@@ -3,7 +3,7 @@
   grid-template-areas: "sidebar captures";
   grid-template-columns: 30% 70%;
   @include media-breakpoint-up(md) {
-    &.with-detail {
+    &.capture-detail {
       grid-template-areas: "sidebar captures capture-detail";
       grid-template-columns: 20% 50% 30%;
     }
@@ -16,4 +16,8 @@
 
 .captures-list {
   grid-area: captures;
+}
+
+.capture-detail-container {
+  grid-area: capture-detail;
 }

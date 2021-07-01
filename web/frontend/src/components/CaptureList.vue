@@ -1,5 +1,6 @@
 <template>
   <div class="captures-list">
+    <h4>Capture history</h4>
     <ul>
       <CaptureListItem
             v-for="capture in captures(sortBy, sortDesc)"

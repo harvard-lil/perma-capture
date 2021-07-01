@@ -1,14 +1,15 @@
 $display-font-weight: 900;
 
 $container-max-widths: (
-  xxl: 1200px
+        xxl: 1200px
 );
 
 // colors
-$color-blue: '#3F77E6';
-$color-red: '#F24E1E';
-$color-orange: '#DD671A';
-$color-gray-medium: '#eeeeee';
-$color-gray-light: '#FBFBFB';
+$color-blue: #3F77E6;
+$color-red: #F24E1E;
+$color-orange: #DD671A;
+$color-gray-medium: #EEEEEE;
+$color-gray-light: #FBFBFB;
+$color-gray-dark: #454545;
 
 $font-family-sans-serif: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;

@@ -9,7 +9,11 @@
     <label>{{ capture.label || '-' }}</label>
     <!--      <td><input class="form-check-input" type="checkbox" v-model="capture.capture_oembed_view" id="flexCheckDisabled"-->
     <!--               disabled></td>-->
-    {{ formattedDate }}
+    <br/>
+    <span class="secondary-text">Recorded {{ formattedCaptureDate }}</span>&nbsp;
+      <span v-if="formattedEndDate" class="warning-text">Expires in {{ formattedEndDate }}</span>
+      <span v-else>Expired</span>
+    <br/>
     <template v-if="downloadUrl">
       <a role="button" class="btn btn-primary bi bi-download mx-1" :href="downloadUrl"></a>
       <a role="button" class="btn btn-primary bi bi-chevron-up mx-1 replayToggle" :class="{active: displayContext}"
@@ -56,8 +60,20 @@ export default {
     url() {
       return this.capture.validated_url || this.capture.requested_url
     },
-    formattedDate() {
-      return (new Date(this.capture.created_at)).toLocaleDateString()
+    formattedCaptureDate() {
+      let options = {year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric'};
+      return (new Date(this.capture.created_at)).toLocaleDateString("en-US", options)
+    },
+    formattedEndDate() {
+      let duration = new Date(this.capture.capture_end_time) - new Date(this.capture.created_at);
+      if (duration <= 0) return;
+      let minutes = Math.floor((duration / (1000 * 60)) % 60),
+          hours = Math.floor((duration / (1000 * 60 * 60)) % 24);
+      if (hours) {
+        return hours + ' hours and ' + minutes + ' minutes'
+      } else if (minutes) {
+        return minutes + ' minutes';
+      }
     },
     statusBG() {
       return {

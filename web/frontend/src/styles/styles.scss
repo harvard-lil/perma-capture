@@ -5,3 +5,25 @@
 
 // Layout
 @import "./_layouts/_layouts-dir";
+
+
+.capture-form {
+  background-color: $color-gray-medium;
+  h1 {
+    font-weight: 100;
+  }
+}
+
+.captures-list {
+  padding: 0 1em;
+  li {
+    list-style: none;
+  }
+}
+
+.warning-text {
+  color: $color-red;
+}
+.secondary-text {
+  color: $color-gray-dark;
+}
