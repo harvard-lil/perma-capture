@@ -26,3 +26,16 @@ export function objectSubset(keys, source) {
 export function assignOverlap(obj1, obj2) {
     return Object.assign(obj1, objectSubset(Object.keys(obj1), obj2));
 }
+
+
+export function debounce(func, wait = 500) {
+    let timeout;
+    return () => {
+        let args = arguments;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            func.apply(this, args);
+        }, wait);
+    }
+
+}

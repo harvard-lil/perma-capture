@@ -18,32 +18,34 @@ export default createStore({
       lg: 1200,
       xl: 1400
     },
+    windowWidth: 'xl',
   },
   mutations: {
     setCapture: (state, capture) => {
       state.capture = capture;
     },
+    setWindowWidth: (state) => {
+      console.log('setWindowWidth')
+      if (window.innerWidth <= state.breakpoints.xs) {
+        state.windowWidth = 'xs';
+      } else if (window.innerWidth <= state.breakpoints.sm) {
+        state.windowWidth = 'sm';
+      } else if (window.innerWidth <= state.breakpoints.md) {
+        state.windowWidth = 'md';
+      } else if (window.innerWidth <= state.breakpoints.lg) {
+        state.windowWidth = 'lg';
+      } else {
+        state.windowWidth = 'xl';
+      }
+    }
   },
   actions: {},
   getters: {
     capture: (state) => {
       return state.capture;
     },
-    screensize: (state) => {
-      if (window.innerWidth <= state.breakpoints.xs) {
-        return 'xs'
-      } else if (window.innerWidth <= state.breakpoints.sm) {
-        return 'sm'
-      } else if (window.innerWidth <= state.breakpoints.md) {
-        return 'md'
-      } else if (window.innerWidth <= state.breakpoints.lg) {
-        return 'lg'
-      } else {
-        return 'xl'
-      }
-    },
     isMobile: (state) => {
-      return window.innerWidth < state.breakpoints.sm;
+      return state.windowWidth === 'sm' || state.windowWidth === 'xs';
     }
   },
 })
