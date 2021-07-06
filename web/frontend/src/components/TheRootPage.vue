@@ -1,6 +1,8 @@
 <template>
-<TheDashboard v-if="is_authenticated"/>
-<TheLandingPage v-else/>
+  <div class="container-full root-page-container">
+    <TheDashboard v-if="is_authenticated"/>
+    <TheLandingPage v-else/>
+  </div>
 </template>
 
 <script lang="ts">

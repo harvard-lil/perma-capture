@@ -1,3 +1,5 @@
+// RESET STYLES
+
 html, body {
   font-family: $font-family-sans-serif;
 }
@@ -13,4 +15,15 @@ h1 {
   @include media-breakpoint-up(lg) {
     font-size: 36px;
   }
+}
+
+.form-control {
+  border-radius: 0;
+  ::placeholder {
+    color: $color-gray-light-medium;
+  }
+}
+
+.btn {
+  border-radius: 0;
 }

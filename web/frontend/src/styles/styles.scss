@@ -6,24 +6,48 @@
 // Layout
 @import "./_layouts/_layouts-dir";
 
+.root-page-container {
+  background-color: $color-gray-light;
+}
 
 .capture-form {
-  background-color: $color-gray-medium;
+  padding: 3em 1.5em;
+  background-color: $color-gray-light-medium;
+
   h1 {
-    font-weight: 100;
+    font-weight: 300;
+  }
+  .subtitle {
+    color: $color-gray-medium;
+    font-size: 1.2em;
+    line-height: 1.4em;
+    font-weight: 400;
+    margin: 1em 0;
   }
 }
 
 .captures-list {
+  background-color: $color-white;
   padding: 0 1em;
+
   li {
     list-style: none;
+    padding: 1em 0;
+    border-bottom: 1px solid $color-gray-light-medium;
+    .capture-url {
+      margin-bottom: 1em;
+      a {
+        text-decoration: none;
+        font-weight: 400;
+      }
+    }
   }
 }
 
 .warning-text {
   color: $color-red;
 }
+
 .secondary-text {
   color: $color-gray-dark;
 }

@@ -5,14 +5,13 @@
     <!--      <span v-else-if="hasFailed" class="bi bi-x"></span>-->
     <!--      <span v-else class="bi bi-check"></span>-->
     <!--    </span>-->
-    <a :href="url">{{ url }}</a>
-    <label>{{ capture.label || '-' }}</label>
+    <p class="capture-url"><a :href="url">{{ url }}</a></p>
+    <!--    <label>{{ capture.label }}</label>-->
     <!--      <td><input class="form-check-input" type="checkbox" v-model="capture.capture_oembed_view" id="flexCheckDisabled"-->
     <!--               disabled></td>-->
-    <br/>
     <span class="secondary-text">Recorded {{ formattedCaptureDate }}</span>&nbsp;
-      <span v-if="formattedEndDate" class="warning-text">Expires in {{ formattedEndDate }}</span>
-      <span v-else>Expired</span>
+    <span v-if="formattedEndDate" class="warning-text">Expires in {{ formattedEndDate }}</span>
+    <span v-else>Expired</span>
     <br/>
     <template v-if="downloadUrl">
       <a role="button" class="btn btn-primary bi bi-download mx-1" :href="downloadUrl"></a>

@@ -8,6 +8,11 @@
       grid-template-columns: 20% 50% 30%;
     }
   }
+  // if smaller screen, make dashboard container full-width
+  @include media-breakpoint-down(md) {
+    min-width: 100%;
+    padding: 0;
+  }
 }
 
 .capture-form {
