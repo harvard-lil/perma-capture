@@ -8,14 +8,14 @@
     grid-area: message;
   }
 
-  .enter-form {
+  .enter-container {
     grid-area: login;
   }
 
   .btn {
     text-align: right;
   }
-  @include media-breakpoint-down(lg) {
+  @include media-breakpoint-down(xl) {
     grid-template-areas: "message . login";
     grid-template-columns: 1fr 2.5em 1fr;
     padding: 3em;

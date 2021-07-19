@@ -1,7 +1,7 @@
 <template>
   <div class="container-full login-page-container">
     <WelcomeMessage/>
-    <div class="enter-form">
+    <div class="enter-container">
       <BaseForm :title="'Log in'"
                 :fields="fields"
                 submitText="Log in"
