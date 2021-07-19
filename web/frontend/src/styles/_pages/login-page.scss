@@ -1,0 +1,35 @@
+.login-page-container {
+  display: grid;
+  grid-template-areas: "message . login";
+  grid-template-columns: 1fr 1fr 1fr;
+  padding: 5em;
+
+  .message {
+    grid-area: message;
+  }
+
+  .enter-form {
+    grid-area: login;
+  }
+
+  .btn {
+    text-align: right;
+  }
+  @include media-breakpoint-down(lg) {
+    grid-template-areas: "message . login";
+    grid-template-columns: 1fr 2.5em 1fr;
+    padding: 3em;
+  }
+  @include media-breakpoint-down(sm) {
+    grid-template-areas: "message"
+                         "login";
+    grid-template-columns: 1fr;
+    padding: 3em 1em;
+    .subtitle {
+      font-size: 1em;
+    }
+    .small {
+      margin-bottom: 0.5em;
+    }
+  }
+}

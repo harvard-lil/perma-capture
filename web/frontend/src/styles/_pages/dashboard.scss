@@ -2,7 +2,7 @@
   display: grid;
   grid-template-areas: "sidebar captures";
   grid-template-columns: 30% 70%;
-  @include media-breakpoint-up(md) {
+  @include media-breakpoint-up(lg) {
     &.capture-detail {
       grid-template-areas: "sidebar captures capture-detail";
       grid-template-columns: 20% 50% 30%;
@@ -12,6 +12,8 @@
   @include media-breakpoint-down(md) {
     min-width: 100%;
     padding: 0;
+    grid-template-areas: "sidebar captures";
+    grid-template-columns: 30% 80%;
   }
 }
 

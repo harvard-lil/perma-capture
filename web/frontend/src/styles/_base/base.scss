@@ -1,3 +1,6 @@
+@import "vars-global";
+@import "fonts";
+
 // RESET STYLES
 
 html, body {
@@ -17,13 +20,31 @@ h1 {
   }
 }
 
+.container-full {
+  min-height: 90vh;
+}
+
 .form-control {
   border-radius: 0;
-  ::placeholder {
-    color: $color-gray-light-medium;
-  }
+}
+
+.form-control::placeholder {
+  color: $color-gray;
+  font-weight: 400;
 }
 
 .btn {
   border-radius: 0;
+}
+
+.warning-text {
+  color: $color-red;
+}
+
+.secondary-text {
+  color: $color-gray-dark;
+}
+
+.blue-text {
+  color: $color-blue;
 }
