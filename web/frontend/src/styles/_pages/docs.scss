@@ -1,0 +1,17 @@
+.docs-page-container {
+  background-color: $color-gray-light-medium;
+  .docs.container {
+    background-color: $color-white;
+    display: grid;
+    grid-template-areas: "toc doc-content";
+    grid-template-columns: 30% 70%;
+
+    .table-of-contents {
+      grid-area: toc;
+    }
+
+    .content {
+      grid-area: doc-content;
+    }
+  }
+}

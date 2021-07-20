@@ -15,16 +15,48 @@
     grid-template-areas: "sidebar captures";
     grid-template-columns: 30% 80%;
   }
-}
 
-.capture-form {
-  grid-area: sidebar;
-}
+  .capture-form {
+    grid-area: sidebar;
+  }
 
-.captures-list {
-  grid-area: captures;
-}
+  .captures-list {
+    grid-area: captures;
+    background-color: $color-white;
+    padding: 0;
 
-.capture-detail-container {
-  grid-area: capture-detail;
+    h4 {
+      padding-left: 0.5em;
+    }
+  }
+
+  .capture-detail-container {
+    grid-area: capture-detail;
+  }
+
+  h1 {
+    font-weight: 300;
+  }
+
+  li {
+    list-style: none;
+    padding: 1em;
+    border-bottom: 1px solid $color-gray-light-medium;
+
+    .capture-url {
+      margin-bottom: 1em;
+
+      a {
+        text-decoration: none;
+        font-weight: 400;
+      }
+    }
+  }
+
+  .capture-detail-container {
+    background-color: $color-white;
+    padding: 1em;
+    border-left: 1px solid $color-gray-light-medium;
+  }
+
 }

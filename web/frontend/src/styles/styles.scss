@@ -29,31 +29,6 @@
   }
 }
 
-.captures-list {
-  background-color: $color-white;
-  padding: 0;
-
-  li {
-    list-style: none;
-    padding: 1em;
-    border-bottom: 1px solid $color-gray-light-medium;
-
-    .capture-url {
-      margin-bottom: 1em;
-
-      a {
-        text-decoration: none;
-        font-weight: 400;
-      }
-    }
-  }
-}
-
-.capture-detail-container {
-  background-color: $color-white;
-  padding: 1em;
-  border-left: 1px solid $color-gray-light-medium;
-}
 
 // login-page
 .login-page-container {
