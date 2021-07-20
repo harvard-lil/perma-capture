@@ -4,16 +4,12 @@
     <div class="enter-container" v-if="allow_signups">
       <BaseForm :title="'Sign up'"
                 :fields="fields"
-                submitText="Log in"
-                :action="doLogin"/>
+                submitText="Sign up"
+                :action="signUp"/>
 
       <p class="small">
-        Don't have an account?
-        <router-link :to="{name: 'sign_up'}">Sign up</router-link>
-      </p>
-      <p class="small">
-        Forgot your password?
-        <router-link :to="{name: 'password_reset'}">Reset password</router-link>
+        Have an account?
+        <router-link :to="{name: 'login'}">Log in</router-link>
       </p>
     </div>
     <div class="enter-container" v-else>
@@ -63,15 +59,16 @@ export default {
   ]),
   data: () => ({
     fields: [
-      {name: 'username', label: 'Email'},
-      {name: 'password', type: 'password'},
-      {name: 'password confirm', type: 'password'}
+      {name: 'first_name', label: 'First name'},
+      {name: 'last_name', label: 'Last name'},
+      {name: 'email', label: 'Email'},
     ]
   }),
   methods: {
-    ...mapActions(['login']),
-    doLogin(params) {
-      return this.login(params).then(() => window.location = '/')
+    ...mapActions(['signup']),
+    signUp(params) {
+      console.log('getting params::::', params)
+      return this.signup(params).then(() => window.location = '/')
     }
   }
 
