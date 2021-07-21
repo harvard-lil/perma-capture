@@ -1,5 +1,64 @@
+/* Fixes overflow: auto not working on code blocks */
+.col {
+  min-width: 0
+}
+
+h2:not(:first-child) {
+  margin-top: 3rem;
+}
+
+h2 {
+  font-weight: 300;
+}
+
+h3 {
+  margin-top: 2rem;
+}
+
+h4 {
+  margin-top: 1.5rem;
+}
+
+pre {
+  padding: 1rem;
+  background-color: $color-tan;
+}
+
+.table-of-contents {
+  li {
+    list-style: none;
+    line-height: 3em;
+    border-top: 1px solid #C4C4C4;
+  }
+
+  li > a {
+    text-decoration: none;
+    color: $color-gray-medium;
+  }
+
+  li:first-child {
+    border-top: 1px solid $color-black;
+
+    a {
+      color: $color-black;
+    }
+  }
+
+  ul {
+    li:first-child {
+      border-top: 1px solid $color-black;
+
+      a {
+        color: $color-black;
+      }
+    }
+  }
+
+}
+
 .docs-page-container {
   background-color: $color-gray-light-medium;
+
   .docs.container {
     background-color: $color-white;
     display: grid;
@@ -8,6 +67,7 @@
 
     .table-of-contents {
       grid-area: toc;
+      padding: 0 1.5em;
     }
 
     .content {

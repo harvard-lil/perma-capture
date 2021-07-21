@@ -24,6 +24,12 @@ h1 {
   min-height: 90vh;
 }
 
+.container-full > .container {
+  @include media-breakpoint-down(lg) {
+    min-width: 100%;
+  }
+}
+
 .form-control {
   border-radius: 0;
   //padding-left: 0;

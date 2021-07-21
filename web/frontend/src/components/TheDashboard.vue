@@ -44,5 +44,7 @@ export default {
 }
 </script>
 
-<style scoped>
+<style lang="scss">
+@import "../styles/styles";
+@import "../styles/_pages/dashboard";
 </style>

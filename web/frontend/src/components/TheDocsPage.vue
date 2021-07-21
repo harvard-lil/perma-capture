@@ -82,8 +82,7 @@
           header:
         </p>
 
-        <pre><code>curl -H "Authorization: Token {{ auth_token_key }}" {{ base_url }}...
-    </code></pre>
+        <pre><code>curl -H "Authorization: Token {{ auth_token_key }}" {{ base_url }}...</code></pre>
 
         <h4 id="capturing-endpoints">Endpoints</h4>
 
@@ -112,16 +111,11 @@
         "tag": "my-batch", \
         "userDataField": "foo=bar&boo=baz" \
         }' \
-        {{ base_url + '/captures/' }}
-    </code></pre>
+        {{ base_url + '/captures/' }}</code></pre>
 
         <p>The response, on success, will be a JSON dictionary including a jobid for each submitted URL:</p>
 
-        <pre><code>{
-        "urls": 2,
-        "jobids": ["uuid4-1", "uuid4-2"]
-        }
-    </code></pre>
+        <pre><code>{"urls": 2, "jobids": ["uuid4-1", "uuid4-2"]}</code></pre>
 
         <p>You can then query <code>{{ base_url + '/captures/' }}</code> to see all the capture jobs you have in the
           system:</p>
@@ -473,26 +467,9 @@ export default {
 // script async src="https://platform.twitter.com/widgets.js" charset="utf-8"
 </script>
 
-<style>
-/* Fixes overflow: auto not working on code blocks */
-.col {
-  min-width: 0
-}
+<style lang="scss">
+@import "../styles/styles";
+@import "../styles/_pages/docs";
 
-h2:not(:first-child) {
-  margin-top: 3rem;
-}
 
-h3 {
-  margin-top: 2rem;
-}
-
-h4 {
-  margin-top: 1.5rem;
-}
-
-pre {
-  padding: 1rem;
-  background-color: var(--color-background);
-}
 </style>

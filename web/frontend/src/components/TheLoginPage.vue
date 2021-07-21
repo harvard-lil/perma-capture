@@ -46,3 +46,8 @@ export default {
   }
 }
 </script>
+<style lang="scss">
+@import "../styles/styles";
+@import "../styles/_pages/login-page";
+</style>
+
