@@ -2,7 +2,7 @@
   <div class="capture-dashboard container" :class="{'capture-detail': !$store.getters.isMobile && capture}">
     <CaptureForm/>
     <CaptureList/>
-    <capture-detail v-if="!isMobile && capture" :capture="capture" />
+    <capture-detail v-if="!isMobile && capture" :capture="capture"/>
   </div>
 </template>
 
@@ -41,7 +41,9 @@ export default {
           }, 250)
       );
     });
-
+    const replay = document.createElement('script')
+    replay.setAttribute('src', 'https://cdn.jsdelivr.net/npm/replaywebpage@1.3.9/ui.js')
+    document.head.appendChild(replay)
   }
 }
 </script>
