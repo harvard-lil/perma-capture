@@ -1,20 +1,34 @@
 .capture-dashboard {
   display: grid;
   grid-template-areas: "sidebar captures";
-  grid-template-columns: 30% 70%;
+  grid-template-columns: 28% 72%;
   @include media-breakpoint-up(lg) {
     &.capture-detail {
       grid-template-areas: "sidebar captures capture-detail";
       grid-template-columns: 20% 50% 30%;
     }
   }
-  // if smaller screen, make dashboard container full-width
   @include media-breakpoint-down(md) {
-    min-width: 100%;
-    padding: 0;
-    grid-template-areas: "sidebar captures";
-    grid-template-columns: 30% 80%;
+    padding: 0 !important;
   }
+  // if smaller screen, make dashboard container full-width
+  @include media-breakpoint-only(md) {
+    min-width: 100%;
+    grid-template-areas: "sidebar captures";
+    grid-template-columns: 45% 55%;
+  }
+
+  @include media-breakpoint-down(sm) {
+    min-width: 100%;
+    grid-template-areas:
+                  "sidebar"
+                  "captures";
+    grid-template-columns: 100%;
+    .captures-header {
+      display: none;
+    }
+  }
+
 
   .capture-form {
     grid-area: sidebar;
@@ -25,8 +39,11 @@
     background-color: $color-white;
     padding: 0;
 
-    h4 {
-      padding-left: 0.5em;
+    .captures-header {
+      padding-left: 1em;
+      h4 {
+        font-weight: $font-weight-normal;
+      }
     }
   }
 
@@ -38,25 +55,160 @@
     font-weight: 300;
   }
 
-  li {
-    list-style: none;
-    padding: 1em;
-    border-bottom: 1px solid $color-gray-light-medium;
-
-    .capture-url {
-      margin-bottom: 1em;
-
-      a {
-        text-decoration: none;
-        font-weight: 400;
-      }
-    }
-  }
 
   .capture-detail-container {
     background-color: $color-white;
     padding: 1em;
     border-left: 1px solid $color-gray-light-medium;
   }
+}
 
+// LIST ITEM PARTS
+.favicon {
+  grid-area: favicon;
+}
+
+.capture-url {
+  grid-area: url;
+}
+
+
+.capture-title {
+  grid-area: title;
+}
+
+.recorded-date {
+  grid-area: recorded-date;
+}
+
+.expired-date {
+  grid-area: expired-date;
+  text-align: right;
+}
+
+.btn-group {
+  display: grid;
+  grid-template-areas: "download arrow";
+}
+
+.replay-toggle {
+  grid-area: arrow;
+}
+
+.download-button {
+  grid-area: download;
+  border-radius: 50%;
+  background-color: $color-white;
+  color: $color-blue;
+  border: 2px solid $color-blue;
+  font-weight: 500;
+}
+
+.capture-url {
+  margin-bottom: 1em;
+
+  a {
+    text-decoration: none;
+    font-weight: 400;
+  }
+}
+
+.form-submit-container {
+  display: grid;
+  grid-template: "btn-create warning" auto;
+}
+
+.btn-create {
+  grid-area: btn-create;
+  margin-right: 1em;
+  @include media-breakpoint-between(sm, md) {
+    grid-column: auto / span 2;
+  }
+}
+
+// LIST ITEM GRID
+.capture-list-item {
+  list-style: none;
+  padding: 1em;
+  border-bottom: 1px solid $color-gray-light-medium;
+  background-color: rgba(196, 196, 196, 12%);
+  display: grid;
+
+  &.active {
+    background-color: $color-white;
+  }
+
+  @include media-breakpoint-up(lg) {
+    grid-template-areas:
+            "favicon title title arrow"
+            ". url url url"
+            ". recorded-date expired-date expired-date";
+    grid-template-columns: 5% 3fr 3fr 1fr 5%;
+    .download-button {
+      display: none;
+    }
+  }
+
+  @include media-breakpoint-down(lg) {
+    grid-template-areas:
+            "favicon title title title btn-group"
+            "url url url url url"
+            "recorded-date recorded-date recorded-date expired-date expired-date";
+    grid-template-columns: 5% 1fr 1fr 1fr 1fr;
+  }
+
+  @include media-breakpoint-down(sm) {
+    grid-template-areas: "url arrow download";
+    grid-template-columns: 80% 10% 10%;
+    .capture-title,
+    .recorded-date,
+    .expired-date,
+    .favicon {
+      display: none;
+    }
+    h1 {
+      font-weight: 400;
+    }
+    .replay-toggle {
+      transform: rotate(90deg);
+    }
+    .capture-url {
+      margin: 0;
+    }
+  }
+}
+
+.status {
+  font-size: 1em;
+}
+
+.contextItem {
+  display: block;
+  overflow: hidden;
+  max-height: 200px;
+}
+
+.replay {
+  min-height: 500px;
+  height: 75vh;
+}
+
+.replay-toggle.active::before {
+  transform: rotate(180deg);
+}
+
+/* Without setting the transition timing on the parent, Vue will not add transition states for the child elements to use */
+.slide-enter-active,
+.slide-leave-active,
+.slide-enter-active .contextItem,
+.slide-leave-active .contextItem,
+.replay-toggle::before {
+  transition: all 0.2s;
+}
+
+.slide-enter-from .contextItem,
+.slide-leave-to .contextItem {
+  height: 0;
+  min-height: 0;
+  max-height: 0;
 }

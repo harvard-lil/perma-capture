@@ -1,12 +1,14 @@
 <template>
   <div class="captures-list">
-    <h4>Capture history</h4>
+    <header class="captures-header">
+      <h4 class="list-title">Capture history</h4>
+    </header>
     <ul>
       <CaptureListItem
-            v-for="capture in captures(sortBy, sortDesc)"
-            :key="capture.id"
-            :capture="capture"
-        />
+          v-for="capture in captures(sortBy, sortDesc)"
+          :key="capture.id"
+          :capture="capture"
+      />
     </ul>
   </div>
 

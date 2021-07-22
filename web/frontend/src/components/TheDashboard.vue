@@ -2,7 +2,7 @@
   <div class="capture-dashboard container" :class="{'capture-detail': !$store.getters.isMobile && capture}">
     <CaptureForm/>
     <CaptureList/>
-    <capture-detail v-if="!$store.getters.isMobile && capture" :capture="capture" />
+    <capture-detail v-if="!isMobile && capture" :capture="capture" />
   </div>
 </template>
 
@@ -22,6 +22,9 @@ export default {
   computed: {
     capture() {
       return this.$store.getters.capture;
+    },
+    isMobile() {
+      return this.$store.getters.isMobile;
     }
   },
   watch: {
@@ -29,8 +32,7 @@ export default {
       return this.$store.getters.capture;
     }
   },
-  methods: {
-  },
+
   mounted() {
     this.$store.commit('setWindowWidth')
     this.$nextTick(() => {

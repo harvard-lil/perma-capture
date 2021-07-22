@@ -1,5 +1,6 @@
 <template>
   <div class="capture-detail-container">
+    <h6>Recorded {{ capture.created_at }} </h6>
     <h3>{{ capture.requested_url }}</h3>
     <div>
       <div v-if="capture.message" class="contextItem">
