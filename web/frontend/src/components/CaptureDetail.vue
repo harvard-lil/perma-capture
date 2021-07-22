@@ -19,10 +19,6 @@
 export default {
   name: "CaptureDetail",
   props: ["capture"],
-
-  data() {
-    return {}
-  },
   computed: {
     downloadUrl() {
       return this.capture.archive ? this.capture.archive.download_url : null

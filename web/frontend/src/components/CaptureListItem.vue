@@ -1,5 +1,5 @@
 <template>
-  <li :class="{'active': active}" class="capture-list-item">
+  <li :class="{'active': active, 'details-shown': displayContext}" class="capture-list-item">
     <!--    <span class="status badge" :class="`bg-${statusBG}`">-->
     <!--      <span v-if="isProcessing" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>-->
     <!--      <span v-else-if="hasFailed" class="bi bi-x"></span>-->

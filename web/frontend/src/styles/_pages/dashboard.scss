@@ -8,14 +8,18 @@
       grid-template-columns: 20% 50% 30%;
     }
   }
-  @include media-breakpoint-down(md) {
+  // if smaller screen, make dashboard container full-width
+  @include media-breakpoint-down(lg) {
     padding: 0 !important;
   }
-  // if smaller screen, make dashboard container full-width
-  @include media-breakpoint-only(md) {
+  @include media-breakpoint-between(md, lg) {
     min-width: 100%;
     grid-template-areas: "sidebar captures";
-    grid-template-columns: 45% 55%;
+    grid-template-columns: 35% 65%;
+    &.capture-detail {
+      grid-template-areas: "sidebar captures capture-detail";
+      grid-template-columns: 20% 30% 50%;
+    }
   }
 
   @include media-breakpoint-down(sm) {
@@ -41,6 +45,7 @@
 
     .captures-header {
       padding-left: 1em;
+
       h4 {
         font-weight: $font-weight-normal;
       }
@@ -148,13 +153,30 @@
       display: none;
     }
   }
-
-  @include media-breakpoint-down(lg) {
+  // Mobile
+  @include media-breakpoint-between(md, lg) {
     grid-template-areas:
             "favicon title title title btn-group"
             "url url url url url"
             "recorded-date recorded-date recorded-date expired-date expired-date";
     grid-template-columns: 5% 1fr 1fr 1fr 1fr;
+    background-color: #f2e7c3 !important;
+  }
+
+
+  @include media-breakpoint-down(md) {
+    grid-template-areas:
+              "url btn-group"
+              "capture-detail capture-detail";
+    grid-template-columns: 85% 15%;
+    background-color: palegreen !important;
+    .favicon, .capture-title,
+    .recorded-date, .expired-date {
+      display: none;
+    }
+    .replay-toggle {
+      transform: rotate(90deg);
+    }
   }
 
   @include media-breakpoint-down(sm) {
@@ -168,9 +190,6 @@
     }
     h1 {
       font-weight: 400;
-    }
-    .replay-toggle {
-      transform: rotate(90deg);
     }
     .capture-url {
       margin: 0;
