@@ -10,7 +10,6 @@
 import CaptureForm from './CaptureForm.vue'
 import CaptureList from './CaptureList.vue'
 import CaptureDetail from './CaptureDetail.vue'
-import store from '../store/index.ts';
 import {debounce} from '../lib/helpers';
 
 export default {

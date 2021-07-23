@@ -15,8 +15,8 @@ export function getCookie(name) {
     return cookieValue;
 }
 
-export function snakeToPascal(str='') {
-    return str.split('_').map(word => word.slice(0,1).toUpperCase() + word.slice(1)).join('');
+export function snakeToPascal(str = '') {
+    return str.split('_').map(word => word.slice(0, 1).toUpperCase() + word.slice(1)).join('');
 }
 
 export function objectSubset(keys, source) {
@@ -37,5 +37,9 @@ export function debounce(func, wait = 500) {
             func.apply(this, args);
         }, wait);
     }
+}
 
+export function formatDate(date) {
+  let options = {year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric'};
+  return (new Date(date)).toLocaleDateString("en-US", options)
 }

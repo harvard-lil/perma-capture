@@ -17,8 +17,8 @@
     <!--    <label>{{ capture.label }}</label>-->
     <!--      <td><input class="form-check-input" type="checkbox" v-model="capture.capture_oembed_view" id="flexCheckDisabled"-->
     <!--               disabled></td>-->
-    <span class="secondary-text recorded-date">Recorded {{ formatDate(capture.created_at) }}</span>&nbsp;
-    <span v-if="active" class="warning-text expired-date">Expires in {{ formatDate(capture.capture_end_time) }}</span>
+    <span class="secondary-text recorded-date">Recorded {{ getDate(capture.created_at) }}</span>&nbsp;
+    <span v-if="active" class="warning-text expired-date">Expires in {{ getDate(capture.capture_end_time) }}</span>
     <span v-else class="expired-date">Expired</span>
     <br/>
     <!--    <a v-if="capture.message" role="button" class="btn btn-primary bi bi-question-diamond"-->
@@ -39,6 +39,7 @@ import {TransitionalStates, FailureStates, SuccessStates} from '../constants/cap
 import {snakeToPascal} from '../lib/helpers'
 import store from '../store/index.ts';
 import CaptureDetail from './CaptureDetail.vue'
+import {formatDate} from '../lib/helpers';
 
 export default {
   components: {
@@ -89,10 +90,9 @@ export default {
       // set this as capture if toggling to show capture
       this.displayContext ? store.commit('setCapture', capture) : store.commit('setCapture', undefined)
     },
-    formatDate(date) {
-      let options = {year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric'};
-      return (new Date(date)).toLocaleDateString("en-US", options)
-    },
+    getDate(date) {
+      return formatDate(date);
+    }
   },
 }
 </script>
