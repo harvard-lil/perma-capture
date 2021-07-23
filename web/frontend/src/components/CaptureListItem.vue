@@ -1,16 +1,21 @@
 <template>
-  <li :class="{'active': active, 'details-shown': displayContext}" class="capture-list-item">
-    <!--    <span class="status badge" :class="`bg-${statusBG}`">-->
-    <!--      <span v-if="isProcessing" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>-->
-    <!--      <span v-else-if="hasFailed" class="bi bi-x"></span>-->
-    <!--      <span v-else class="bi bi-check"></span>-->
-    <!--    </span>-->
+  <li :class="{'active': !(hasFailed || isProcessing) && active, 'details-shown': displayContext}" class="capture-list-item">
     <div class="favicon">🔗</div>
     <h6 class="capture-title">Lorem Ipsum title</h6>
     <div class="btn-group" v-if="downloadUrl">
-      <a role="button" class="btn btn-primary bi bi-download download-button" :href="downloadUrl"></a>
-      <a role="button" class="btn bi bi-chevron-right replay-toggle" :class="{active: displayContext}"
-         @click="toggleCaptureDetails(capture)"></a>
+      <span v-if="isProcessing"
+            class="status-icon spinner spinner-border spinner-border-sm"
+            role="status" aria-hidden="true">
+      </span>
+      <span v-else-if="hasFailed" class="status-icon bi bi-x"> </span>
+
+      <!--  on success  -->
+      <template v-else>
+        <span class="status-icon bi bi-check"></span>
+        <a role="button" class="btn btn-primary bi bi-download download-button" :href="downloadUrl"></a>
+        <a role="button" class="btn bi bi-chevron-right replay-toggle" :class="{active: displayContext}"
+           @click="toggleCaptureDetails(capture)"></a>
+      </template>
     </div>
 
     <a class="capture-url" :href="url">{{ url }}</a>

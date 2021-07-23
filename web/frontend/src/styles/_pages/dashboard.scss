@@ -94,6 +94,16 @@
 .btn-group {
   display: grid;
   grid-template-areas: "download arrow";
+
+  .status-icon  {
+    font-weight: 400;
+    line-height: 1.5;
+    padding: 0.375rem 0.75rem;
+  }
+  .status-icon.spinner {
+    color: $color-blue;
+    padding: 0.75rem;
+  }
 }
 
 .replay-toggle {
