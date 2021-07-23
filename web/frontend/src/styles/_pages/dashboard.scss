@@ -59,12 +59,15 @@
   h1 {
     font-weight: 300;
   }
+}
 
+.capture-detail-container {
+  background-color: $color-white;
+  padding: 1em;
+  border-left: 1px solid $color-gray-light-medium;
 
-  .capture-detail-container {
-    background-color: $color-white;
-    padding: 1em;
-    border-left: 1px solid $color-gray-light-medium;
+  .data-group {
+    margin-bottom: 1em;
   }
 }
 
@@ -93,15 +96,16 @@
 
 .btn-group {
   display: grid;
-  grid-template-areas: "download arrow";
+  grid-template-areas: "status download arrow";
 
-  .status-icon  {
+  .status-icon {
     font-weight: 400;
     line-height: 1.5;
     padding: 0.375rem 0.75rem;
-  }
-  .status-icon.spinner {
     color: $color-blue;
+  }
+
+  .status-icon.spinner {
     padding: 0.75rem;
   }
 }
@@ -110,13 +114,21 @@
   grid-area: arrow;
 }
 
-.download-button {
+.bi-download.download-button {
   grid-area: download;
-  border-radius: 50%;
   background-color: $color-white;
   color: $color-blue;
-  border: 2px solid $color-blue;
   font-weight: 500;
+  border-radius: 100%;
+  width: 2em;
+  height: 2em;
+  padding: 0.2em;
+  border: 0.1em solid $color-blue;
+
+  &:hover, &:active {
+    background-color: $color-blue;
+    color: $color-white;
+  }
 }
 
 .capture-url {
@@ -144,21 +156,32 @@
 // LIST ITEM GRID
 .capture-list-item {
   list-style: none;
-  padding: 1em;
   border-bottom: 1px solid $color-gray-light-medium;
   background-color: rgba(196, 196, 196, 12%);
-  display: grid;
 
   &.active {
     background-color: $color-white;
   }
+}
 
+.capture-list-item {
+  @include media-breakpoint-up(lg) {
+    &.details-shown {
+      background-color: rgba(63, 119, 230, 6%)
+    }
+  }
+}
+
+.capture-list-item > .content {
+  display: grid;
   @include media-breakpoint-up(lg) {
     grid-template-areas:
-            "favicon title title arrow"
+            "favicon title title btn-group"
             ". url url url"
             ". recorded-date expired-date expired-date";
-    grid-template-columns: 5% 3fr 3fr 1fr 5%;
+    grid-template-columns: 3em 3fr 3fr 2em;
+    padding: 1em;
+
     .download-button {
       display: none;
     }
@@ -169,7 +192,7 @@
             "favicon title title title btn-group"
             "url url url url url"
             "recorded-date recorded-date recorded-date expired-date expired-date";
-    grid-template-columns: 5% 1fr 1fr 1fr 1fr;
+    grid-template-columns: 5% 1fr 1fr 1fr 25%;
   }
 
 
@@ -177,7 +200,7 @@
     grid-template-areas:
               "url btn-group"
               "capture-detail capture-detail";
-    grid-template-columns: 85% 15%;
+    grid-template-columns: 75% 25%;
     .favicon, .capture-title,
     .recorded-date, .expired-date {
       display: none;
@@ -187,6 +210,13 @@
     }
     .capture-detail-container {
       border-left: 0;
+      background-color: $color-tan;
+    }
+    .capture-url {
+      margin: 1em;
+    }
+    .btn-group {
+      margin: 1em;
     }
   }
 
@@ -247,6 +277,7 @@
   overflow: hidden;
   position: relative;
   border: 1px solid $color-black;
+  margin-bottom: 1.5em;
 }
 
 .iframe-container iframe {
