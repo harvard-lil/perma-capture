@@ -8,7 +8,7 @@
     </div>
     <div class="data-group">
       <h6>Submitted URL</h6>
-      <a href="capture.requested_url">{{ capture.requested_url }}</a>
+      <a :href="capture.validated_url">{{ capture.requested_url }}</a>
     </div>
     <div class="data-group">
       <div v-if="capture.message" class="contextItem">
