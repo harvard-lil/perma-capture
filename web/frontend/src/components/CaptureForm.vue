@@ -9,7 +9,6 @@
       <h2 class="subtitle">Enter one or more URLs to capture it in a downloadable archive.</h2>
       <div class="mb-3">
         <h1 class="text-center display-5">{{ head }}</h1>
-        <p class="text-center" v-if="subhead">{{ subhead }}</p>
 
         <textarea v-model="requested_urls" id="requested_urls" class="form-control" rows="3" required=""
                   placeholder="Enter one or more URLs on each line" aria-describedby="urls-errors"

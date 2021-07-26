@@ -1,8 +1,8 @@
 @import "vars-global";
 @import "fonts";
+@import "forms";
 
 // RESET STYLES
-
 html, body {
   font-family: $font-family-sans-serif;
 }
@@ -20,24 +20,17 @@ h1 {
   }
 }
 
-.container-full {
-  min-height: 90vh;
-}
-
-.container-full > .container {
-  @include media-breakpoint-down(lg) {
-    min-width: 100%;
-  }
-}
-
 .form-control {
   border-radius: 0;
-  //padding-left: 0;
 }
 
 .form-control::placeholder {
   color: $color-gray;
   font-weight: 400;
+}
+
+.form-control:disabled, .form-control[readonly] {
+  background-color: $color-gray-light-darker;
 }
 
 .btn {

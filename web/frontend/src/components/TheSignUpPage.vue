@@ -1,5 +1,5 @@
 <template>
-  <div class="container-full login-page-container">
+  <div class="container-full two-col login-page-container">
     <WelcomeMessage/>
     <div class="enter-container" v-if="allow_signups">
       <BaseForm :title="'Sign up'"
