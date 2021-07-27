@@ -221,8 +221,10 @@
   }
 
   @include media-breakpoint-down(sm) {
-    grid-template-areas: "url arrow download";
-    grid-template-columns: 80% 10% 10%;
+    grid-template-areas:
+            "url arrow download"
+            "capture-detail capture-detail capture-detail";
+    grid-template-columns: 75% 15% 10%;
     .capture-title,
     .recorded-date,
     .expired-date,
@@ -231,9 +233,6 @@
     }
     h1 {
       font-weight: 400;
-    }
-    .capture-url {
-      margin: 0;
     }
   }
 }
