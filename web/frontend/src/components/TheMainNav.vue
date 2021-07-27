@@ -1,10 +1,10 @@
 <template>
   <div v-if="is_authenticated" class="dropdown">
-    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown"
+    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdown-menu-nav" data-bs-toggle="dropdown"
             aria-expanded="false">
       {{ first_name }}
     </button>
-    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton1">
+    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdown-menu-nav">
       <li>
         <router-link :to="{name: 'root'}" class="dropdown-item">Dashboard</router-link>
       </li>
@@ -55,10 +55,5 @@ export default {
 </script>
 
 <style scoped>
-.dropdown-toggle {
-  background-color: white;
-  color: black;
-  border-color: var(--color-background);
-  padding: 1em;
-}
+
 </style>

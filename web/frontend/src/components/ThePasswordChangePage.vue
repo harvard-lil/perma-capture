@@ -1,23 +1,22 @@
 <template>
-<TheMainHeader
-  head="Change password"/>
-<div class="row justify-content-center">
-  <BaseForm :fields="fields"
-            :action="changePassword"
-            class="col-4"/>
-</div>
+  <div class="container-full two-col login-page-container ">
+    <div class="enter-container">
+      <BaseForm :title="'Password change'"
+                :fields="fields"
+                :action="changePassword"/>
+    </div>
+  </div>
 </template>
 
 <script lang="ts">
-import { createNamespacedHelpers } from 'vuex'
-const { mapActions } = createNamespacedHelpers('user')
+import {createNamespacedHelpers} from 'vuex'
 
-import TheMainHeader from './TheMainHeader.vue'
+const {mapActions} = createNamespacedHelpers('user')
+
 import BaseForm from './BaseForm.vue'
 
 export default {
   components: {
-    TheMainHeader,
     BaseForm
   },
   data: () => ({
@@ -33,5 +32,7 @@ export default {
 }
 </script>
 
-<style scoped>
+<style lang="scss">
+@import "../styles/styles.scss";
+@import "../styles/_pages/login-page";
 </style>
