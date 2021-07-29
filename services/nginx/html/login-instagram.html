@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Log in | Instagram | Capture Challenges Test Suite</title>
+    <script src="./login.js"></script>
+</head>
+<body>
+    <div id="login">
+        <h1>Log in to Test Instagram</h1>
+        <form method="POST" onformdata="login(event, 'password');">
+            <label for="user">Phone number, username, or email</label>
+            <input id="user" autocapitalize="off" autocorrect="off" maxlength="75" name="username" type="text" autocomplete="off" >
+
+            <label for="pass">Password</label>
+            <input id="pass" autocapitalize="off" autocorrect="off" name="password" type="password">
+
+            <button type="submit">Log in</button>
+        </form>
+    </div>
+    <div id="success" style="display: none;">
+        Login Succeeded
+    </div>
+    <div id="error" style="display: none;">
+        Login Failed
+    </div>
+</body>
+</html>

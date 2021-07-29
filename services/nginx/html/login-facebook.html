@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Log in | Facebook | Capture Challenges Test Suite</title>
+    <script src="./login.js"></script>
+</head>
+<body>
+    <div id="login">
+        <h1>Log in to Test Facebook</h1>
+        <form method="POST" onformdata="login(event, 'pass');">
+            <label for="email">Email or Phone number</label>
+            <!-- In real life, the name of the field is "email", but this version of Browsertrix only supports "user" -->
+            <!-- <input type="text" name="email" id="email" autofocus="1" autocomplete="off"> -->
+            <input type="text" name="user" id="email" autofocus="1" autocomplete="off">
+
+            <label for="pass">Password</label>
+            <input type="password" name="pass" id="pass" autocomplete="off">
+
+            <button type="submit">Log in</button>
+        </form>
+    </div>
+    <div id="success" style="display: none;">
+        Login Succeeded
+    </div>
+    <div id="error" style="display: none;">
+        Login Failed
+    </div>
+</body>
+</html>

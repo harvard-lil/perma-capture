@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Log in | Twitter | Capture Challenges Test Suite</title>
+    <script src="./login.js"></script>
+</head>
+<body>
+    <div id="login">
+        <h1>Log in to Test Twitter</h1>
+        <form method="POST" onformdata="login(event, 'session[password]');">
+            <label for="user">Phone, email, or username</label>
+            <input id="user" autocapitalize="none" autocomplete="off" autocorrect="off" name="session[username_or_email]" spellcheck="false" type="text" dir="auto">
+
+            <label for="pass">Password</label>
+            <input id="pass" autocapitalize="none" autocomplete="off" autocorrect="off" name="session[password]" spellcheck="false" type="password" dir="auto">
+
+            <button type="submit">Log in</button>
+        </form>
+    </div>
+    <div id="success" style="display: none;">
+        Login Succeeded
+    </div>
+    <div id="error" style="display: none;">
+        Login Failed
+    </div>
+</body>
+</html>
