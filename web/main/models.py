@@ -462,6 +462,14 @@ class ProfileCaptureJob(Job):
 
         return job
 
+    @property
+    def has_profile(self):
+        try:
+            self.profile
+        except ObjectDoesNotExist:
+            return False
+        return True
+
 
 
 class Profile(TimestampedModel):
@@ -505,7 +513,7 @@ class Profile(TimestampedModel):
         """
         A method for use by the storage helper `profile_job_directory`. Must be defined on both ProfileCaptureJob and Profile.
         """
-        return self.profile_capture_job.id
+        return self.profile_capture_job_id
 
 
 class UserManager(BaseUserManager):

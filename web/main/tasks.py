@@ -198,7 +198,7 @@ def run_next_capture():
 
     >>> orig_inc_progress = inc_progress
     >>> mock_inc_progress = mocker.patch('main.tasks.inc_progress')
-    >>> def run_test_capture(url, stop_before_step=None, throw=None, capture_job_extra_kwargs=None):
+    >>> def run_test_capture(url, stop_before_step=None, capture_job_extra_kwargs=None):
     ...     if stop_before_step:
     ...         mock_inc_progress.side_effect = raise_on_call(orig_inc_progress, stop_before_step + 1, HaltCaptureException)
     ...     else:
@@ -258,8 +258,8 @@ def run_next_capture():
 
     # A domain where logged-in capture is not supported:
 
-    # >>> job = run_test_capture(no_profile_domain)
-    # >>> assert_succeeded(job, with_profile=None)
+    >>> job = run_test_capture(no_profile_domain)
+    >>> assert_succeeded(job, with_profile=None)
 
     A domain where logged-in capture is supported:
 
@@ -267,13 +267,13 @@ def run_next_capture():
     >>> job = run_test_capture(f'http://{profile_domain}/page', capture_job_extra_kwargs={'headless': profile.headless})
     >>> assert_succeeded(job, with_profile=profile)
 
-    # ... and profile.headless == capture job.headless, but capture_job.log_in_if_supported == False
-    # >>> job = run_test_capture(f'http://{profile_domain}/page', capture_job_extra_kwargs={'headless': profile.headless, 'log_in_if_supported': False})
-    # >>> assert_succeeded(job, with_profile=None)
+    ... and profile.headless == capture job.headless, but capture_job.log_in_if_supported == False
+    >>> job = run_test_capture(f'http://{profile_domain}/page', capture_job_extra_kwargs={'headless': profile.headless, 'log_in_if_supported': False})
+    >>> assert_succeeded(job, with_profile=None)
 
-    # ... but profile.headless != capture job.headless
-    # >>> job = run_test_capture(f'http://{profile_domain}/page', capture_job_extra_kwargs={'headless': not profile.headless})
-    # >>> assert_succeeded(job, with_profile=None)
+    ... but profile.headless != capture job.headless
+    >>> job = run_test_capture(f'http://{profile_domain}/page', capture_job_extra_kwargs={'headless': not profile.headless})
+    >>> assert_succeeded(job, with_profile=None)
 
     FAILURE
 
