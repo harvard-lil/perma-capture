@@ -9,12 +9,12 @@
         <router-link :to="{name: 'root'}" class="dropdown-item">Dashboard</router-link>
       </li>
       <li>
-        <router-link :to="{name: 'account'}" class="dropdown-item" href="/user/account/">My Account</router-link>
+        <router-link :to="{name: 'account'}" class="dropdown-item">My Account</router-link>
       </li>
       <li>
         <router-link :to="{name: 'docs'}" class="dropdown-item">User Guide</router-link>
       </li>
-      <li><a class="dropdown-item" href="/user/logout/">Log Out</a></li>
+      <li><a class="dropdown-item">Log Out</a></li>
 
       <template v-if="is_staff">
         <li>
@@ -22,20 +22,19 @@
         </li>
         <li><h6 class="dropdown-header">Admin Only</h6></li>
         <li><a class="dropdown-item" href="/admin/">Django Admin</a></li>
-        <!-- <li><a class="dropdown-item" href="/manage/celery/">Celery Queue Status</a></li>-->
       </template>
     </ul>
   </div>
 
   <ul v-else class="navbar-nav">
     <li class="nav-item">
-      <router-link :to="{name: 'sign_up'}" class="nav-link" href="/sign-up/">Sign up</router-link>
+      <router-link :to="{name: 'sign_up'}" class="nav-link">Sign up</router-link>
     </li>
     <li class="nav-item">
       <router-link :to="{name: 'docs'}" class="nav-link">User Guide</router-link>
     </li>
     <li class="nav-item">
-      <router-link :to="{name: 'login'}" class="nav-link" href="/user/login">Log in</router-link>
+      <router-link :to="{name: 'login'}" class="nav-link">Log in</router-link>
     </li>
   </ul>
 </template>
