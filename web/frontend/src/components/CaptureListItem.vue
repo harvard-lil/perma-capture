@@ -3,7 +3,7 @@
       class="capture-list-item">
     <div class="content">
       <div class="favicon">🔗</div>
-      <h6 class="capture-title">Lorem Ipsum title</h6>
+      <h3 class="h6 capture-title">Lorem Ipsum title</h3>
       <div class="btn-group" v-if="downloadUrl">
       <span v-if="isProcessing"
             class="status-icon spinner spinner-border spinner-border-sm"
