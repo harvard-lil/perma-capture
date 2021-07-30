@@ -1,7 +1,7 @@
 <template>
   <div class="captures-list">
     <header class="captures-header">
-      <h4 class="list-title">Capture history</h4>
+      <h2 class="h4 list-title">Capture history</h2>
     </header>
     <ul>
       <CaptureListItem
