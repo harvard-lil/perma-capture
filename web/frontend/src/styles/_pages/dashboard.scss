@@ -5,7 +5,7 @@
   @include media-breakpoint-up(lg) {
     &.capture-detail {
       grid-template-areas: "sidebar captures capture-detail";
-      grid-template-columns: 25% 45% 30%;
+      grid-template-columns: 25% 35% 40%;
     }
   }
   // if smaller screen, make dashboard container full-width

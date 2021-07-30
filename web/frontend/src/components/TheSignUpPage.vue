@@ -67,7 +67,6 @@ export default {
   methods: {
     ...mapActions(['signup']),
     signUp(params) {
-      console.log('getting params::::', params)
       return this.signup(params).then(() => window.location = '/')
     }
   }

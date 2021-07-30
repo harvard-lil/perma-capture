@@ -14,8 +14,9 @@
         <!--  on success  -->
         <template v-else>
           <!-- <span class="status-icon bi bi-check"></span>-->
-          <a role="button" class="btn bi bi-download download-button" :href="downloadUrl"></a>
-          <a role="button" class="btn bi bi-chevron-right replay-toggle" :class="{active: displayContext}"
+          <a class="btn bi bi-download download-button" :href="downloadUrl"></a>
+          <a class="btn bi bi-chevron-right replay-toggle" :class="{active: displayContext}"
+
              @click="toggleCaptureDetails(capture)"></a>
         </template>
       </div>
@@ -25,11 +26,11 @@
       <!--      <td><input class="form-check-input" type="checkbox" v-model="capture.capture_oembed_view" id="flexCheckDisabled"-->
       <!--               disabled></td>-->
       <span class="secondary-text recorded-date">Recorded {{ getDate(capture.created_at) }}</span>&nbsp;
-      <span v-if="active" class="warning-text expired-date">Expires in {{ getDate(capture.capture_end_time) }}</span>
+      <span v-if="active" class="warning-text expired-date">Expires {{ getDate(capture.capture_end_time) }}</span>
       <span v-else class="expired-date">Expired</span>
       <br/>
-      <template v-if="isMobile && displayContext && $store.getters.capture">
-        <capture-detail v-if="capture.id === $store.getters.capture.id" :capture="capture"/>
+      <template v-if="isMobile && displayContext && capture.id === $store.getters.displayedCapture.id">
+        <capture-detail />
       </template>
     </div>
   </li>
@@ -88,12 +89,21 @@ export default {
       return this.capture.archive ? this.capture.archive.download_url : null
     },
   },
+  watch: {
+    '$store.getters.displayedCapture': function(newcapture) {
+      if (!(newcapture) || newcapture.id !== this.capture.id) {
+        this.displayContext = false;
+      }
+    }
+  },
   methods: {
     ...mapActions(['read']),
     toggleCaptureDetails(capture) {
+
       this.displayContext = !this.displayContext
+
       // set this as capture if toggling to show capture
-      this.displayContext ? store.commit('setCapture', capture) : store.commit('setCapture', undefined)
+      this.displayContext ? store.commit('setDisplayedCapture', capture) : store.commit('setDisplayedCapture', undefined)
     },
     getDate(date) {
       return formatDate(date);

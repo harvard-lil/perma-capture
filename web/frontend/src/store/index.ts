@@ -10,7 +10,7 @@ export default createStore({
     captures
   },
   state: {
-    capture: undefined,
+    displayedCapture: undefined,
     breakpoints: {
       xs: 576,
       sm: 768,
@@ -21,8 +21,8 @@ export default createStore({
     windowWidth: 'xl',
   },
   mutations: {
-    setCapture: (state, capture) => {
-      state.capture = capture;
+    setDisplayedCapture: (state, capture) => {
+      state.displayedCapture = capture;
     },
     setWindowWidth: (state) => {
       if (window.innerWidth <= state.breakpoints.xs) {
@@ -40,8 +40,8 @@ export default createStore({
   },
   actions: {},
   getters: {
-    capture: (state) => {
-      return state.capture;
+    displayedCapture: (state) => {
+      return state.displayedCapture;
     },
     isMobile: (state) => {
       return state.windowWidth === 'sm' || state.windowWidth === 'xs';

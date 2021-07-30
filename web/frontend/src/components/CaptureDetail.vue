@@ -1,32 +1,36 @@
 <template>
-  <div class="capture-detail-container">
+  <div class="capture-detail-container" v-if="displayedCapture">
     <div class="data-group">
-      <span>Recorded {{ getDate(capture.created_at) }}</span>
+      <span>Recorded {{ getDate(displayedCapture.created_at) }}</span>
       <span class="float-end" v-if="!isMobile">
-      <a role="button" class="btn bi bi-download download-button" :href="downloadUrl"></a>
+      <a class="btn bi bi-download download-button" :href="downloadUrl"></a>
     </span>
     </div>
     <div class="data-group">
-      <h6>Submitted URL</h6>
-      <a :href="capture.validated_url">{{ capture.requested_url }}</a>
+      <h3 class="h6">Submitted URL</h3>
+      <a :href="displayedCapture.validated_url">{{ displayedCapture.requested_url }}</a>
+    </div>
+    <div class="data-group" v-if="displayedCapture.label">
+      <h3 class="h6">Labels</h3>
+      <p>{{ displayedCapture.label }}</p>
     </div>
     <div class="data-group">
-      <div v-if="capture.message" class="contextItem">
-        <div class="alert alert-danger">{{ capture.message }}</div>
+      <div v-if="displayedCapture.message" class="contextItem">
+        <div class="alert alert-danger">{{ displayedCapture.message }}</div>
       </div>
     </div>
     <div class="data-group">
-      <h6>Preview</h6>
+      <h3 class="h6">Preview</h3>
       <div class="iframe-container">
         <replay-web-page v-if="downloadUrl"
                          :source="downloadUrl"
-                         :url="capture.url"
+                         :url="displayedCapture.url"
                          replaybase="/replay/"
                          class="replay contextItem"/>
       </div>
     </div>
     <div class="data-group">
-      <h6>Capture size</h6>
+      <h3 class="h6">Capture size</h3>
       <p>{{ size }}MB</p>
     </div>
   </div>
@@ -37,24 +41,25 @@ import {formatDate} from '../lib/helpers';
 
 export default {
   name: "CaptureDetail",
-  props: ["capture"],
 
   computed: {
     downloadUrl() {
-      return this.capture.archive ? this.capture.archive.download_url : null
+      return this.displayedCapture.archive ? this.displayedCapture.archive.download_url : null
     },
     size() {
-      return Number((this.capture.archive.warc_size / (1024 * 1024)).toFixed(2))
+      return Number((this.displayedCapture.archive.warc_size / (1024 * 1024)).toFixed(2))
     },
     isMobile() {
       return this.$store.getters.isMobile;
     },
+    displayedCapture() {
+      return this.$store.getters.displayedCapture;
+    }
   },
   methods: {
     getDate(date) {
       return formatDate(date);
     },
-
   }
 }
 </script>

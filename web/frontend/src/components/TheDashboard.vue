@@ -1,8 +1,9 @@
 <template>
-  <div class="capture-dashboard container" :class="{'capture-detail': !$store.getters.isMobile && capture}">
+  <div class="capture-dashboard container"
+       :class="{'capture-detail': !$store.getters.isMobile && displayedCapture}">
     <CaptureForm/>
     <CaptureList/>
-    <capture-detail v-if="!isMobile && capture" :capture="capture"/>
+    <capture-detail v-if="!isMobile"/>
   </div>
 </template>
 
@@ -19,16 +20,11 @@ export default {
     CaptureDetail
   },
   computed: {
-    capture() {
-      return this.$store.getters.capture;
-    },
     isMobile() {
       return this.$store.getters.isMobile;
-    }
-  },
-  watch: {
-    capture() {
-      return this.$store.getters.capture;
+    },
+    displayedCapture() {
+      return this.$store.getters.displayedCapture;
     }
   },
 
