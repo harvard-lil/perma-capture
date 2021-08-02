@@ -21,7 +21,7 @@
         </template>
       </div>
 
-      <a class="capture-url" :href="url">{{ url }}</a>
+      <a class="capture-url" :href="url" v-text="shortenUrl(url)"></a>
       <!--    <label>{{ capture.label }}</label>-->
       <!--      <td><input class="form-check-input" type="checkbox" v-model="capture.capture_oembed_view" id="flexCheckDisabled"-->
       <!--               disabled></td>-->
@@ -38,14 +38,12 @@
 
 <script lang="ts">
 import {createNamespacedHelpers} from 'vuex'
-
-const {mapActions} = createNamespacedHelpers('captures')
-
-import {TransitionalStates, FailureStates, SuccessStates} from '../constants/captures'
-import {snakeToPascal} from '../lib/helpers'
+import {FailureStates, TransitionalStates} from '../constants/captures'
+import {formatDate, snakeToPascal} from '../lib/helpers'
 import store from '../store/index.ts';
 import CaptureDetail from './CaptureDetail.vue'
-import {formatDate} from '../lib/helpers';
+
+const {mapActions} = createNamespacedHelpers('captures')
 
 export default {
   components: {
@@ -107,7 +105,11 @@ export default {
     },
     getDate(date) {
       return formatDate(date);
-    }
+    },
+    shortenUrl(url) {
+      if (url.length <= 100) return url
+      return url.slice(0, 100) + '...';
+    },
   },
 }
 </script>
