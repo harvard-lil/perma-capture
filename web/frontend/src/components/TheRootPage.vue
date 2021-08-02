@@ -21,7 +21,7 @@ export default {
   beforeMount() {
     // redirect to login if not logged in
     if (!(this.is_authenticated)) {
-      this.$router.push('/user/login/')
+      this.$router.push({name: 'login'})
     }
   }
 }
