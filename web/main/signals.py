@@ -45,6 +45,25 @@ def dispatch_webhook_receiver(sender, **kwargs):
 def launch_profile_capture_job_receiver(sender, **kwargs):
     """
     This receiver is notified when ProfileCaptureJob objects are saved. (See apps.py)
+
+    Given:
+    >>> profile_capture_job_factory, mocker = [getfixture(i) for i in ['profile_capture_job_factory', 'mocker']]
+    >>> create_browser_profile = mocker.patch('main.signals.create_browser_profile')
+    >>> from main.models import ProfileCaptureJob
+
+    Upon the creation of a new ProfileCaptureJob, we launch the job.
+    >>> job = ProfileCaptureJob()
+    >>> job.save()
+    >>> assert create_browser_profile.mock_calls == [
+    ...    call.apply_async(args=[job.id])
+    ... ]
+
+    We do NOT send a duplicate notification if the Archive is subsequently updated.
+    >>> create_browser_profile.reset_mock()
+    >>> assert not job.headless
+    >>> job.headless = True
+    >>> job.save()
+    >>> assert not create_browser_profile.mock_calls
     """
     created = kwargs['created']
     instance = kwargs['instance']
