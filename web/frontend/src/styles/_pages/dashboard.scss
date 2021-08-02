@@ -105,6 +105,9 @@
     line-height: 1.5;
     padding: 0.375rem 0.75rem;
     color: $color-blue;
+    &.bi-x {
+      color: $color-red;
+    }
   }
 
   .status-icon.spinner {

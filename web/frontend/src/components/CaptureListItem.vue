@@ -5,13 +5,11 @@
       <div class="favicon">🔗</div>
       <h3 class="h6 capture-title">Lorem Ipsum title</h3>
       <div class="btn-group">
-      <span v-if="isProcessing"
-            class="status-icon spinner spinner-border spinner-border-sm"
-            role="status" aria-hidden="true">
-      </span>
-
-        <span v-else-if="hasFailed" class="status-icon bi bi-x"> </span>
-
+        <span v-if="isProcessing"
+              class="status-icon spinner spinner-border spinner-border-sm"
+              role="status" aria-hidden="true">
+        </span>
+        <span v-else-if="hasFailed" class="status-icon bi bi-x" aria-label="Capture has failed" role="status"> </span>
         <!--  on success  -->
         <template v-else>
           <a class="btn bi bi-download download-button" :href="downloadUrl"></a>
