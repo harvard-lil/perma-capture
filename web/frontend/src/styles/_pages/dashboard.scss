@@ -45,9 +45,11 @@
 
     .captures-header {
       padding-left: 1em;
+      padding-top: 1em;
 
-      h4 {
+      .list-title {
         font-weight: $font-weight-normal;
+        font-size: 1.4em;
       }
     }
   }

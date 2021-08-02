@@ -10,18 +10,12 @@
       <div class="mb-3">
 
         <textarea v-model="requested_urls" id="requested_urls" class="form-control" rows="3" required=""
-                  placeholder="Enter one or more URLs on each line" aria-describedby="urls-errors"
-                  aria-invalid="false"></textarea>
+                  placeholder="Enter one or more URLs on each line"
+                  aria-label="Enter one or more URLs on each line"></textarea>
       </div>
 
-      <!--    <div clas="mb-3 form-check">-->
-      <!--      <input v-model="capture_oembed_view" id="capture_oembed_view" type="checkbox" class="form-check-input">-->
-      <!--      <label for="capture_oembed_view" class="form-check-label">Archive Embedded Version (if available)</label>-->
-      <!--    </div>-->
-
       <div class="mb-3">
-        <!--      <label for="label" class="form-label">Label (Optional)</label>-->
-        <input v-model="label" placeholder="Label (Optional)" id="label" type="text" class="form-control">
+        <input v-model="label" aria-label="Label (Optional)" placeholder="Label (Optional)" id="label" type="text" class="form-control">
       </div>
       <div class="form-submit-container">
         <button type="submit" class="btn btn-primary btn-create">Create</button>

@@ -13,7 +13,6 @@
 
         <!--  on success  -->
         <template v-else>
-          <!-- <span class="status-icon bi bi-check"></span>-->
           <a class="btn bi bi-download download-button" :href="downloadUrl"></a>
           <a class="btn bi bi-chevron-right replay-toggle" :class="{active: displayContext}"
 
@@ -22,9 +21,6 @@
       </div>
 
       <a class="capture-url" :href="url" v-text="shortenUrl(url)"></a>
-      <!--    <label>{{ capture.label }}</label>-->
-      <!--      <td><input class="form-check-input" type="checkbox" v-model="capture.capture_oembed_view" id="flexCheckDisabled"-->
-      <!--               disabled></td>-->
       <span class="secondary-text recorded-date">Recorded {{ getDate(capture.created_at) }}</span>&nbsp;
       <span v-if="active" class="warning-text expired-date">Expires {{ getDate(capture.capture_end_time) }}</span>
       <span v-else class="expired-date">Expired</span>
