@@ -303,7 +303,7 @@ DEFAULT_S3_STORAGE = {
 OVERRIDE_STORAGE_NETLOC = None
 
 # Browsertrix
-BROWSERTRIX_IMAGE = 'registry.lil.tools/webrecorder/browsertrix-crawler:0.3.0-beta.1'
+BROWSERTRIX_IMAGE = 'registry.lil.tools/webrecorder/browsertrix-crawler:0.3.2'
 BROWSERTRIX_DOCKER_NETWORK = None
 
 BROWSERTRIX_INTERNAL_DATA_DIR = os.environ.get('BROWSERTRIX_INTERNAL_DATA_DIR')
