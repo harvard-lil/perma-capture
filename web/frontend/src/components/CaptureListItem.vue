@@ -4,11 +4,12 @@
     <div class="content">
       <div class="favicon">🔗</div>
       <h3 class="h6 capture-title">Lorem Ipsum title</h3>
-      <div class="btn-group" v-if="downloadUrl">
+      <div class="btn-group">
       <span v-if="isProcessing"
             class="status-icon spinner spinner-border spinner-border-sm"
             role="status" aria-hidden="true">
       </span>
+
         <span v-else-if="hasFailed" class="status-icon bi bi-x"> </span>
 
         <!--  on success  -->
@@ -19,14 +20,13 @@
              @click="toggleCaptureDetails(capture)"></a>
         </template>
       </div>
-
       <a class="capture-url" :href="url" v-text="shortenUrl(url)"></a>
       <span class="secondary-text recorded-date">Recorded {{ getDate(capture.created_at) }}</span>&nbsp;
       <span v-if="active" class="warning-text expired-date">Expires {{ getDate(capture.capture_end_time) }}</span>
       <span v-else class="expired-date">Expired</span>
       <br/>
       <template v-if="isMobile && displayContext && capture.id === $store.getters.displayedCapture.id">
-        <capture-detail />
+        <capture-detail/>
       </template>
     </div>
   </li>
@@ -84,7 +84,7 @@ export default {
     },
   },
   watch: {
-    '$store.getters.displayedCapture': function(newcapture) {
+    '$store.getters.displayedCapture': function (newcapture) {
       if (!(newcapture) || newcapture.id !== this.capture.id) {
         this.displayContext = false;
       }
