@@ -18,5 +18,5 @@ WEBHOOK_MAX_RETRIES = 1
 
 DEFAULT_S3_STORAGE['bucket_name'] += '-test'
 
-BROWSERTRIX_DOCKER_NETWORK = f'{os.environ.get('HOST_DIRECTORY')}_capture-target'
+BROWSERTRIX_DOCKER_NETWORK = f"{os.environ.get('HOST_DIRECTORY')}_capture-target"
 TEST_CAPTURE_TARGET_DOMAINS = os.environ.get('TEST_CAPTURE_TARGET_DOMAINS').split(',')
