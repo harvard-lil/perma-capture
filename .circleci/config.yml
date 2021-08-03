@@ -49,6 +49,7 @@ jobs:
       - run:
           name: "Test Django"
           command: |
+            export HOST_DIRECTORY=project
             docker-compose up -d
             docker-compose exec web ./manage.py collectstatic --noinput   # collect static files
             docker-compose exec web bash -c "cd frontend && yarn install"
