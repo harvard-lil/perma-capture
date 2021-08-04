@@ -1,21 +1,30 @@
 {
   "src/main.ts": {
-    "file": "vite/main.c4614747.js",
+    "file": "vite/main.64c44760.js",
     "src": "src/main.ts",
     "isEntry": true,
     "imports": [
-      "_vendor.2a1b1931.js"
+      "_vendor.828cf2b6.js"
     ],
     "css": [
-      "vite/main.74f1d197.css"
+      "vite/main.7d3e768e.css"
     ],
     "assets": [
+      "vite/perma-logo.6b161a6e.svg",
       "vite/preview.e6fb6c31.svg",
-      "vite/download.757723f9.svg",
+      "vite/download.8d047fcf.svg",
       "vite/dashboard-screenshot.fe6ece90.png",
       "vite/slack-screenshot.46ab25e6.png",
+      "vite/welcome-graphic.bc1da09f.svg",
       "vite/bootstrap-icons.856b3f9e.woff2",
       "vite/bootstrap-icons.492cc153.woff",
+      "vite/roboto-cyrillic-ext-100-normal.ce622382.woff2",
+      "vite/roboto-all-100-normal.c369e3a2.woff",
+      "vite/roboto-cyrillic-100-normal.eb94eb23.woff2",
+      "vite/roboto-greek-100-normal.13a959e3.woff2",
+      "vite/roboto-vietnamese-100-normal.27ab2c76.woff2",
+      "vite/roboto-latin-ext-100-normal.b0781b99.woff2",
+      "vite/roboto-latin-100-normal.12823d58.woff2",
       "vite/roboto-cyrillic-ext-300-normal.4f12c41d.woff2",
       "vite/roboto-all-300-normal.b229babd.woff",
       "vite/roboto-cyrillic-300-normal.081f44d9.woff2",
@@ -30,6 +39,13 @@
       "vite/roboto-vietnamese-400-normal.67afba35.woff2",
       "vite/roboto-latin-ext-400-normal.4c846294.woff2",
       "vite/roboto-latin-400-normal.48c3fa6f.woff2",
+      "vite/roboto-cyrillic-ext-500-normal.1f083966.woff2",
+      "vite/roboto-all-500-normal.9915a79a.woff",
+      "vite/roboto-cyrillic-500-normal.e6bbcc62.woff2",
+      "vite/roboto-greek-500-normal.da6e676d.woff2",
+      "vite/roboto-vietnamese-500-normal.66a6ef37.woff2",
+      "vite/roboto-latin-ext-500-normal.9c7063e4.woff2",
+      "vite/roboto-latin-500-normal.24369e1b.woff2",
       "vite/roboto-cyrillic-ext-900-normal.18e3ec2c.woff2",
       "vite/roboto-all-900-normal.851072ef.woff",
       "vite/roboto-cyrillic-900-normal.1a229106.woff2",
@@ -39,7 +55,7 @@
       "vite/roboto-latin-900-normal.edcdf3f6.woff2"
     ]
   },
-  "_vendor.2a1b1931.js": {
-    "file": "vite/vendor.2a1b1931.js"
+  "_vendor.828cf2b6.js": {
+    "file": "vite/vendor.828cf2b6.js"
   }
 }
