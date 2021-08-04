@@ -1,29 +1,25 @@
 <template>
-<nav class="navbar navbar-expand-lg mb-3 py-3">
-  <div class="container-fluid">
-    <router-link :to="{name: 'root'}" class="navbar-brand">{{ app_name }}</router-link>
-    <TheMainNav/>
-  </div>
-</nav>
+  <nav class="navbar navbar-expand-lg">
+    <div class="container-fluid">
+      <router-link :to="{name: 'root'}" class="navbar-brand">
+        <img alt="Perma logo" title="Perma logo" src="../assets/img/perma-logo.svg">
+        Perma capture
+      </router-link>
+      <TheMainNav/>
+    </div>
+  </nav>
 </template>
 
-<script lang="ts">
-import TheMainNav from './TheMainNav.vue'
-import { createNamespacedHelpers } from 'vuex'
-const { mapState } = createNamespacedHelpers('globals')
+
+<script>
+import TheMainNav from './TheMainNav.vue';
+import {createNamespacedHelpers} from 'vuex';
+
+const {mapState} = createNamespacedHelpers('globals');
 
 export default {
   components: {
-    TheMainNav
+    TheMainNav,
   },
-  computed: mapState([
-    'app_name'
-  ])
 }
 </script>
-
-<style scoped>
-  .navbar-brand {
-    color: var(--color-black);
-  }
-</style>

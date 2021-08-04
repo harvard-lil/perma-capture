@@ -1,0 +1,50 @@
+@import "vars-global";
+@import "fonts";
+@import "forms";
+
+// RESET STYLES
+html, body {
+  font-family: $font-family-sans-serif;
+}
+
+ul {
+  padding: 0;
+}
+
+h1 {
+  @include media-breakpoint-up(md) {
+    font-size: 32px;
+  }
+  @include media-breakpoint-up(lg) {
+    font-size: 36px;
+  }
+}
+
+.form-control {
+  border-radius: 0;
+}
+
+.form-control::placeholder {
+  color: $color-gray;
+  font-weight: 400;
+}
+
+.form-control:disabled, .form-control[readonly] {
+  background-color: $color-gray-light-darker;
+}
+
+.btn {
+  border-radius: 0;
+}
+
+.warning-text {
+  color: $color-red;
+}
+
+.secondary-text {
+  color: $color-gray-dark;
+}
+
+.blue-text {
+  color: $color-blue;
+}

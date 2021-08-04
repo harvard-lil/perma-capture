@@ -1,31 +1,35 @@
 <template>
-<form ref="form"
-      class="capture-form p-3"
-      @submit.prevent="submit"
-      @keydown.shift.enter.exact.prevent="submit"
-      @keydown.meta.enter.exact.prevent="submit">
-  <div class="mb-3">
-    <label for="requested_urls" class="form-label">URLs</label>
-    <textarea v-model="requested_urls" id="requested_urls" class="form-control" rows="3" required="" placeholder="Enter one or more URLs on each line" aria-describedby="urls-errors" aria-invalid="false"></textarea>
-  </div>
-  
-  <div class="mb-3 form-check">
-    <input v-model="capture_oembed_view" id="capture_oembed_view" type="checkbox" class="form-check-input">
-    <label for="capture_oembed_view" class="form-check-label">Archive Embedded Version (if available)</label>
-  </div>
-  
-  <div class="mb-3">
-    <label for="label" class="form-label">Label (Optional)</label>
-    <input v-model="label" id="label" type="text" class="form-control">
-  </div>
-  
-  <button type="submit" class="btn btn-primary mb-3">Capture</button>
-</form>
+  <form ref="form"
+        class="capture-form"
+        @submit.prevent="submit"
+        @keydown.shift.enter.exact.prevent="submit"
+        @keydown.meta.enter.exact.prevent="submit">
+    <div class="form-content">
+      <h1>Create a capture for download</h1>
+      <h2 class="subtitle">Enter one or more URLs to capture it in a downloadable archive.</h2>
+      <div class="mb-3">
+
+        <textarea v-model="requested_urls" id="requested_urls" class="form-control" rows="3" required=""
+                  placeholder="Enter one or more URLs on each line"
+                  aria-label="Enter one or more URLs on each line"></textarea>
+      </div>
+
+      <div class="mb-3">
+        <input v-model="label" aria-label="Label (Optional)" placeholder="Label (Optional)" id="label" type="text" class="form-control">
+      </div>
+      <div class="form-submit-container">
+        <button type="submit" class="btn btn-primary btn-create">Create</button>
+        <span class="warning-text">Captures expire <u>four hours</u> after creation.</span>
+      </div>
+    </div>
+  </form>
 </template>
 
 <script lang="ts">
-import { createNamespacedHelpers } from 'vuex'
-const { mapActions } = createNamespacedHelpers('captures')
+import {createNamespacedHelpers} from 'vuex'
+
+const {mapActions} = createNamespacedHelpers('captures')
+
 
 export default {
   data: () => ({
@@ -49,12 +53,8 @@ export default {
       })))
       this.$refs.form.reset()
     }
-  }
+  },
 }
 </script>
 
-<style scoped>
-.capture-form {
-  background: var(--color-background);
-  }
-</style>
+<style></style>

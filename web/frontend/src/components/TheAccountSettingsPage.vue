@@ -1,27 +1,27 @@
 <template>
-<div class="row mt-5 gx-5">
-  <div class="col">
-    <h2>Profile</h2>
-    <TheUserForm/>
-    
-    <h2>Password</h2>
-    <router-link :to="{name: 'password_change'}" class="btn btn-primary mt-3">
-      Change my password
-    </router-link>
+  <div class="container-full two-col account-page-container">
+    <div class="account-info">
+      <h1>Profile</h1>
+      <TheUserForm/>
+
+      <router-link :to="{name: 'password_change'}" class="btn btn-primary mt-3">
+        Change my password
+      </router-link>
+
+    </div>
+    <div class="api-info">
+      <h1>API</h1>
+      <BaseForm :fields="[{name: 'api-key', label: 'Your API key', value: auth_token.key, readonly: true}]"
+                :action="resetToken"
+                submitText="Get a new key"/>
+    </div>
   </div>
-  
-  <div class="col">
-    <h2>API</h2>
-    <BaseForm :fields="[{name: 'api-key', label: 'Your API key', value: auth_token.key, readonly: true}]"
-          :action="resetToken"
-          submitText="Get a new key"/>
-  </div>
-</div>
 </template>
 
 <script lang="ts">
-import { createNamespacedHelpers } from 'vuex'
-const { mapState, mapActions } = createNamespacedHelpers('user')
+import {createNamespacedHelpers} from 'vuex'
+
+const {mapState, mapActions} = createNamespacedHelpers('user')
 
 import BaseForm from './BaseForm.vue'
 import TheUserForm from './TheUserForm.vue'
@@ -40,5 +40,8 @@ export default {
 }
 </script>
 
-<style scoped>
+
+<style lang="scss">
+@import "../styles/styles.scss";
+@import "../styles/_pages/account-page";
 </style>

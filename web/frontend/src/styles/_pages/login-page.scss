@@ -1,0 +1,22 @@
+.login-page-container {
+  .message {
+    grid-area: col1;
+  }
+
+  .enter-container {
+    grid-area: col2;
+  }
+
+  .btn {
+    text-align: right;
+  }
+
+  @include media-breakpoint-down(sm) {
+    .subtitle {
+      font-size: 1em;
+    }
+    .small {
+      margin-bottom: 0.5em;
+    }
+  }
+}

@@ -1,51 +1,53 @@
 <template>
-<tr>
-  <td>
-    <span class="status badge" :class="`bg-${statusBG}`">
-      <span v-if="isProcessing" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-      <span v-else-if="hasFailed" class="bi bi-x"></span>
-      <span v-else class="bi bi-check"></span>
-    </span>
-  </td>
-  <td><a :href="url">{{ url }}</a></td>
-  <td>{{ capture.label || '-' }}</td>
-  <td><input class="form-check-input" type="checkbox" v-model="capture.capture_oembed_view" id="flexCheckDisabled" disabled></td>
-  <td>{{ formattedDate }}</td>
-  <td>
-    <template v-if="downloadUrl">
-      <a role="button" class="btn btn-primary bi bi-download mx-1" :href="downloadUrl"></a>
-      <a role="button" class="btn btn-primary bi bi-chevron-up mx-1 replayToggle" :class="{active: displayContext}" @click="toggleContext"></a>
-    </template>
-    <a v-if="capture.message" role="button" class="btn btn-primary bi bi-question-diamond mx-1" @click="toggleContext"></a>
-  </td>
-</tr>
-<transition name="slide">
-  <tr v-if="displayContext">
-    <td colspan="999" class="p-0">
-      <div v-if="capture.message" class="contextItem">
-        <div class="alert alert-danger">{{ capture.message }}</div>
+  <li :class="{'active': !(hasFailed || isProcessing) && active, 'details-shown': displayContext}"
+      class="capture-list-item">
+    <div class="content">
+      <div class="favicon">🔗</div>
+      <h3 class="h6 capture-title">Lorem Ipsum title</h3>
+      <div class="btn-group">
+        <span v-if="isProcessing"
+              class="status-icon spinner spinner-border spinner-border-sm"
+              role="status" aria-hidden="true">
+        </span>
+        <span v-else-if="hasFailed" class="status-icon bi bi-x" aria-label="Capture has failed" role="status"> </span>
+        <!--  on success  -->
+        <template v-else>
+          <a class="btn bi bi-download download-button" :href="downloadUrl"></a>
+          <a class="btn bi bi-chevron-right replay-toggle" :class="{active: displayContext}"
+
+             @click="toggleCaptureDetails(capture)"></a>
+        </template>
       </div>
-      <replay-web-page v-if="downloadUrl"
-        :source="downloadUrl"
-        :url="url"
-        replaybase="/replay/"
-        class="replay contextItem"/>
-    </td>
-  </tr>
-</transition>
+      <a class="capture-url" :href="url" v-text="shortenUrl(url)"></a>
+      <template v-if="!isProcessing">
+        <span class="secondary-text recorded-date">Recorded {{ getDate(capture.created_at) }}</span>&nbsp;
+        <span v-if="active" class="warning-text expired-date">Expires {{ getDate(capture.capture_end_time) }}</span>
+        <span v-else class="expired-date">Expired</span>
+      </template>
+      <br/>
+      <template v-if="isMobile && displayContext && capture.id === $store.getters.displayedCapture.id">
+        <capture-detail/>
+      </template>
+    </div>
+  </li>
 </template>
 
 <script lang="ts">
-import { createNamespacedHelpers } from 'vuex'
-const { mapActions } = createNamespacedHelpers('captures')
+import {createNamespacedHelpers} from 'vuex'
+import {FailureStates, TransitionalStates} from '../constants/captures'
+import {formatDate, snakeToPascal} from '../lib/helpers'
+import store from '../store/index.ts';
+import CaptureDetail from './CaptureDetail.vue'
 
-import { TransitionalStates, FailureStates, SuccessStates } from '../constants/captures'
-import { snakeToPascal } from '../lib/helpers'
+const {mapActions} = createNamespacedHelpers('captures')
 
 export default {
+  components: {
+    CaptureDetail
+  },
   props: ['capture'],
   data: () => ({
-    displayContext: false
+    displayContext: false,
   }),
   computed: {
     statusOrDefault() {
@@ -60,8 +62,13 @@ export default {
     url() {
       return this.capture.validated_url || this.capture.requested_url
     },
-    formattedDate() {
-      return (new Date(this.capture.created_at)).toLocaleDateString()
+    active() {
+      let duration = new Date(this.capture.capture_end_time) - new Date(this.capture.created_at);
+      if (duration <= 0) return;
+      return true;
+    },
+    isMobile() {
+      return this.$store.getters.isMobile;
     },
     statusBG() {
       return {
@@ -74,48 +81,31 @@ export default {
     },
     downloadUrl() {
       return this.capture.archive ? this.capture.archive.download_url : null
+    },
+  },
+  watch: {
+    '$store.getters.displayedCapture': function (newcapture) {
+      if (!(newcapture) || newcapture.id !== this.capture.id) {
+        this.displayContext = false;
+      }
     }
   },
   methods: {
     ...mapActions(['read']),
-    toggleContext() {
+    toggleCaptureDetails(capture) {
+
       this.displayContext = !this.displayContext
-    }
-  }
+
+      // set this as capture if toggling to show capture
+      this.displayContext ? store.commit('setDisplayedCapture', capture) : store.commit('setDisplayedCapture', undefined)
+    },
+    getDate(date) {
+      return formatDate(date);
+    },
+    shortenUrl(url) {
+      if (url.length <= 100) return url
+      return url.slice(0, 100) + '...';
+    },
+  },
 }
 </script>
-
-<style scoped>
-.status {
-  font-size: 1em;
-}
-.contextItem {
-  display: block;
-  overflow: hidden;
-  max-height: 200px;
-}
-.replay {
-  min-height: 500px;
-  height: 75vh;
-}
-
-.replayToggle.active::before {
-  transform: rotate(180deg);
-}
-
-/* Without setting the transition timing on the parent, Vue will not add transition states for the child elements to use */
-.slide-enter-active,
-.slide-leave-active,
-.slide-enter-active .contextItem,
-.slide-leave-active .contextItem,
-.replayToggle::before {
-  transition: all 0.2s;
-}
-
-.slide-enter-from .contextItem,
-.slide-leave-to .contextItem {
-  height: 0;
-  min-height: 0;
-  max-height: 0;
-}
-</style>

@@ -1,29 +1,41 @@
 <template>
-<TheMainHeader
-  head="Create a new archive"
-  subhead="Enter any URL to capture it in a downloadable archive."/>
-
-<div class="mt-5">
-  <CaptureForm/>
-</div>
-
-<div class="mt-5">
-  <CaptureList/>
-</div>
+  <div class="capture-dashboard container"
+       :class="{'capture-detail': !$store.getters.isMobile && displayedCapture}">
+    <CaptureForm/>
+    <CaptureList/>
+    <capture-detail v-if="!isMobile"/>
+  </div>
 </template>
 
 <script lang="ts">
-import TheMainHeader from './TheMainHeader.vue'
 import CaptureForm from './CaptureForm.vue'
 import CaptureList from './CaptureList.vue'
+import CaptureDetail from './CaptureDetail.vue'
+import {debounce} from '../lib/helpers';
 
 export default {
   components: {
-    TheMainHeader,
     CaptureForm,
-    CaptureList
+    CaptureList,
+    CaptureDetail
   },
+  computed: {
+    isMobile() {
+      return this.$store.getters.isMobile;
+    },
+    displayedCapture() {
+      return this.$store.getters.displayedCapture;
+    }
+  },
+
   mounted() {
+    this.$store.commit('setWindowWidth')
+    this.$nextTick(() => {
+      window.addEventListener('resize', debounce(() => {
+            this.$store.commit('setWindowWidth')
+          }, 250)
+      );
+    });
     const replay = document.createElement('script')
     replay.setAttribute('src', 'https://cdn.jsdelivr.net/npm/replaywebpage@1.3.9/ui.js')
     document.head.appendChild(replay)
@@ -31,5 +43,7 @@ export default {
 }
 </script>
 
-<style scoped>
+<style lang="scss">
+@import "../styles/styles";
+@import "../styles/_pages/dashboard";
 </style>

@@ -1,0 +1,294 @@
+.capture-dashboard {
+  display: grid;
+  grid-template-areas: "sidebar captures";
+  grid-template-columns: 28% 72%;
+  @include media-breakpoint-up(lg) {
+    &.capture-detail {
+      grid-template-areas: "sidebar captures capture-detail";
+      grid-template-columns: 25% 35% 40%;
+    }
+  }
+  // if smaller screen, make dashboard container full-width
+  @include media-breakpoint-down(lg) {
+    padding: 0 !important;
+  }
+  @include media-breakpoint-between(md, lg) {
+    min-width: 100%;
+    grid-template-areas: "sidebar captures";
+    grid-template-columns: 35% 65%;
+    &.capture-detail {
+      grid-template-areas: "sidebar captures capture-detail";
+      grid-template-columns: 20% 30% 50%;
+    }
+  }
+
+  @include media-breakpoint-down(sm) {
+    min-width: 100%;
+    grid-template-areas:
+                  "sidebar"
+                  "captures";
+    grid-template-columns: 100%;
+    .captures-header {
+      display: none;
+    }
+  }
+
+
+  .capture-form {
+    grid-area: sidebar;
+  }
+
+  .captures-list {
+    grid-area: captures;
+    background-color: $color-white;
+    padding: 0;
+
+    .captures-header {
+      padding-left: 1em;
+      padding-top: 1em;
+
+      .list-title {
+        font-weight: $font-weight-normal;
+        font-size: 1.4em;
+      }
+    }
+  }
+
+  .capture-detail-container {
+    grid-area: capture-detail;
+  }
+
+  h1 {
+    font-weight: 300;
+  }
+}
+
+.capture-detail-container {
+  background-color: $color-white;
+  padding: 1em;
+  border-left: 1px solid $color-gray-light-medium;
+
+  .data-group {
+    margin-bottom: 1em;
+  }
+}
+
+// LIST ITEM PARTS
+.favicon {
+  grid-area: favicon;
+}
+
+.capture-url {
+  grid-area: url;
+}
+
+
+.capture-title {
+  grid-area: title;
+}
+
+.recorded-date {
+  grid-area: recorded-date;
+}
+
+.expired-date {
+  grid-area: expired-date;
+  text-align: right;
+}
+
+.btn-group {
+  display: grid;
+  grid-template-areas: "status download arrow";
+
+  .status-icon {
+    font-weight: 400;
+    line-height: 1.5;
+    padding: 0.375rem 0.75rem;
+    color: $color-blue;
+    &.bi-x {
+      color: $color-red;
+    }
+  }
+
+  .status-icon.spinner {
+    padding: 0.75rem;
+  }
+}
+
+.replay-toggle {
+  grid-area: arrow;
+}
+
+.bi-download.download-button {
+  grid-area: download;
+  background-color: $color-white;
+  color: $color-blue;
+  font-weight: 500;
+  border-radius: 100%;
+  width: 2em;
+  height: 2em;
+  padding: 0.2em;
+  border: 0.1em solid $color-blue;
+
+  &:hover, &:active {
+    background-color: $color-blue;
+    color: $color-white;
+  }
+}
+
+.capture-url {
+  margin-bottom: 1em;
+
+  a {
+    text-decoration: none;
+    font-weight: 400;
+  }
+}
+
+.form-submit-container {
+  display: grid;
+  grid-template: "btn-create warning" auto;
+}
+
+.btn-create {
+  grid-area: btn-create;
+  margin-right: 1em;
+  @include media-breakpoint-between(sm, md) {
+    grid-column: auto / span 2;
+  }
+}
+
+// LIST ITEM GRID
+.capture-list-item {
+  list-style: none;
+  border-bottom: 1px solid $color-gray-light-medium;
+  background-color: rgba(196, 196, 196, 12%);
+
+  &.active {
+    background-color: $color-white;
+  }
+}
+
+.capture-list-item {
+  @include media-breakpoint-up(lg) {
+    &.details-shown {
+      background-color: rgba(63, 119, 230, 6%)
+    }
+  }
+}
+
+.capture-list-item > .content {
+  display: grid;
+  @include media-breakpoint-up(lg) {
+    grid-template-areas:
+            "favicon title title btn-group"
+            ". url url url"
+            ". recorded-date expired-date expired-date";
+    grid-template-columns: 3em 3fr 3fr 2em;
+    padding: 1em;
+
+    .download-button {
+      display: none;
+    }
+  }
+  // Mobile
+  @include media-breakpoint-between(md, lg) {
+    grid-template-areas:
+            "favicon title title title btn-group"
+            "url url url url url"
+            "recorded-date recorded-date recorded-date expired-date expired-date";
+    grid-template-columns: 5% 1fr 1fr 1fr 25%;
+  }
+
+
+  @include media-breakpoint-down(md) {
+    grid-template-areas:
+              "url btn-group"
+              "capture-detail capture-detail";
+    grid-template-columns: 75% 25%;
+    .favicon, .capture-title,
+    .recorded-date, .expired-date {
+      display: none;
+    }
+    .replay-toggle {
+      transform: rotate(90deg);
+    }
+    .capture-detail-container {
+      border-left: 0;
+      background-color: $color-tan;
+    }
+    .capture-url {
+      margin: 1em;
+    }
+    .btn-group {
+      margin: 1em;
+    }
+  }
+
+  @include media-breakpoint-down(sm) {
+    grid-template-areas:
+            "url arrow download"
+            "capture-detail capture-detail capture-detail";
+    grid-template-columns: 75% 15% 10%;
+    .capture-title,
+    .recorded-date,
+    .expired-date,
+    .favicon {
+      display: none;
+    }
+    h1 {
+      font-weight: 400;
+    }
+  }
+}
+
+.status {
+  font-size: 1em;
+}
+
+.contextItem {
+  display: block;
+  overflow: hidden;
+  max-height: 200px;
+}
+
+.replay {
+  min-height: 500px;
+  height: 75vh;
+}
+
+.replay-toggle.active::before {
+  transform: rotate(180deg);
+}
+
+/* Without setting the transition timing on the parent, Vue will not add transition states for the child elements to use */
+.slide-enter-active,
+.slide-leave-active,
+.slide-enter-active .contextItem,
+.slide-leave-active .contextItem,
+.replay-toggle::before {
+  transition: all 0.2s;
+}
+
+.slide-enter-from .contextItem,
+.slide-leave-to .contextItem {
+  height: 0;
+  min-height: 0;
+  max-height: 0;
+}
+
+.iframe-container {
+  overflow: hidden;
+  position: relative;
+  border: 1px solid $color-black;
+  margin-bottom: 1.5em;
+}
+
+.iframe-container iframe {
+  border: 0;
+  height: 100%;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
+}

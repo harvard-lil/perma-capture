@@ -1,0 +1,30 @@
+@import "nav";
+
+.container-full {
+  min-height: 90vh;
+}
+
+.container-full > .container {
+  @include media-breakpoint-down(lg) {
+    min-width: 100%;
+  }
+}
+
+// two column
+.container-full.two-col {
+  display: grid;
+  grid-template-areas: "col1 . col2";
+  grid-template-columns: 1fr 1fr 1fr;
+  padding: 5em;
+  @include media-breakpoint-down(xl) {
+    grid-template-areas: "col1 . col2";
+    grid-template-columns: 1fr 2.5em 1fr;
+    padding: 3em;
+  }
+  @include media-breakpoint-down(sm) {
+    grid-template-areas: "col1"
+                         "col2";
+    grid-template-columns: 1fr;
+    padding: 3em 1em;
+  }
+}

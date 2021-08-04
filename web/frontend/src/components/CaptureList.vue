@@ -1,36 +1,25 @@
 <template>
-<table class="table">
-  <thead>
-    <tr>
-      <th v-for="(heading, prop) in headings" scope="col">
-        <a @click="changeSort(prop)" role="button" :class="sortBy == prop ? 'active' : ''" class="sortButton">
-          {{ heading }}
-          <span :class="`bi-sort-${sortDesc || sortBy != prop ? 'down' : 'up'}`" class="sortIcon bi"></span>
-        </a>
-      </th>
-      <th scope="col">Actions</th>
-    </tr>
-  </thead>
-  <tbody ref="tableBody">
-    <CaptureListItem
-      v-for="capture in captures(sortBy, sortDesc)"
-      :key="capture.id"
-      :capture="capture"
+  <div class="captures-list">
+    <header class="captures-header">
+      <h2 class="list-title">Capture history</h2>
+    </header>
+    <ul>
+      <CaptureListItem
+          v-for="capture in captures(sortBy, sortDesc)"
+          :key="capture.id"
+          :capture="capture"
       />
-    <tr v-if="loading">
-      <td colspan="999">
-        Loading more...
-      </td>
-    </tr>
-  </tbody>
-</table>
+    </ul>
+  </div>
+
 </template>
 
 <script lang="ts">
 import CaptureListItem from './CaptureListItem.vue'
 
-import { createNamespacedHelpers } from 'vuex'
-const { mapGetters, mapActions, mapState } = createNamespacedHelpers('captures')
+import {createNamespacedHelpers} from 'vuex'
+
+const {mapGetters, mapActions, mapState} = createNamespacedHelpers('captures')
 
 export default {
   poller: null,
@@ -79,7 +68,7 @@ export default {
       window.removeEventListener("scroll", this.handleScroll)
     },
     changeSort(prop) {
-      if(this.sortBy == prop){
+      if (this.sortBy == prop) {
         this.sortDesc = !this.sortDesc
       } else {
         this.sortBy = prop
@@ -87,24 +76,24 @@ export default {
       }
     },
     handleScroll(e) {
-	  if (this.$refs.tableBody.getBoundingClientRect().bottom < window.innerHeight) {
+      if (this.$refs.tableBody.getBoundingClientRect().bottom < window.innerHeight) {
         this.clearScrollListener()
         this.loading = true
-		this.pageForward().then(() => this.loading = false)
-	  }
+        this.pageForward().then(() => this.loading = false)
+      }
     }
   },
   watch: {
     apiParams: {
       deep: true,
-      handler(){
+      handler() {
         this.list(this.apiParams)
       }
     },
     apiContext: {
       deep: true,
-      handler(current, previous){
-        if(current.next) {
+      handler(current, previous) {
+        if (current.next) {
           // Don't bother tracking whether it's already been attached
           // https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener#multiple_identical_event_listeners
           window.addEventListener("scroll", this.handleScroll)
@@ -114,9 +103,9 @@ export default {
       }
     },
     processing(current, previous) {
-      if(this.$options.poller){
-        if(!current.length) this.clearProcessingPoll()
-      } else if(current.length) {
+      if (this.$options.poller) {
+        if (!current.length) this.clearProcessingPoll()
+      } else if (current.length) {
         this.pollForProcessingChanges()
       }
     }
@@ -135,6 +124,7 @@ export default {
 .sortIcon {
   visibility: hidden;
 }
+
 .sortButton:hover .sortIcon,
 .active .sortIcon {
   visibility: visible;
@@ -143,16 +133,19 @@ export default {
 .sortButton:hover .sortIcon {
   opacity: 0.25;
 }
+
 .active .sortIcon,
 .active:hover .sortIcon {
   opacity: 1;
 }
+
 .sortButton {
   color: inherit;
   text-decoration: none;
   padding: 0.5rem;
   margin-left: -0.5rem;
 }
+
 .sortButton:hover,
 .sortButton.active {
   background: var(--color-background);

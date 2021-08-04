@@ -1,6 +1,7 @@
 <template>
-<form @submit.prevent="submit"
+<form class="base-form" @submit.prevent="submit"
       novalidate>
+  <h1>{{ title }}</h1>
 
   <div v-if="displayValidations && errorCount"
        ref="errorsHeader"
@@ -62,7 +63,8 @@ export default {
       type: String,
       default: 'Submit'
     },
-    action: Function
+    action: Function,
+    title: String,
   },
   data: () => ({
     processing: false,

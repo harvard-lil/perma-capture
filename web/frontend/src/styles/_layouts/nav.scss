@@ -1,0 +1,24 @@
+.navbar {
+  border-bottom: 1px solid $color-gray-light-medium;
+
+  .dropdown-toggle {
+    background-color: $color-blue;
+    color: $color-white;
+    border: 0;
+  }
+}
+
+.navbar-brand {
+  color: $color-gray-medium;
+  font-size: 1.25em;
+}
+
+.navbar-nav {
+  @include media-breakpoint-down(lg) {
+    flex-direction: row;
+  }
+
+  .nav-item {
+    margin-left: 0.5em;
+  }
+}
