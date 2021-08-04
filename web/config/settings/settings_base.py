@@ -303,11 +303,8 @@ DEFAULT_S3_STORAGE = {
 OVERRIDE_STORAGE_NETLOC = None
 
 # Browsertrix
-BROWSERTRIX_IMAGE = 'registry.lil.tools/webrecorder/browsertrix-crawler:0.3.2'
+BROWSERTRIX_IMAGE = 'registry.lil.tools/webrecorder/browsertrix-crawler:0.4.3'
 BROWSERTRIX_DOCKER_NETWORK = None
-
-BROWSERTRIX_INTERNAL_DATA_DIR = os.environ.get('BROWSERTRIX_INTERNAL_DATA_DIR')
-BROWSERTRIX_ENTRYPOINT = os.environ.get('BROWSERTRIX_ENTRYPOINT')
 BROWSERTRIX_TIMEOUT_SECONDS = 270
 
 LAUNCH_CAPTURE_JOBS = True
