@@ -5,21 +5,22 @@ from datetime import timedelta
 import docker
 import requests
 import socket
-import tarfile
-import tempfile
 import threading
 from time import sleep
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.files import File
 from django.core.mail import mail_admins
 from django.utils import timezone
+from django.views.decorators.debug import sensitive_variables
 
-from .models import CaptureJob, Archive, WebhookSubscription
+from .models import CaptureJob, Archive, WebhookSubscription, ProfileCaptureJob, Profile
 from .serializers import ReadOnlyCaptureJobSerializer, SimpleWebhookSubscriptionSerializer
-from .storages import get_storage
-from .utils import (validate_and_clean_url, get_file_hash, parse_querystring,
-    datetime_from_timestamp, sign_data, is_valid_signature, send_template_email
+from .storages import get_archive_storage
+from .utils import (validate_and_clean_url, copy_file_to_container, extract_file_from_container,
+    get_file_hash, parse_querystring, datetime_from_timestamp, sign_data, is_valid_signature,
+    send_template_email
 )
 
 from pytest import raises as assert_raises
@@ -102,8 +103,8 @@ class BrowsertrixLifeCycleThread(threading.Thread):
         except requests.exceptions.ConnectionError:
             self.timedout = True
             # For now, just kill the container. We likely want something gentler,
-            # that requests Browsertrix stop recording and finalize the record,
-            # and then a second timeout, so as to preserve partial capture results.
+            # that politely requests Browsertrix stop and finish up what it's doing,
+            # and then a second timeout, so we can, for instance, preserve partial capture results.
             self.container.stop(timeout=0)
             self.result = self.container.wait(timeout=1)
         finally:
@@ -125,18 +126,7 @@ PUPPETEER_ESCAPE_SEQUENCES = [
     ''.join(chr(c) for c in [27, 91, 56]),
     ''.join(chr(c) for c in [27, 91, 75])
 ]
-MILESTONES = [
-    'creating pages',
-    'Waiting for behaviors to finish',
-    'All Behaviors Done',
-    'ensure WARCs are finished',
-    'Generating WACZ',
-    'WACZ successfully generated'
-]
-INFO_EVENTS = [
-    'Sys. load'
-]
-def handle_browsertrix_msg(capture_job, msg):
+def handle_browsertrix_msg(capture_job, msg, milestones='', info_events=''):
     """
     Reformat a logline from Browsertrix and log at the desired level, incrementing
     the process of the capture job if a "milestone" has been reached.
@@ -154,9 +144,9 @@ def handle_browsertrix_msg(capture_job, msg):
     if msg.startswith('behavior debug'):
         msg = msg[len('behavior debug: '):].strip('"!')
     if msg:
-        if any(milestone in msg for milestone in MILESTONES):
+        if any(milestone in msg for milestone in milestones):
             inc_progress(capture_job, 1, f"Browsertrix: {msg}.")
-        elif any(event in msg for event in INFO_EVENTS):
+        elif any(event in msg for event in info_events):
             logger.info(f"{capture_job} Browsertrix {msg}")
         else:
             logger.debug(msg)
@@ -196,8 +186,10 @@ def demo_scheduled_task(pause_for_seconds=0):
 def run_next_capture():
     """
     Given:
-    >>> pending_capture_job_factory, docker_client, django_settings, mocker, caplog = [getfixture(i) for i in ['pending_capture_job_factory', 'docker_client', 'settings', 'mocker', 'caplog']]
+    >>> target_domains, pending_capture_job_factory, docker_client, django_settings, mocker, caplog = [getfixture(i) for i in ['target_domains', 'pending_capture_job_factory', 'docker_client', 'settings', 'mocker', 'caplog']]
     >>> output_dir = f'{settings.SERVICES_DIR}/browsertrix/data/'
+    >>> no_profile_domain = target_domains['no_profile']
+    >>> profile_domain, profile = target_domains['active_profile']
 
     Helpers:
     >>> orig_clean_up_failed = clean_up_failed_captures
@@ -206,15 +198,28 @@ def run_next_capture():
 
     >>> orig_inc_progress = inc_progress
     >>> mock_inc_progress = mocker.patch('main.tasks.inc_progress')
-    >>> def run_test_capture(url, stop_before_step=None, throw=None):
+    >>> def run_test_capture(url, stop_before_step=None, capture_job_extra_kwargs=None):
     ...     if stop_before_step:
     ...         mock_inc_progress.side_effect = raise_on_call(orig_inc_progress, stop_before_step + 1, HaltCaptureException)
     ...     else:
     ...         mock_inc_progress.side_effect = orig_inc_progress
-    ...     job = pending_capture_job_factory(requested_url=url)
+    ...     job = pending_capture_job_factory(requested_url=url, **capture_job_extra_kwargs if capture_job_extra_kwargs else {})
     ...     _ = run_next_capture.apply()
     ...     job.refresh_from_db()
     ...     return job
+
+    >>> def assert_succeeded(job, with_profile):
+    ...     assert job.status == CaptureJob.Status.COMPLETED
+    ...     assert job.step_description == 'Saving archive.'
+    ...     assert job.capture_end_time
+    ...     assert job.archive.warc_size
+    ...     assert job.archive.hash and job.archive.hash_algorithm
+    ...     assert requests.get(job.archive.download_url).status_code == 200
+    ...     if with_profile:
+    ...         assert job.archive.created_with_profile == with_profile
+    ...     else:
+    ...         assert not job.archive.created_with_profile
+
 
     NO JOBS
 
@@ -251,13 +256,24 @@ def run_next_capture():
 
     SUCCESS
 
-    >>> job = run_test_capture('example.com')
-    >>> assert job.status == CaptureJob.Status.COMPLETED
-    >>> assert job.step_description == 'Saving archive.'
-    >>> assert job.capture_end_time
-    >>> assert job.archive.warc_size
-    >>> assert job.archive.hash and job.archive.hash_algorithm
-    >>> assert requests.get(job.archive.download_url).status_code == 200
+    # A domain where logged-in capture is not supported:
+
+    >>> job = run_test_capture(no_profile_domain)
+    >>> assert_succeeded(job, with_profile=None)
+
+    A domain where logged-in capture is supported:
+
+    ... and profile.headless == capture job.headless
+    >>> job = run_test_capture(f'http://{profile_domain}/page', capture_job_extra_kwargs={'headless': profile.headless})
+    >>> assert_succeeded(job, with_profile=profile)
+
+    ... and profile.headless == capture job.headless, but capture_job.log_in_if_supported == False
+    >>> job = run_test_capture(f'http://{profile_domain}/page', capture_job_extra_kwargs={'headless': profile.headless, 'log_in_if_supported': False})
+    >>> assert_succeeded(job, with_profile=None)
+
+    ... but profile.headless != capture job.headless
+    >>> job = run_test_capture(f'http://{profile_domain}/page', capture_job_extra_kwargs={'headless': not profile.headless})
+    >>> assert_succeeded(job, with_profile=None)
 
     FAILURE
 
@@ -310,7 +326,10 @@ def run_next_capture():
         client = docker.from_env()
 
         inc_progress(capture_job, 1, "Creating Browsertrix container.")
-        archive = Archive(capture_job=capture_job)
+        profile = None
+        if capture_job.log_in_if_supported:
+            profile = Profile.for_url(capture_job.validated_url, capture_job.headless)
+        archive = Archive(capture_job=capture_job, created_with_profile=profile)
         collection_name = archive.filename[:-5]
         browsertrix_output_filename = f'{collection_name}.wacz'
         browsertrix_output_path = f'{settings.BROWSERTRIX_INTERNAL_DATA_DIR}/collections/{collection_name}/{browsertrix_output_filename}'
@@ -320,26 +339,45 @@ def run_next_capture():
                 f'DATA_DIR={settings.BROWSERTRIX_INTERNAL_DATA_DIR}'
             ],
             volumes={
-                settings.BROWSERTRIX_ENTRYPOINT : {
+                settings.BROWSERTRIX_ENTRYPOINT: {
                     'bind': '/entrypoint.sh'
                 }
             },
             entrypoint='/entrypoint.sh',
             cap_add=['NET_ADMIN', 'SYS_ADMIN'],
             shm_size='1GB',
-            command=f'crawl --logging "stats,behaviors-debug" --generateWACZ --limit 1 --cwd {settings.BROWSERTRIX_INTERNAL_DATA_DIR} --collection {collection_name} --url {capture_job.validated_url}',
-            detach=True
+            command=f'crawl --logging "stats,behaviors-debug" --generateWACZ --limit 1 --cwd {settings.BROWSERTRIX_INTERNAL_DATA_DIR} --collection {collection_name} --url {capture_job.validated_url} {"--profile /tmp/profile.tar.gz" if profile else ""}',
+            detach=True,
+            network=settings.BROWSERTRIX_DOCKER_NETWORK or ''
         )
+
+        if profile:
+            inc_progress(capture_job, 1, "Transferring browser profile.")
+            if not copy_file_to_container(profile.profile, '/tmp', 'profile.tar.gz', container):
+                capture_job.mark_failed('Transfer of browser profile to container failed.')
+                raise HaltCaptureException
 
         inc_progress(capture_job, 1, "Starting Browsertrix.")
         container.start()
-        browsertrix_life_cycle_thread = BrowsertrixLifeCycleThread(container, settings.BROWSERTRIX_TIMEOUT_SECONDS, name="browsertrix_return")
+        browsertrix_life_cycle_thread = BrowsertrixLifeCycleThread(container, settings.BROWSERTRIX_TIMEOUT_SECONDS, name="browsertrix")
         browsertrix_life_cycle_thread.start()
         stdout_stream = container.logs(stderr=False, stream=True)
         for msg in stdout_stream:
             # we should look into whether the browsertrix container needs init, and whether it passes signals correctly, etc.
             # see also https://github.com/moby/moby/issues/37663.
-            handle_browsertrix_msg(capture_job, msg)
+            handle_browsertrix_msg(capture_job, msg,
+                milestones=(
+                    'creating pages',
+                    'Waiting for behaviors to finish',
+                    'All Behaviors Done',
+                    'ensure WARCs are finished',
+                    'Generating WACZ',
+                    'WACZ successfully generated'
+                ),
+                info_events=(
+                    'Sys. load',
+                )
+            )
 
         browsertrix_life_cycle_thread.join()
         if browsertrix_life_cycle_thread.exit_code != 0:
@@ -363,18 +401,8 @@ def run_next_capture():
                 container.stop()
 
                 try:
-                    # mode set to 'ab+' as a workaround for https://bugs.python.org/issue25341
-                    with tempfile.TemporaryFile('ab+') as tmpfile:
-                        stream, _ = container.get_archive(browsertrix_output_path)
-
-                        inc_progress(capture_job, 1, "Fetching archive.")
-                        for chunk in stream:
-                            tmpfile.write(chunk)
-                        tmpfile.seek(0)
-                        tar = tarfile.open(fileobj=tmpfile)
-                        file = tar.extractfile(browsertrix_output_filename)
-
-                        # should probably also make sure its a valid wacz?
+                    with extract_file_from_container(browsertrix_output_filename, browsertrix_output_path, container) as file:
+                        # should probably make sure its a valid wacz?
                         # unlike a truncated warc, I don't think a truncated wacz can be played back
 
                         inc_progress(capture_job, 1, "Processing archive.")
@@ -384,10 +412,8 @@ def run_next_capture():
 
                         inc_progress(capture_job, 1, "Saving archive.")
                         file.seek(0)
-                        storage = get_storage()
+                        storage = get_archive_storage()
                         real_filename = storage.save(archive.filename, file)
-                        file.close()
-                        tar.close()
                         try:
                             assert real_filename == archive.filename
                         except AssertionError:
@@ -395,8 +421,9 @@ def run_next_capture():
                             # shouldn't happen, since we include the capture job id. But, if it does, we'll
                             # want to know about it, so we can manually clean up the file after it expires.
                             logger.error(f'The archive for capture job {capture_job.id} has been saved as {real_filename}, not {archive.filename}.')
-                        archive.download_url = storage.url(real_filename)
-                        archive.download_expiration_timestamp = datetime_from_timestamp(parse_querystring(archive.download_url)['Expires'][0])
+
+                    archive.download_url = storage.url(real_filename)
+                    archive.download_expiration_timestamp = datetime_from_timestamp(parse_querystring(archive.download_url)['Expires'][0])
                     archive.save()
                     capture_job.mark_completed()
                     logger.info("Capture succeeded.")
@@ -548,7 +575,7 @@ def clean_up_archive(archive_id):
     >>> archive_factory, mocker, caplog = [getfixture(i) for i in ['no_signals_archive_factory', 'mocker', 'caplog']]
     >>> archive = archive_factory()
     >>> already_cleaned_up_archive = archive_factory(expired=True)
-    >>> mock_storage = mocker.patch('main.tasks.get_storage')
+    >>> mock_storage = mocker.patch('main.tasks.get_archive_storage')
 
     Delete the archive from storage and unset its download_url.
     >>> _ = clean_up_archive.apply([archive.id])
@@ -568,8 +595,176 @@ def clean_up_archive(archive_id):
         logger.info(f"Archive {archive_id} already cleaned up.")
         return
 
-    storage = get_storage()
+    storage = get_archive_storage()
     storage.delete(archive.filename)
 
     archive.download_url = None
     archive.save()
+
+
+
+@shared_task
+@sensitive_variables('user', 'password')
+def create_browser_profile(profile_capture_job_id):
+    """
+    Given:
+    >>> profile_capture_job_factory, docker_client, django_settings, mocker, caplog = [getfixture(i) for i in ['profile_capture_job_factory', 'docker_client', 'settings', 'mocker', 'caplog']]
+    >>> output_dir = f'{settings.SERVICES_DIR}/browsertrix/data/'
+
+    Helpers:
+
+    >>> orig_inc_progress = inc_progress
+    >>> mock_inc_progress = mocker.patch('main.tasks.inc_progress')
+    >>> def run_test_capture(stop_before_step=None, capture_job_extra_kwargs=None, login_style='twitter'):
+    ...     if stop_before_step:
+    ...         mock_inc_progress.side_effect = raise_on_call(orig_inc_progress, stop_before_step + 1, HaltCaptureException)
+    ...     else:
+    ...         mock_inc_progress.side_effect = orig_inc_progress
+    ...     job = profile_capture_job_factory(status='pending', **capture_job_extra_kwargs if capture_job_extra_kwargs else {})
+    ...     django_settings.PROFILE_SECRETS[job.netloc]['log_in_url'] = f'http://{job.netloc}/login-{login_style}.html'
+    ...     _ = create_browser_profile.apply((job.id,))
+    ...     job.refresh_from_db()
+    ...     return job
+
+    >>> def assert_succeeded(job):
+    ...     assert job.status == CaptureJob.Status.COMPLETED
+    ...     assert job.step_description == 'Saving screenshot.'
+    ...     assert job.profile
+
+    SUCCESS
+
+    We successfully save profiles for our target sites, using a headful browser.
+    (There's no way to know, presently, whether login succeeded, other than inspecting the screenshot.)
+    >>> for site in ['twitter', 'facebook', 'instagram']:
+    ...     job = run_test_capture(login_style=site, capture_job_extra_kwargs={'headless': False})
+    ...     assert_succeeded(job)
+
+    The Browsertrix process currently fails and hangs if run in headless mode.
+    # >>> for site in ['twitter', 'facebook', 'instagram']:
+    # ...     job = run_test_capture(login_style=site, capture_job_extra_kwargs={'headless': True})
+    # ...     assert_succeeded(job)
+
+    FAILURE
+
+    If an exception is thrown in the main thread while Browsertrix is working, we stop and clean up.
+    >>> caplog.clear()
+    >>> job = run_test_capture(stop_before_step=5)
+    >>> assert job.status == CaptureJob.Status.FAILED
+    >>> assert job.step_count == 5
+    >>> assert 'Browsertrix:' in job.step_description
+    >>> assert job.capture_end_time
+    >>> assert not docker_client.containers.list(all=True, filters={'ancestor': settings.BROWSERTRIX_IMAGE})
+
+    If Browsertrix exceeds the maximum permitted time limit, we stop and clean up.
+    >>> caplog.clear()
+    >>> django_settings.BROWSERTRIX_TIMEOUT_SECONDS = 1
+    >>> job = run_test_capture()
+    >>> assert job.status == ProfileCaptureJob.Status.FAILED
+    >>> assert 'Browsertrix exited with 137' in caplog.text  #  137 means SIGKILL
+    >>> assert not docker_client.containers.list(all=True, filters={'ancestor': settings.BROWSERTRIX_IMAGE})
+    """
+
+    # Basic Setup
+    client = None
+    container = None
+    browsertrix_life_cycle_thread = None
+    capture_job = ProfileCaptureJob.get_job(profile_capture_job_id)
+
+    profile_filename = 'profile.tar.gz'
+    browsertrix_profile_path = f'/tmp/{profile_filename}'
+    screenshot_filename = 'screenshot.png'
+    browsertrix_screenshot_path = f'/tmp/{screenshot_filename}'
+
+    user = settings.PROFILE_SECRETS[capture_job.netloc]['user']
+    password = settings.PROFILE_SECRETS[capture_job.netloc]['password']
+    url = settings.PROFILE_SECRETS[capture_job.netloc]['log_in_url']
+
+    try:
+        inc_progress(capture_job, 1, "Connecting to Docker.")
+        client = docker.from_env()
+
+        inc_progress(capture_job, 1, "Creating Browsertrix container.")
+        container = client.containers.create(
+            settings.BROWSERTRIX_IMAGE,
+            cap_add=['NET_ADMIN', 'SYS_ADMIN'],
+            shm_size='1GB',
+            command=f'create-login-profile --url {url} --user {user} {"--headless" if capture_job.headless else ""}--filename {browsertrix_profile_path} --debugScreenshot {browsertrix_screenshot_path}',
+            detach=True,
+            stdin_open=True,
+            network=settings.BROWSERTRIX_DOCKER_NETWORK or ''
+        )
+
+        inc_progress(capture_job, 1, "Starting Browsertrix.")
+        container.start()
+
+        inc_progress(capture_job, 1, "Sending password to Browsertrix.")
+        s = container.attach_socket(params={'stdin': 1, 'stream': 1})
+        s._sock.send(bytes(password, 'utf-8') + b'\n')
+        s.close()  # see https://github.com/docker/docker-py/issues/1507: we may need to close more thoroughly
+
+        browsertrix_life_cycle_thread = BrowsertrixLifeCycleThread(container, settings.BROWSERTRIX_TIMEOUT_SECONDS, name="browsertrix")
+        browsertrix_life_cycle_thread.start()
+        stdout_stream = container.logs(stderr=False, stream=True)
+        for msg in stdout_stream:
+            handle_browsertrix_msg(capture_job, msg,
+                milestones=(
+                    'Launching XVFB',
+                    'loading',
+                    'loaded',
+                    'creating profile'
+                )
+            )
+
+        browsertrix_life_cycle_thread.join()
+        if browsertrix_life_cycle_thread.exit_code != 0:
+            logger.error(f"Browsertrix exited with {browsertrix_life_cycle_thread.exit_code}: {browsertrix_life_cycle_thread.stderr}")
+            raise HaltCaptureException
+
+        inc_progress(capture_job, 1, "Saving profile.")
+        with extract_file_from_container(profile_filename, browsertrix_profile_path, container) as file:
+            profile = Profile(
+                profile_capture_job=capture_job,
+                netloc=capture_job.netloc,
+                headless=capture_job.headless,
+                username=user,
+                profile = File(file, profile_filename)
+            )
+            profile.save()
+
+    except HaltCaptureException:
+        logger.info("HaltCaptureException thrown.")
+    except SoftTimeLimitExceeded:
+        logger.warning(f"Soft timeout during profile capture job {capture_job.id}.")
+    except:  # noqa
+        logger.exception(f"Exception during profile capture job {capture_job.id}.")
+    finally:
+        try:
+            if container:
+
+                container.stop()
+
+                try:
+                    with extract_file_from_container(screenshot_filename, browsertrix_screenshot_path, container) as file:
+                        inc_progress(capture_job, 1, "Saving screenshot.")
+                        file.seek(0)
+                        capture_job.screenshot = File(file, screenshot_filename)
+                        capture_job.save()
+                except docker.errors.NotFound:
+                    logger.info("No screenshot available.")
+
+                if capture_job.has_profile:
+                    capture_job.mark_completed()
+                    logger.info("Profile capture job succeeded.")
+                else:
+                    logger.info("Profile capture job failed.")
+
+                container.remove(force=True)
+
+            if client:
+                client.close()
+
+        except:  # noqa
+            logger.exception(f"Exception while finishing profile capture job {capture_job.id}.")
+        finally:
+            if capture_job.status == ProfileCaptureJob.Status.IN_PROGRESS:
+                capture_job.mark_failed('Failed.')

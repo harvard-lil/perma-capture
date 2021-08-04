@@ -288,21 +288,23 @@ USE_ANALYTICS = False
 APP_NAME = 'capture.perma.cc'
 
 TESTING = False
+TEST_CAPTURE_TARGET_DOMAINS = ''
 
 API_PREFIX = 'api'
 
 # Storage
 ARCHIVE_EXPIRES_AFTER_MINUTES = 4 * 60
-TMP_S3_STORAGE = {
+DEFAULT_S3_STORAGE = {
     'endpoint_url': 'http://minio:9000',
     'access_key': 'accesskey',
     'secret_key': 'secretkey',
-    'bucket_name': 'archives'
+    'bucket_name': 'perma-capture'
 }
-OVERRIDE_DOWNLOAD_URL_NETLOC = None
+OVERRIDE_STORAGE_NETLOC = None
 
 # Browsertrix
-BROWSERTRIX_IMAGE = 'registry.lil.tools/webrecorder/browsertrix-crawler:0.3.0-beta.1'
+BROWSERTRIX_IMAGE = 'registry.lil.tools/webrecorder/browsertrix-crawler:0.3.2'
+BROWSERTRIX_DOCKER_NETWORK = None
 
 BROWSERTRIX_INTERNAL_DATA_DIR = os.environ.get('BROWSERTRIX_INTERNAL_DATA_DIR')
 BROWSERTRIX_ENTRYPOINT = os.environ.get('BROWSERTRIX_ENTRYPOINT')
@@ -318,5 +320,19 @@ EXPOSE_WEBHOOK_TEST_ROUTE = False
 
 # Playback
 RWP_BASE_URL = "https://cdn.jsdelivr.net/npm/replaywebpage@1.3.9"
+
+# Vite/Vue frontend
 VITE_MANIFEST_PATH = "main/static/manifest.json"
 VITE_ENTRY_PATH = "src/main.ts"
+
+# Credentials for the creation of logged-in browser profiles.
+# Name includes 'SECRET' so that Django excludes from logs and debug info.
+# Format:
+# PROFILE_SECRETS = {
+#     'twitter.com': {
+#         'log_in_url': 'https://twitter.com/login',
+#         'user': 'username',
+#         'password': 'password',
+#     },
+# }
+PROFILE_SECRETS = {}

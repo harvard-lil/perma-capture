@@ -1,9 +1,12 @@
+from contextlib import contextmanager
 import datetime
 from functools import wraps
 import hashlib
 import hmac
 from pytz import timezone as tz
 import secrets
+import tarfile
+import tempfile
 import unicodedata
 import urllib.parse
 
@@ -148,6 +151,35 @@ def validate_and_clean_url(url):
     return url_validator.clean(url)
 
 
+def copy_file_to_container(src, dst_path, dst_name, container):
+    # mode set to 'ab+' as a workaround for https://bugs.python.org/issue25341
+    with tempfile.TemporaryFile('ab+') as tmpfile:
+        tar = tarfile.open(fileobj=tmpfile, mode='w')
+        info = tarfile.TarInfo(dst_name)
+        info.size = src.size
+        tar.addfile(info, src)
+        tar.close()
+        tmpfile.seek(0)
+        return container.put_archive(path=dst_path, data=tmpfile)
+
+
+@contextmanager
+def extract_file_from_container(name, path, container):
+    # mode set to 'ab+' as a workaround for https://bugs.python.org/issue25341
+    with tempfile.TemporaryFile('ab+') as tmpfile:
+        stream, _ = container.get_archive(path)
+        for chunk in stream:
+            tmpfile.write(chunk)
+        tmpfile.seek(0)
+        tar = tarfile.open(fileobj=tmpfile)
+        file = tar.extractfile(name)
+        try:
+            yield file
+        finally:
+            file.close()
+            tar.close()
+
+
 def get_file_hash(handle, chunk_size=1024, algorithm='sha256'):
     """
     Calculate the file's hash.
@@ -161,9 +193,9 @@ def get_file_hash(handle, chunk_size=1024, algorithm='sha256'):
     return (hasher.hexdigest(), algorithm)
 
 
-def override_access_url_netloc(access_url):
-    return urllib.parse.urlparse(access_url)._replace(
-        netloc=settings.OVERRIDE_DOWNLOAD_URL_NETLOC
+def override_storage_netloc(url):
+    return urllib.parse.urlparse(url)._replace(
+        netloc=settings.OVERRIDE_STORAGE_NETLOC
     ).geturl()
 
 

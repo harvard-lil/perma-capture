@@ -3,7 +3,7 @@ from rest_framework import serializers
 from django.conf import settings
 
 from .models import WebhookSubscription, CaptureJob, Archive
-from .utils import override_access_url_netloc
+from .utils import override_storage_netloc
 
 
 class ArchiveSerializer(serializers.ModelSerializer):
@@ -16,7 +16,7 @@ class ArchiveSerializer(serializers.ModelSerializer):
 
     def get_download_url(self, archive):
         if archive.download_url:
-            return override_access_url_netloc(archive.download_url) if settings.OVERRIDE_DOWNLOAD_URL_NETLOC else archive.download_url
+            return override_storage_netloc(archive.download_url) if settings.OVERRIDE_STORAGE_NETLOC else archive.download_url
 
 
 class CaptureJobSerializer(serializers.ModelSerializer):
@@ -25,14 +25,14 @@ class CaptureJobSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CaptureJob
-        fields =  ('id', 'requested_url', 'validated_url', 'capture_oembed_view', 'headless', 'human', 'label', 'webhook_data', 'status', 'message', 'queue_position', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time', 'archive')
+        fields =  ('id', 'requested_url', 'validated_url', 'capture_oembed_view', 'headless', 'log_in_if_supported', 'human', 'label', 'webhook_data', 'status', 'message', 'queue_position', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time', 'archive')
         read_only_fields =  ('user', 'id', 'status', 'message', 'queue_position', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')
 
 
 class ReadOnlyCaptureJobSerializer(CaptureJobSerializer):
 
     class Meta(CaptureJobSerializer.Meta):
-        read_only_fields =  ('user', 'id', 'requested_url', 'validated_url', 'capture_oembed_view', 'headless', 'human', 'label', 'webhook_data', 'status', 'message', 'queue_position', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')
+        read_only_fields =  ('user', 'id', 'requested_url', 'validated_url', 'capture_oembed_view', 'headless', 'log_in_if_supported', 'human', 'label', 'webhook_data', 'status', 'message', 'queue_position', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')
 
 
 class WebhookSubscriptionSerializer(serializers.ModelSerializer):
