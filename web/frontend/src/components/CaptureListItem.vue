@@ -19,9 +19,11 @@
         </template>
       </div>
       <a class="capture-url" :href="url" v-text="shortenUrl(url)"></a>
-      <span class="secondary-text recorded-date">Recorded {{ getDate(capture.created_at) }}</span>&nbsp;
-      <span v-if="active" class="warning-text expired-date">Expires {{ getDate(capture.capture_end_time) }}</span>
-      <span v-else class="expired-date">Expired</span>
+      <template v-if="!isProcessing">
+        <span class="secondary-text recorded-date">Recorded {{ getDate(capture.created_at) }}</span>&nbsp;
+        <span v-if="active" class="warning-text expired-date">Expires {{ getDate(capture.capture_end_time) }}</span>
+        <span v-else class="expired-date">Expired</span>
+      </template>
       <br/>
       <template v-if="isMobile && displayContext && capture.id === $store.getters.displayedCapture.id">
         <capture-detail/>
