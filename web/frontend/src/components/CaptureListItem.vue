@@ -1,31 +1,29 @@
 <template>
-  <li :class="{'active': !(hasFailed || isProcessing) && active, 'details-shown': displayContext}"
+  <li :class="{'active': (isProcessing || downloadUrl), 'details-shown': displayDetails}"
       class="capture-list-item">
     <div class="content">
-      <div class="favicon">🔗</div>
-      <h3 class="h6 capture-title">Lorem Ipsum title</h3>
-      <div class="btn-group">
+      <div class="favicon" aria-hidden="true">🔗</div>
+      <h3 class="h6 capture-title">{{ title }}</h3>
+      <div class="btn-group spinner">
         <span v-if="isProcessing"
               class="status-icon spinner spinner-border spinner-border-sm"
-              role="status" aria-hidden="true">
+              aria-hidden="true">
         </span>
-        <span v-else-if="hasFailed" class="status-icon bi bi-x" aria-label="Capture has failed" role="status"> </span>
-        <!--  on success  -->
         <template v-else>
-          <a class="btn bi bi-download download-button" :href="downloadUrl"></a>
-          <a class="btn bi bi-chevron-right replay-toggle" :class="{active: displayContext}"
-
-             @click="toggleCaptureDetails(capture)"></a>
+          <a v-if="downloadUrl" class="btn bi bi-download download-button" :href="downloadUrl"></a>
+          <span v-else class="btn bi bi-download download-button placeholder"></span>
+          <button class="btn bi bi-chevron-right replay-toggle" :class="{active: displayDetails}"
+             @click="toggleCaptureDetails(capture)"></button>
         </template>
       </div>
-      <a class="capture-url" :href="url" v-text="shortenUrl(url)"></a>
+      <span v-if="statusOrDefault==='Invalid'"  class="capture-url" v-text="shortenUrl(url)"></span>
+      <a v-else class="capture-url" :href="url" v-text="shortenUrl(url)"></a>
+      <span class="secondary-text recorded-date">Submitted {{ getDate(capture.created_at) }}</span>&nbsp;
       <template v-if="!isProcessing">
-        <span class="secondary-text recorded-date">Recorded {{ getDate(capture.created_at) }}</span>&nbsp;
-        <span v-if="active" class="warning-text expired-date">Expires {{ getDate(capture.capture_end_time) }}</span>
-        <span v-else class="expired-date">Expired</span>
+        <span v-if="downloadUrl" class="warning-text expired-date">Expires {{ getDate(expiresAt) }}</span>
+        <span v-else-if="succeeded" class="expired-date">Expired {{ getDate(expiresAt) }}</span>
       </template>
-      <br/>
-      <template v-if="isMobile && displayContext && capture.id === $store.getters.displayedCapture.id">
+      <template v-if="isMobile && displayDetails && capture.id === $store.getters.displayedCapture.id">
         <capture-detail/>
       </template>
     </div>
@@ -34,7 +32,7 @@
 
 <script lang="ts">
 import {createNamespacedHelpers} from 'vuex'
-import {FailureStates, TransitionalStates} from '../constants/captures'
+import {SuccessStates, FailureStates, TransitionalStates} from '../constants/captures'
 import {formatDate, snakeToPascal} from '../lib/helpers'
 import store from '../store/index.ts';
 import CaptureDetail from './CaptureDetail.vue'
@@ -47,57 +45,75 @@ export default {
   },
   props: ['capture'],
   data: () => ({
-    displayContext: false,
+    displayDetails: false,
   }),
   computed: {
     statusOrDefault() {
-      return this.capture.status || 'pending'
+      return snakeToPascal(this.capture.status || 'pending')
     },
     isProcessing() {
-      return snakeToPascal(this.statusOrDefault) in TransitionalStates
+      return this.statusOrDefault in TransitionalStates
+    },
+    succeeded() {
+      return this.statusOrDefault in SuccessStates
     },
     hasFailed() {
-      return snakeToPascal(this.statusOrDefault) in FailureStates
+      return this.statusOrDefault in FailureStates
+    },
+    title() {
+      let title;
+      switch(this.statusOrDefault) {
+        case 'Invalid':
+          title = 'Invalid URL';
+          break;
+        case 'InProgress':
+          title = 'Capture In Progress';
+          break;
+        case 'Failed':
+          title = 'Capture Failed';
+          break;
+        case 'Completed':
+          title = 'Lorem Ipsum title';
+          break;
+        default:
+          title = 'Capture Pending';
+      }
+      return title
     },
     url() {
       return this.capture.validated_url || this.capture.requested_url
     },
-    active() {
-      let duration = new Date(this.capture.capture_end_time) - new Date(this.capture.created_at);
-      if (duration <= 0) return;
-      return true;
+    downloadUrl() {
+      return this.capture.archive ? this.capture.archive.download_url : null
+    },
+    expiresAt() {
+      return this.capture.archive ? new Date(this.capture.archive.download_expiration_timestamp) : null
     },
     isMobile() {
       return this.$store.getters.isMobile;
     },
     statusBG() {
       return {
-        invalid: "danger",
-        pending: "secondary",
-        in_progress: "primary",
-        completed: "success",
-        failed: "danger"
+        Invalid: "danger",
+        Pending: "secondary",
+        InProgress: "primary",
+        Completed: "success",
+        Failed: "danger"
       }[this.statusOrDefault]
-    },
-    downloadUrl() {
-      return this.capture.archive ? this.capture.archive.download_url : null
-    },
+    }
   },
   watch: {
     '$store.getters.displayedCapture': function (newcapture) {
       if (!(newcapture) || newcapture.id !== this.capture.id) {
-        this.displayContext = false;
+        this.displayDetails = false;
       }
     }
   },
   methods: {
     ...mapActions(['read']),
     toggleCaptureDetails(capture) {
-
-      this.displayContext = !this.displayContext
-
-      // set this as capture if toggling to show capture
-      this.displayContext ? store.commit('setDisplayedCapture', capture) : store.commit('setDisplayedCapture', undefined)
+      this.displayDetails = !this.displayDetails
+      this.displayDetails ? store.commit('setDisplayedCapture', capture) : store.commit('setDisplayedCapture', undefined)
     },
     getDate(date) {
       return formatDate(date);

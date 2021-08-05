@@ -12,11 +12,11 @@ export default createStore({
   state: {
     displayedCapture: undefined,
     breakpoints: {
-      xs: 576,
-      sm: 768,
-      md: 992,
-      lg: 1200,
-      xl: 1400
+      xs: 576-1,
+      sm: 768-1,
+      md: 992-1,
+      lg: 1200-1,
+      xl: 1400-1
     },
     windowWidth: 'xl',
   },
@@ -44,7 +44,7 @@ export default createStore({
       return state.displayedCapture;
     },
     isMobile: (state) => {
-      return state.windowWidth === 'sm' || state.windowWidth === 'xs';
+      return state.windowWidth === 'md' || state.windowWidth === 'sm' || state.windowWidth === 'xs';
     }
   },
 })

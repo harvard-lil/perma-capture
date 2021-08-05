@@ -76,11 +76,11 @@ export default {
       }
     },
     handleScroll(e) {
-      if (this.$refs.tableBody.getBoundingClientRect().bottom < window.innerHeight) {
-        this.clearScrollListener()
-        this.loading = true
-        this.pageForward().then(() => this.loading = false)
-      }
+      // if (this.$refs.tableBody.getBoundingClientRect().bottom < window.innerHeight) {
+      //   this.clearScrollListener()
+      //   this.loading = true
+      //   this.pageForward().then(() => this.loading = false)
+      // }
     }
   },
   watch: {

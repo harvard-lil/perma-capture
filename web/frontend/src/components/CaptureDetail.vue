@@ -1,35 +1,39 @@
 <template>
   <div class="capture-detail-container" v-if="displayedCapture">
-    <div class="data-group">
-      <span>Recorded {{ getDate(displayedCapture.created_at) }}</span>
-      <span class="float-end" v-if="!isMobile">
-      <a class="btn bi bi-download download-button" :href="downloadUrl"></a>
-    </span>
+    <div v-if="isMobile" class="data-group">
+      <span>Submitted {{ getDate(displayedCapture.created_at) }}</span><br>
+      <span v-if="downloadUrl">Expires {{ getDate(expiresAt) }}</span>
+      <span v-else-if="!hasFailed">Expired {{ getDate(expiresAt) }}</span>
+    </div>
+    <div v-else class="data-group download-button-group">
+      <span class="float-end">
+        <a v-if="downloadUrl" class="btn bi bi-download download-button" :href="downloadUrl"></a>
+      </span>
     </div>
     <div class="data-group">
-      <h3 class="h6">Submitted URL</h3>
+      <h3 class="h6">Requested URL</h3>
       <a :href="displayedCapture.validated_url">{{ displayedCapture.requested_url }}</a>
     </div>
     <div class="data-group" v-if="displayedCapture.label">
       <h3 class="h6">Labels</h3>
       <p>{{ displayedCapture.label }}</p>
     </div>
-    <div class="data-group">
-      <div v-if="displayedCapture.message" class="contextItem">
+    <div v-if="displayedCapture.message" class="data-group">
+      <h3 class="h6">Error Message</h3>
+      <div  class="contextItem">
         <div class="alert alert-danger">{{ displayedCapture.message }}</div>
       </div>
     </div>
-    <div class="data-group">
+    <div v-if="downloadUrl" class="data-group">
       <h3 class="h6">Preview</h3>
       <div class="iframe-container">
-        <replay-web-page v-if="downloadUrl"
-                         :source="downloadUrl"
-                         :url="displayedCapture.url"
+        <replay-web-page :source="downloadUrl"
+                         :url="displayedCapture.validated_url"
                          replaybase="/replay/"
                          class="replay contextItem"/>
       </div>
     </div>
-    <div class="data-group">
+    <div v-if="size" class="data-group">
       <h3 class="h6">Capture size</h3>
       <p>{{ size }}MB</p>
     </div>
@@ -47,7 +51,10 @@ export default {
       return this.displayedCapture.archive ? this.displayedCapture.archive.download_url : null
     },
     size() {
-      return Number((this.displayedCapture.archive.warc_size / (1024 * 1024)).toFixed(2))
+      return this.displayedCapture.archive ? Number((this.displayedCapture.archive.warc_size / (1024 * 1024)).toFixed(2)) : 0
+    },
+    expiresAt() {
+      return this.displayedCapture.archive ? new Date(this.displayedCapture.archive.download_expiration_timestamp) : null
     },
     isMobile() {
       return this.$store.getters.isMobile;
