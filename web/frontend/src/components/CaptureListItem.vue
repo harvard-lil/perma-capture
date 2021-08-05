@@ -1,5 +1,5 @@
 <template>
-  <li :class="{'active': !(hasFailed || isProcessing) && active, 'details-shown': displayContext}"
+  <li :class="{'active': !(hasFailed || isProcessing) && active, 'details-shown': displayDetails}"
       class="capture-list-item">
     <div class="content">
       <div class="favicon">🔗</div>
@@ -13,8 +13,7 @@
         <!--  on success  -->
         <template v-else>
           <a class="btn bi bi-download download-button" :href="downloadUrl"></a>
-          <a class="btn bi bi-chevron-right replay-toggle" :class="{active: displayContext}"
-
+          <a class="btn bi bi-chevron-right replay-toggle" :class="{active: displayDetails}"
              @click="toggleCaptureDetails(capture)"></a>
         </template>
       </div>
@@ -46,7 +45,7 @@ export default {
   },
   props: ['capture'],
   data: () => ({
-    displayContext: false,
+    displayDetails: false,
   }),
   computed: {
     statusOrDefault() {
@@ -85,18 +84,15 @@ export default {
   watch: {
     '$store.getters.displayedCapture': function (newcapture) {
       if (!(newcapture) || newcapture.id !== this.capture.id) {
-        this.displayContext = false;
+        this.displayDetails = false;
       }
     }
   },
   methods: {
     ...mapActions(['read']),
     toggleCaptureDetails(capture) {
-
-      this.displayContext = !this.displayContext
-
-      // set this as capture if toggling to show capture
-      this.displayContext ? store.commit('setDisplayedCapture', capture) : store.commit('setDisplayedCapture', undefined)
+      this.displayDetails = !this.displayDetails
+      this.displayDetails ? store.commit('setDisplayedCapture', capture) : store.commit('setDisplayedCapture', undefined)
     },
     getDate(date) {
       return formatDate(date);
