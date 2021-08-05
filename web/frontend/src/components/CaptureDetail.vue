@@ -28,7 +28,7 @@
                          class="replay contextItem"/>
       </div>
     </div>
-    <div class="data-group">
+    <div v-if="size" class="data-group">
       <h3 class="h6">Capture size</h3>
       <p>{{ size }}MB</p>
     </div>
@@ -46,7 +46,8 @@ export default {
       return this.displayedCapture.archive ? this.displayedCapture.archive.download_url : null
     },
     size() {
-      return Number((this.displayedCapture.archive.warc_size / (1024 * 1024)).toFixed(2))
+      return this.displayedCapture.archive ? Number((this.displayedCapture.archive.warc_size / (1024 * 1024)).toFixed(2)) : 0
+    },
     },
     isMobile() {
       return this.$store.getters.isMobile;
