@@ -279,9 +279,9 @@ def run_next_capture():
 
     If an exception is thrown in the main thread while Browsertrix is working, we stop and clean up.
     >>> caplog.clear()
-    >>> job = run_test_capture('example.com', stop_before_step=6)
+    >>> job = run_test_capture(no_profile_domain, stop_before_step=5)
     >>> assert job.status == CaptureJob.Status.FAILED
-    >>> assert job.step_count == 5
+    >>> assert job.step_count == 4
     >>> assert 'Browsertrix:' in job.step_description
     >>> assert job.capture_end_time
     >>> assert caplog.records[-1].message == 'No jobs waiting!'
@@ -332,21 +332,12 @@ def run_next_capture():
         archive = Archive(capture_job=capture_job, created_with_profile=profile)
         collection_name = archive.filename[:-5]
         browsertrix_output_filename = f'{collection_name}.wacz'
-        browsertrix_output_path = f'{settings.BROWSERTRIX_INTERNAL_DATA_DIR}/collections/{collection_name}/{browsertrix_output_filename}'
+        browsertrix_output_path = f'/tmp/collections/{collection_name}/{browsertrix_output_filename}'
         container = client.containers.create(
             settings.BROWSERTRIX_IMAGE,
-            environment=[
-                f'DATA_DIR={settings.BROWSERTRIX_INTERNAL_DATA_DIR}'
-            ],
-            volumes={
-                settings.BROWSERTRIX_ENTRYPOINT: {
-                    'bind': '/entrypoint.sh'
-                }
-            },
-            entrypoint='/entrypoint.sh',
             cap_add=['NET_ADMIN', 'SYS_ADMIN'],
             shm_size='1GB',
-            command=f'crawl --logging "stats,behaviors-debug" --generateWACZ --limit 1 --cwd {settings.BROWSERTRIX_INTERNAL_DATA_DIR} --collection {collection_name} --url {capture_job.validated_url} {"--profile /tmp/profile.tar.gz" if profile else ""}',
+            command=f'crawl --logging "stats,behaviors-debug" --generateWACZ --limit 1 --cwd /tmp --collection {collection_name} --url {capture_job.validated_url} {"--profile /tmp/profile.tar.gz" if profile else ""}',
             detach=True,
             network=settings.BROWSERTRIX_DOCKER_NETWORK or ''
         )
@@ -367,12 +358,16 @@ def run_next_capture():
             # see also https://github.com/moby/moby/issues/37663.
             handle_browsertrix_msg(capture_job, msg,
                 milestones=(
-                    'creating pages',
+                    'Text Extraction: Disabled',
                     'Waiting for behaviors to finish',
-                    'All Behaviors Done',
-                    'ensure WARCs are finished',
+                    'Waiting to ensure pending data is written',
                     'Generating WACZ',
-                    'WACZ successfully generated'
+                    'Validating passed pages.jsonl file',
+                    'Reading and Indexing All WARCs',
+                    'Writing archives',
+                    'Generating page index',
+                    'Generating datapackage.json',
+                    'Generating datapackage-digest.json',
                 ),
                 info_events=(
                     'Sys. load',
