@@ -11,15 +11,16 @@
       </span>
     </div>
     <div class="data-group">
-      <h3 class="h6">Submitted URL</h3>
+      <h3 class="h6">Requested URL</h3>
       <a :href="displayedCapture.validated_url">{{ displayedCapture.requested_url }}</a>
     </div>
     <div class="data-group" v-if="displayedCapture.label">
       <h3 class="h6">Labels</h3>
       <p>{{ displayedCapture.label }}</p>
     </div>
-    <div class="data-group">
-      <div v-if="displayedCapture.message" class="contextItem">
+    <div v-if="displayedCapture.message" class="data-group">
+      <h3 class="h6">Error Message</h3>
+      <div  class="contextItem">
         <div class="alert alert-danger">{{ displayedCapture.message }}</div>
       </div>
     </div>
