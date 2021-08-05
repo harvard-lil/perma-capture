@@ -12,7 +12,7 @@
   @include media-breakpoint-down(lg) {
     padding: 0 !important;
   }
-  @include media-breakpoint-between(md, lg) {
+  @include media-breakpoint-between(sm, lg) {
     min-width: 100%;
     grid-template-areas: "sidebar captures";
     grid-template-columns: 35% 65%;
@@ -36,6 +36,29 @@
 
   .capture-form {
     grid-area: sidebar;
+    padding: 1.5em;
+    @include media-breakpoint-up(sm) {
+      padding: 2em 1.5em;
+    }
+    @include media-breakpoint-up(lg) {
+      padding: 3em 1.5em;
+    }
+    background-color: $color-gray-light-medium;
+
+    .subtitle {
+      color: $color-gray-medium;
+      font-size: 1.2em;
+      line-height: 1.4em;
+      font-weight: 400;
+      margin: 1em 0;
+    }
+
+    .form-control, .btn, .warning-text {
+      font-size: 0.9rem;
+      @include media-breakpoint-up(lg) {
+        font-size: 1rem;
+      }
+    }
   }
 
   .captures-list {
@@ -60,6 +83,9 @@
 
   h1 {
     font-weight: 300;
+    @include media-breakpoint-up(sm) {
+      font-size: 32px;
+    }
   }
 }
 
@@ -165,8 +191,15 @@
 .btn-create {
   grid-area: btn-create;
   margin-right: 1em;
-  @include media-breakpoint-between(sm, md) {
+  @include media-breakpoint-down(xl) {
     grid-column: auto / span 2;
+    margin-right: 0;
+  }
+}
+
+.warning-text {
+  @include media-breakpoint-down(xl) {
+    margin-top: 0.5rem;
   }
 }
 
@@ -204,7 +237,7 @@
     }
   }
   // Mobile
-  @include media-breakpoint-between(md, lg) {
+  @include media-breakpoint-between(sm, lg) {
     grid-template-areas:
             "favicon title title title btn-group"
             "url url url url url"
@@ -213,7 +246,7 @@
   }
 
 
-  @include media-breakpoint-down(md) {
+  @include media-breakpoint-down(lg) {
     grid-template-areas:
               "url btn-group"
               "capture-detail capture-detail";

@@ -1,11 +1,35 @@
 .login-page-container {
+  background-color: $color-gray-light-medium;
+
   .message {
     grid-area: col1;
+
+    .subtitle {
+      font-weight: normal;
+    }
   }
 
   .enter-container {
     grid-area: col2;
   }
+
+  .base-form {
+    background-color: $color-white;
+    padding: 1em;
+    margin-bottom: 1.5em;
+    h1 {
+      color: $color-blue;
+    }
+    input {
+      border: 0;
+      border-bottom: 1px solid $color-gray;
+    }
+  }
+
+  .small {
+    color: $color-gray-medium;
+  }
+
 
   .btn {
     text-align: right;
