@@ -104,6 +104,10 @@
   display: grid;
   grid-template-areas: "status download arrow";
 
+  &.spinner {
+    height: 38px;  // matches toggle button
+  }
+
   .status-icon {
     font-weight: 400;
     line-height: 1.5;

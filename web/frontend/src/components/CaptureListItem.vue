@@ -4,7 +4,7 @@
     <div class="content">
       <div class="favicon" aria-hidden="true">🔗</div>
       <h3 class="h6 capture-title">{{ title }}</h3>
-      <div class="btn-group">
+      <div class="btn-group spinner">
         <span v-if="isProcessing"
               class="status-icon spinner spinner-border spinner-border-sm"
               aria-hidden="true">
@@ -18,8 +18,8 @@
       </div>
       <span v-if="statusOrDefault==='Invalid'"  class="capture-url" v-text="shortenUrl(url)"></span>
       <a v-else class="capture-url" :href="url" v-text="shortenUrl(url)"></a>
+      <span class="secondary-text recorded-date">Submitted {{ getDate(capture.created_at) }}</span>&nbsp;
       <template v-if="!isProcessing">
-        <span class="secondary-text recorded-date">Submitted {{ getDate(capture.created_at) }}</span>&nbsp;
         <span v-if="downloadUrl" class="warning-text expired-date">Expires {{ getDate(expiresAt) }}</span>
         <span v-else-if="succeeded" class="expired-date">Expired {{ getDate(expiresAt) }}</span>
       </template>
