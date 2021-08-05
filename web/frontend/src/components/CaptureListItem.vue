@@ -2,8 +2,8 @@
   <li :class="{'active': (isProcessing || downloadUrl), 'details-shown': displayDetails}"
       class="capture-list-item">
     <div class="content">
-      <h3 class="h6 capture-title">Lorem Ipsum title</h3>
       <div class="favicon" aria-hidden="true">🔗</div>
+      <h3 class="h6 capture-title">{{ title }}</h3>
       <div class="btn-group">
         <span v-if="isProcessing"
               class="status-icon spinner spinner-border spinner-border-sm"
@@ -59,6 +59,25 @@ export default {
     hasFailed() {
       return this.statusOrDefault in FailureStates
     },
+    title() {
+      let title;
+      switch(this.statusOrDefault) {
+        case 'Invalid':
+          title = 'Invalid URL';
+          break;
+        case 'InProgress':
+          title = 'Capture In Progress';
+          break;
+        case 'Failed':
+          title = 'Capture Failed';
+          break;
+        case 'Completed':
+          title = 'Lorem Ipsum title';
+          break;
+        default:
+          title = 'Capture Pending';
+      }
+      return title
     },
     url() {
       return this.capture.validated_url || this.capture.requested_url
