@@ -11,6 +11,7 @@
         </span>
         <template v-else>
           <a v-if="downloadUrl" class="btn bi bi-download download-button" :href="downloadUrl"></a>
+          <span v-else class="btn bi bi-download download-button placeholder"></span>
           <a class="btn bi bi-chevron-right replay-toggle" :class="{active: displayDetails}"
              @click="toggleCaptureDetails(capture)"></a>
         </template>
