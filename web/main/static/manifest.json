@@ -1,13 +1,13 @@
 {
   "src/main.ts": {
-    "file": "vite/main.64c44760.js",
+    "file": "vite/main.dedc0b67.js",
     "src": "src/main.ts",
     "isEntry": true,
     "imports": [
       "_vendor.828cf2b6.js"
     ],
     "css": [
-      "vite/main.7d3e768e.css"
+      "vite/main.0e2c8da8.css"
     ],
     "assets": [
       "vite/perma-logo.6b161a6e.svg",
