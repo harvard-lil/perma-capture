@@ -19,12 +19,11 @@
         <div class="alert alert-danger">{{ displayedCapture.message }}</div>
       </div>
     </div>
-    <div class="data-group">
+    <div v-if="downloadUrl" class="data-group">
       <h3 class="h6">Preview</h3>
       <div class="iframe-container">
-        <replay-web-page v-if="downloadUrl"
-                         :source="downloadUrl"
-                         :url="displayedCapture.url"
+        <replay-web-page :source="downloadUrl"
+                         :url="displayedCapture.validated_url"
                          replaybase="/replay/"
                          class="replay contextItem"/>
       </div>
