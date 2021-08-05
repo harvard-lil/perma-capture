@@ -24,8 +24,7 @@
         <span v-if="active" class="warning-text expired-date">Expires {{ getDate(capture.capture_end_time) }}</span>
         <span v-else class="expired-date">Expired</span>
       </template>
-      <br/>
-      <template v-if="isMobile && displayContext && capture.id === $store.getters.displayedCapture.id">
+      <template v-if="isMobile && displayDetails && capture.id === $store.getters.displayedCapture.id">
         <capture-detail/>
       </template>
     </div>
