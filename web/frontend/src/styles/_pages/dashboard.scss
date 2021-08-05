@@ -70,6 +70,10 @@
 
   .data-group {
     margin-bottom: 1em;
+
+    &.download-button-group {
+      margin-bottom: 0;
+    }
   }
 }
 

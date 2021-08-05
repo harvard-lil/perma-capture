@@ -1,10 +1,14 @@
 <template>
   <div class="capture-detail-container" v-if="displayedCapture">
-    <div class="data-group">
-      <span>Recorded {{ getDate(displayedCapture.created_at) }}</span>
-      <span class="float-end" v-if="!isMobile">
-      <a class="btn bi bi-download download-button" :href="downloadUrl"></a>
-    </span>
+    <div v-if="isMobile" class="data-group">
+      <span>Submitted {{ getDate(displayedCapture.created_at) }}</span><br>
+      <span v-if="downloadUrl">Expires {{ getDate(expiresAt) }}</span>
+      <span v-else-if="!hasFailed">Expired {{ getDate(expiresAt) }}</span>
+    </div>
+    <div v-else class="data-group download-button-group">
+      <span class="float-end">
+        <a v-if="downloadUrl" class="btn bi bi-download download-button" :href="downloadUrl"></a>
+      </span>
     </div>
     <div class="data-group">
       <h3 class="h6">Submitted URL</h3>
@@ -48,6 +52,8 @@ export default {
     size() {
       return this.displayedCapture.archive ? Number((this.displayedCapture.archive.warc_size / (1024 * 1024)).toFixed(2)) : 0
     },
+    expiresAt() {
+      return this.displayedCapture.archive ? new Date(this.displayedCapture.archive.download_expiration_timestamp) : null
     },
     isMobile() {
       return this.$store.getters.isMobile;
