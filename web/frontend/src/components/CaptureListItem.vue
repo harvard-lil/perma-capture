@@ -2,12 +2,12 @@
   <li :class="{'active': !(hasFailed || isProcessing) && active, 'details-shown': displayDetails}"
       class="capture-list-item">
     <div class="content">
-      <div class="favicon">🔗</div>
       <h3 class="h6 capture-title">Lorem Ipsum title</h3>
+      <div class="favicon" aria-hidden="true">🔗</div>
       <div class="btn-group">
         <span v-if="isProcessing"
               class="status-icon spinner spinner-border spinner-border-sm"
-              role="status" aria-hidden="true">
+              aria-hidden="true">
         </span>
         <span v-else-if="hasFailed" class="status-icon bi bi-x" aria-label="Capture has failed" role="status"> </span>
         <!--  on success  -->
