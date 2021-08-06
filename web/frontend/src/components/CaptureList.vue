@@ -9,6 +9,7 @@
           :key="capture.id"
           :capture="capture"
       />
+      <li v-if="loading" class="capture-list-loading">Loading...</li>
     </ul>
   </div>
 
@@ -66,23 +67,21 @@ export default {
     clearProcessingPoll() {
       clearInterval(this.$options.poller)
     },
-    clearScrollListener() {
-      window.removeEventListener("scroll", this.handleScroll)
+    clearLazyLoadListeners() {
+      this.$refs.captureList.removeEventListener("scroll", this.handleLazyLoad);
+      window.removeEventListener("scroll", this.handleLazyLoad);
     },
-    changeSort(prop) {
-      if (this.sortBy == prop) {
-        this.sortDesc = !this.sortDesc
-      } else {
-        this.sortBy = prop
-        this.sortDesc = true
+    handleLazyLoad(e) {
+      console.log('scrolling!')
+      let element = this.$refs.captureList;
+      let scrolling_mobile_window = this.$store.getters.isSmallestScreen && element.getBoundingClientRect().bottom < window.innerHeight;
+      let scrolling_capture_list = !this.$store.getters.isSmallestScreen && element.scrollHeight - Math.abs(element.scrollTop) === element.clientHeight;
+      if (scrolling_mobile_window || scrolling_capture_list) {
+        console.log('more!')
+        this.clearLazyLoadListeners()
+        this.loading = true
+        this.pageForward().then(() => this.loading = false)
       }
-    },
-    handleScroll(e) {
-      // if (this.$refs.tableBody.getBoundingClientRect().bottom < window.innerHeight) {
-      //   this.clearScrollListener()
-      //   this.loading = true
-      //   this.pageForward().then(() => this.loading = false)
-      // }
     },
     checkIsScrollable() {
       this.$nextTick(function () {
@@ -99,6 +98,14 @@ export default {
       } else {
         this.scrolled = false;
       }
+    },
+    changeSort(prop) {
+      if (this.sortBy == prop) {
+        this.sortDesc = !this.sortDesc
+      } else {
+        this.sortBy = prop
+        this.sortDesc = true
+      }
     }
   },
   watch: {
@@ -114,9 +121,10 @@ export default {
         if (current.next) {
           // Don't bother tracking whether it's already been attached
           // https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener#multiple_identical_event_listeners
-          window.addEventListener("scroll", this.handleScroll)
+          this.$refs.captureList.addEventListener("scroll", this.handleLazyLoad);
+          window.addEventListener("scroll", this.handleLazyLoad)
         } else {
-          this.clearScrollListener()
+          this.clearLazyLoadListeners()
         }
       }
     },
@@ -141,9 +149,9 @@ export default {
       this.checkIsScrollable()
     })
   },
-  unmounted() {
-    this.clearScrollListener();
+  beforeUnmount() {
     this.clearProcessingPoll();
+    this.clearLazyLoadListeners();
     window.removeEventListener('resize', this.checkIsScrollable);
   }
 }

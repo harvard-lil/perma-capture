@@ -56,7 +56,7 @@ const getters = {
 }
 
 const actions = {
-  list: ({ commit }, params = {ordering: '-created_at'}) =>
+  list: ({ commit }, params = {ordering: '-created_at', limit: 10}) =>
     Axios
       .get(URL_ROOT, {params: params})
       .then(resp => {
