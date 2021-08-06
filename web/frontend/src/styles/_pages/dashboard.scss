@@ -69,12 +69,35 @@
     .captures-header {
       padding-left: 1em;
       padding-top: 1em;
+      margin-bottom: 1em;
 
       .list-title {
         font-weight: $font-weight-normal;
         font-size: 1.4em;
       }
     }
+
+    .scrollable {
+      overflow-y: scroll;
+
+      margin-bottom: 0;
+      height: 80vh;
+
+      /* Subtle shadow at the bottom of the list */
+      box-shadow: 0 15px 15px -15px rgba(0,0,0,0.1);
+    }
+
+    .scrolled {
+      /* Subtle shadow between header and list, and at the bottom of the list */
+      box-shadow:
+        0 15px 15px -15px rgba(0,0,0,0.1),
+        0 -2px 2px -2px rgba(0,0,0,0.2);
+    }
+
+    li:first-child .content {
+      margin-top: -0.5em;
+    }
+
   }
 
   .capture-detail-container {

@@ -29,10 +29,12 @@ export default {
   },
 
   mounted() {
-    this.$store.commit('setWindowWidth')
+    this.$store.commit('setWindowWidth');
+    this.$store.commit('setViewportHeight');
     this.$nextTick(() => {
       window.addEventListener('resize', debounce(() => {
-            this.$store.commit('setWindowWidth')
+            this.$store.commit('setWindowWidth');
+            this.$store.commit('setViewportHeight');
           }, 250)
       );
     });
