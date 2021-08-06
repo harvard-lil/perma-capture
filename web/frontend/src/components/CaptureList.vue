@@ -3,7 +3,7 @@
     <header class="captures-header">
       <h2 class="list-title">Capture history</h2>
     </header>
-    <ul>
+    <ul ref="captureList" :class="{'scrollable': scrollable, 'scrolled': scrolled}" @scroll="applyScrollStyles">
       <CaptureListItem
           v-for="capture in captures(sortBy, sortDesc)"
           :key="capture.id"
@@ -36,7 +36,9 @@ export default {
       label: 'Label',
       capture_oembed_view: 'Embedded Version',
       created_at: 'Created At'
-    }
+    },
+    scrollable: false,
+    scrolled: false
   }),
   computed: {
     ...mapGetters({
@@ -81,6 +83,22 @@ export default {
       //   this.loading = true
       //   this.pageForward().then(() => this.loading = false)
       // }
+    },
+    checkIsScrollable() {
+      this.$nextTick(function () {
+        if (!this.$store.getters.isSmallestScreen && this.$refs.captureList.scrollHeight > (0.9 * this.$store.getters.viewportHeight)){
+          this.scrollable = true;
+        } else {
+          this.scrollable = false;
+        }
+      })
+    },
+    applyScrollStyles(e) {
+      if (e.target.scrollTop > 0) {
+        this.scrolled = true;
+      } else {
+        this.scrolled = false;
+      }
     }
   },
   watch: {
@@ -113,9 +131,20 @@ export default {
   created() {
     this.list().then(() => this.loading = false)
   },
+  mounted() {
+    this.$nextTick(function () {
+      window.addEventListener('resize', this.checkIsScrollable);
+    })
+  },
+  updated() {
+    this.$nextTick(function () {
+      this.checkIsScrollable()
+    })
+  },
   unmounted() {
-    this.clearScrollListener()
-    this.clearProcessingPoll()
+    this.clearScrollListener();
+    this.clearProcessingPoll();
+    window.removeEventListener('resize', this.checkIsScrollable);
   }
 }
 </script>

@@ -19,6 +19,7 @@ export default createStore({
       xl: 1400-1
     },
     windowWidth: 'xl',
+    viewportHeight: 0
   },
   mutations: {
     setDisplayedCapture: (state, capture) => {
@@ -36,6 +37,9 @@ export default createStore({
       } else {
         state.windowWidth = 'xl';
       }
+    },
+    setViewportHeight: (state) => {
+      state.viewportHeight = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
     }
   },
   actions: {},
@@ -45,6 +49,12 @@ export default createStore({
     },
     isMobile: (state) => {
       return state.windowWidth === 'md' || state.windowWidth === 'sm' || state.windowWidth === 'xs';
+    },
+    isSmallestScreen: (state) => {
+      return state.windowWidth === 'xs';
+    },
+    viewportHeight: (state) => {
+      return state.viewportHeight;
     }
   },
 })
