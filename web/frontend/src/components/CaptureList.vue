@@ -86,7 +86,7 @@ export default {
     },
     checkIsScrollable() {
       this.$nextTick(function () {
-        if (!this.$store.getters.isSmallestScreen && this.$refs.captureList.scrollHeight > (0.9 * this.$store.getters.viewportHeight)){
+        if (!this.$store.getters.isSmallestScreen && this.$refs.captureList.scrollHeight >= (0.8 * this.$store.getters.viewportHeight)){
           this.scrollable = true;
         } else {
           this.scrollable = false;
