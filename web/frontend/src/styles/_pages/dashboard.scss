@@ -227,7 +227,7 @@
 }
 
 // LIST ITEM GRID
-.capture-list-item {
+.capture-list-item, .capture-list-loading {
   list-style: none;
   border-bottom: 1px solid $color-gray-light-medium;
   background-color: rgba(196, 196, 196, 12%);
@@ -235,6 +235,11 @@
   &.active {
     background-color: $color-white;
   }
+}
+
+.capture-list-loading {
+  text-align: center;
+  padding: 1.5em;
 }
 
 .capture-list-item {
