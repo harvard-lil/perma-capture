@@ -1,4 +1,14 @@
 @import "nav";
+@import "footer";
+
+html, body {
+  height: 100%;
+}
+#vue-app {
+  min-height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
 
 .container-full {
   min-height: 90vh;

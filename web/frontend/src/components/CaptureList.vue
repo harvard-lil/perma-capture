@@ -72,12 +72,10 @@ export default {
       window.removeEventListener("scroll", this.handleLazyLoad);
     },
     handleLazyLoad(e) {
-      console.log('scrolling!')
       let element = this.$refs.captureList;
       let scrolling_mobile_window = this.$store.getters.isSmallestScreen && element.getBoundingClientRect().bottom < window.innerHeight;
       let scrolling_capture_list = !this.$store.getters.isSmallestScreen && element.scrollHeight - Math.abs(element.scrollTop) === element.clientHeight;
       if (scrolling_mobile_window || scrolling_capture_list) {
-        console.log('more!')
         this.clearLazyLoadListeners()
         this.loading = true
         this.pageForward().then(() => this.loading = false)
