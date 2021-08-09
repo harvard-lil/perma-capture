@@ -3,7 +3,7 @@
     <div v-if="isMobile" class="data-group">
       <span>Submitted {{ getDate(displayedCapture.created_at) }}</span><br>
       <span v-if="downloadUrl">Expires {{ getDate(expiresAt) }}</span>
-      <span v-else-if="!hasFailed">Expired {{ getDate(expiresAt) }}</span>
+      <span v-else-if="succeeded">Expired {{ getDate(expiresAt) }}</span>
     </div>
     <div v-else class="data-group download-button-group">
       <span class="float-end">
@@ -41,7 +41,8 @@
 </template>
 
 <script>
-import {formatDate} from '../lib/helpers';
+import {formatDate, snakeToPascal} from '../lib/helpers';
+import {SuccessStates} from '../constants/captures'
 
 export default {
   name: "CaptureDetail",
@@ -55,6 +56,9 @@ export default {
     },
     expiresAt() {
       return this.displayedCapture.archive ? new Date(this.displayedCapture.archive.download_expiration_timestamp) : null
+    },
+    succeeded() {
+      return snakeToPascal(this.displayedCapture.status || 'pending') in SuccessStates
     },
     isMobile() {
       return this.$store.getters.isMobile;
