@@ -17,7 +17,7 @@
         </template>
       </div>
       <span v-if="statusOrDefault==='Invalid'"  class="capture-url" v-text="shortenUrl(url)"></span>
-      <a v-else class="capture-url" :href="url" v-text="shortenUrl(url)"></a>
+      <span v-else class="capture-url"><a :href="url" v-text="shortenUrl(url)"></a></span>
       <span class="secondary-text recorded-date">Submitted {{ getDate(capture.created_at) }}</span>&nbsp;
       <template v-if="!isProcessing">
         <span v-if="downloadUrl" class="warning-text expired-date">Expires {{ getDate(expiresAt) }}</span>
