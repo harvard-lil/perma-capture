@@ -1,13 +1,13 @@
 {
   "src/main.ts": {
-    "file": "vite/main.3650bcf6.js",
+    "file": "vite/main.e73e8584.js",
     "src": "src/main.ts",
     "isEntry": true,
     "imports": [
-      "_vendor.828cf2b6.js"
+      "_vendor.7c86a5cd.js"
     ],
     "css": [
-      "vite/main.b8857b25.css"
+      "vite/main.d270a73e.css"
     ],
     "assets": [
       "vite/perma-logo.6b161a6e.svg",
@@ -55,7 +55,7 @@
       "vite/roboto-latin-900-normal.edcdf3f6.woff2"
     ]
   },
-  "_vendor.828cf2b6.js": {
-    "file": "vite/vendor.828cf2b6.js"
+  "_vendor.7c86a5cd.js": {
+    "file": "vite/vendor.7c86a5cd.js"
   }
 }
