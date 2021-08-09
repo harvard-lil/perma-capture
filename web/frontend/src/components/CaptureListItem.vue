@@ -91,15 +91,6 @@ export default {
     },
     isMobile() {
       return this.$store.getters.isMobile;
-    },
-    statusBG() {
-      return {
-        Invalid: "danger",
-        Pending: "secondary",
-        InProgress: "primary",
-        Completed: "success",
-        Failed: "danger"
-      }[this.statusOrDefault]
     }
   },
   watch: {
