@@ -57,9 +57,6 @@ export default {
     succeeded() {
       return this.statusOrDefault in SuccessStates
     },
-    hasFailed() {
-      return this.statusOrDefault in FailureStates
-    },
     title() {
       let title;
       switch(this.statusOrDefault) {
