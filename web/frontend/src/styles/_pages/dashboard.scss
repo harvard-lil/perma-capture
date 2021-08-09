@@ -102,26 +102,23 @@
 
   .capture-detail-container {
     grid-area: capture-detail;
+    background-color: $color-white;
+    padding: 1em;
+    border-left: 1px solid $color-gray-light-medium;
+
+    .data-group {
+      margin-bottom: 1em;
+
+      &.download-button-group {
+        margin-bottom: 0;
+      }
+    }
   }
 
   h1 {
     font-weight: 300;
     @include media-breakpoint-up(sm) {
       font-size: 32px;
-    }
-  }
-}
-
-.capture-detail-container {
-  background-color: $color-white;
-  padding: 1em;
-  border-left: 1px solid $color-gray-light-medium;
-
-  .data-group {
-    margin-bottom: 1em;
-
-    &.download-button-group {
-      margin-bottom: 0;
     }
   }
 }
