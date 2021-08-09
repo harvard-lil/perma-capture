@@ -1,11 +1,33 @@
+@mixin bottom-shadow {
+  box-shadow: 0 15px 15px -15px rgba(0,0,0,0.1);
+}
+
+@mixin bottom-and-top-shadow {
+  box-shadow:
+  0 15px 15px -15px rgba(0,0,0,0.1),
+  0 -2px 2px -2px rgba(0,0,0,0.2);
+}
+
+@mixin cap-column-height {
+  height: calc(80vh + 60px);
+  overflow-y: auto;
+  @include bottom-shadow;
+}
+
 .capture-dashboard {
   display: grid;
   grid-template-areas: "sidebar captures";
   grid-template-columns: 28% 72%;
+  .capture-form, .captures-list {
+    @include cap-column-height;
+  }
   @include media-breakpoint-up(lg) {
     &.capture-detail {
       grid-template-areas: "sidebar captures capture-detail";
       grid-template-columns: 25% 35% 40%;
+    }
+    .capture-detail-container {
+      @include cap-column-height;
     }
   }
   // if smaller screen, make dashboard container full-width
@@ -30,6 +52,11 @@
     grid-template-columns: 100%;
     .captures-header {
       display: none;
+    }
+    .capture-form, .captures-list, .capture-detail-container {
+      height: initial;
+      overflow-y: initial;
+      box-shadow: none;
     }
   }
 
@@ -78,20 +105,14 @@
     }
 
     .scrollable {
-      overflow-y: scroll;
-
+      overflow-y: auto;
       margin-bottom: 0;
       height: 80vh;
-
-      /* Subtle shadow at the bottom of the list */
-      box-shadow: 0 15px 15px -15px rgba(0,0,0,0.1);
+      @include bottom-shadow;
     }
 
     .scrolled {
-      /* Subtle shadow between header and list, and at the bottom of the list */
-      box-shadow:
-        0 15px 15px -15px rgba(0,0,0,0.1),
-        0 -2px 2px -2px rgba(0,0,0,0.2);
+      @include bottom-and-top-shadow;
     }
 
     li:first-child .content {
