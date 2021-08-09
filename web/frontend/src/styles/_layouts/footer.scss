@@ -1,0 +1,27 @@
+.page-footer {
+  background-color: $color-gray-light;
+  min-height: 150px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 4em 2em;
+  color: $color-gray-medium;
+
+  .links {
+    margin-top: 1em;
+
+    ul {
+      list-style: none;
+    }
+
+    a {
+      color: $color-gray-medium;
+
+      &:hover, &:focus {
+        color: $color-blue;
+      }
+    }
+  }
+}

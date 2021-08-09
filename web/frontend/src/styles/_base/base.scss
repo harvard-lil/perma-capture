@@ -48,3 +48,17 @@ h1 {
 .blue-text {
   color: $color-blue;
 }
+
+@mixin bottom-shadow {
+  box-shadow: 0 15px 15px -15px rgba(0,0,0,0.1);
+}
+
+@mixin top-shadow {
+  box-shadow: 0 -2px 2px -2px rgba(0,0,0,0.2);
+}
+
+@mixin bottom-and-top-shadow {
+  box-shadow:
+    0 15px 15px -15px rgba(0,0,0,0.1),
+    0 -2px 2px -2px rgba(0,0,0,0.2);
+}
