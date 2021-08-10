@@ -39,6 +39,8 @@
 
       <div class="content">
 
+        <TheMainHeader head="User Guide" :center="false"/>
+
         <p class="lead">The Perma.cc capture system is built on <a href="https://github.com/webrecorder">Webrecorder</a>
           technology and uses an automated browser to produce high-fidelity web archives.</p>
         <p>A <a href="https://github.com/webrecorder/wacz-format">web archive file</a> is created for each submitted
@@ -450,9 +452,11 @@
 
 <script lang="ts">
 
+import TheMainHeader from './TheMainHeader.vue'
+
 export default {
   components: {
-    // TheMainHeader
+     TheMainHeader
   },
   data: () => ({
     rwp_base_url: '',

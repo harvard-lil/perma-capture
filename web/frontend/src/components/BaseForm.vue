@@ -1,7 +1,6 @@
 <template>
-<form class="base-form" @submit.prevent="submit"
-      novalidate>
-  <h1>{{ title }}</h1>
+<form class="base-form" @submit.prevent="submit" novalidate>
+  <h1 v-if="title">{{ title }}</h1>
 
   <div v-if="displayValidations && errorCount"
        ref="errorsHeader"

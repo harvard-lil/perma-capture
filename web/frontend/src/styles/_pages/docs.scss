@@ -37,7 +37,7 @@ pre {
   }
 
   li:first-child {
-    border-top: 1px solid $color-black;
+    border-top: none;
 
     a {
       color: $color-black;
@@ -67,7 +67,7 @@ pre {
 
     .table-of-contents {
       grid-area: toc;
-      padding: 0 1.5em;
+      padding: 1.5em 2.5em 0 1.5em;
     }
 
     .content {

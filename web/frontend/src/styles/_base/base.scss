@@ -20,17 +20,9 @@ h1 {
   }
 }
 
-.form-control {
-  border-radius: 0;
-}
-
-.form-control::placeholder {
-  color: $color-gray;
-  font-weight: 400;
-}
-
-.form-control:disabled, .form-control[readonly] {
-  background-color: $color-gray-light-darker;
+.main-header {
+  @extend .display-5;
+  padding-top: 0.5em;
 }
 
 .btn {
