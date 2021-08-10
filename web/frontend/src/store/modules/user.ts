@@ -24,6 +24,13 @@ const actions = {
       Axios
           .post(`${URL_ROOT}login/`, payload, {headers: {"Content-Type": "multipart/form-data"}}),
 
+  logout: ({commit}) =>
+      Axios
+          .post(`${URL_ROOT}logout/`, {headers: {"Content-Type": "multipart/form-data"}})
+          .then(resp => {
+            commit('logout')
+          }),
+
   resetPassword: (_context, payload) =>
       Axios
           .post(`${URL_ROOT}password_reset/`, payload, {headers: {"Content-Type": "multipart/form-data"}}),
@@ -45,7 +52,10 @@ const mutations = {
       Object.assign(state, payload),
 
   updateToken: (state, payload) =>
-      state.auth_token.key = payload
+      state.auth_token.key = payload,
+
+  logout: (state) =>
+      state.is_authenticated = false
 }
 
 export default {

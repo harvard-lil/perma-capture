@@ -521,6 +521,7 @@ def index(request):
             'heading': settings.APP_NAME,
             'message': "A Witness Server & Suite of Tools for Journalists and Fact Checkers"
         })
+    return render(request, 'vue_base.html')
 
 
 @perms_test({'results': {200: ['user', None]}})

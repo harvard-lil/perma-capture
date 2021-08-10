@@ -1,8 +1,10 @@
 <template>
 <TheMainHeader
   head="Logged out"/>
-You have logged out.
-<router-link :to="{name: 'login'}">Log in again</router-link>
+<div class="container text-center">
+  <div>You have logged out.</div>
+  <div><router-link :to="{name: 'login'}">Log in again</router-link></div>
+</div>
 </template>
 
 <script lang="ts">
