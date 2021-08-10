@@ -510,17 +510,7 @@ def index(request):
     # ...     f'href="{settings.ACCESSIBILITY_POLICY_URL}"'
     # ... ])
     """
-    if request.user.is_authenticated:
-        return render(request, 'vue_base.html', {
-            'rwp_base_url': settings.RWP_BASE_URL,
-            'api_prefix': settings.API_PREFIX,
-            'heading': 'Create a new archive'
-        })
-    else:
-        return render(request, 'vue_base.html', {
-            'heading': settings.APP_NAME,
-            'message': "A Witness Server & Suite of Tools for Journalists and Fact Checkers"
-        })
+    return render(request, 'vue_base.html')
 
 
 @perms_test({'results': {200: ['user', None]}})

@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth import views as auth_views
 from django.urls import path, re_path
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic import TemplateView
 
 from .test.test_permissions_helpers import no_perms_test
@@ -28,7 +29,7 @@ urlpatterns = [
     # built-in Django auth views, wrapped to return JSON, with overrides to replace the form or tweak behavior in some views
     *[path(f'user/{view[0]}/', no_perms_test(auth_view_json_response(view[1])), name=f'{view[2]}')
         for view in [
-            ('login', auth_views.LoginView.as_view(), 'login'),
+            ('login',ensure_csrf_cookie(auth_views.LoginView.as_view()), 'login'),
             ('logout', auth_views.LogoutView.as_view(), 'logout'),
             ('password_change', auth_views.PasswordChangeView.as_view(), 'password_change'),
             ('password_change/done', auth_views.PasswordChangeDoneView.as_view(), 'password_change_done'),
