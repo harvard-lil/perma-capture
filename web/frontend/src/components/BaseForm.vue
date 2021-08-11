@@ -1,20 +1,20 @@
 <template>
 <form class="base-form" @submit.prevent="submit" novalidate>
-  <h1 v-if="title">{{ title }}</h1>
+  <h1 v-if="title" class="mb-1">{{ title }}</h1>
 
   <div v-if="displayValidations && errorCount"
        ref="errorsHeader"
        tabindex="-1"
-       class="invalid-feedback d-block">
+       class="invalid-field-summary alert alert-danger">
 
     Please correct the following
     <template v-if="errorCount == 1">error</template>
     <strong v-else>{{ errorCount }} errors</strong>:
 
-    <ul>
+    <ul class="invalid-field-list">
       <li v-for="(errorsArray, fieldName) in errors">
         <template v-if="fieldName != '__all__'">
-          <a :href="'#' + getFieldByName(fieldName).id">{{ getFieldByName(fieldName).label }}</a>:
+          <a class="alert-link" :href="'#' + getFieldByName(fieldName).id">{{ getFieldByName(fieldName).label }}</a>:
         </template>
         {{ errorsArray.map(({message}) => message).join(', ') }}
       </li>
@@ -22,28 +22,31 @@
   </div>
 
   <template v-for="field in fieldsWithDefaults">
-    <label :for="field.id" class="form-label mt-3">{{ field.label }}</label>
-    <input v-model="field.value"
-           @blur="checkValidity"
-           @invalid="onInvalid"
-           :name="field.name"
-           :id="field.id"
-           :type="field.type"
-           :class="['form-control', {'is-invalid': displayValidations && errors[field.name], 'is-valid': displayValidations && !errors[field.name]}]"
-           :required="field.required"
-           :disabled="field.disabled === true || processing"
-           :readonly="field.readonly"
-           :aria-invalid="!!errors[field.name]"
-           :aria-describedby="(errors[field.name] || []).map((error, index) => field.id + 'InvalidFeedback' + index)">
-    <div v-for="(error, index) in errors[field.name]"
-         :id="field.id + 'InvalidFeedback' + index"
-         class="invalid-feedback">
-      {{ error.message }}
+    <div class="form-floating mb-3">
+      <input v-model="field.value"
+             @blur="checkValidity"
+             @invalid="onInvalid"
+             :placeholder="field.label"
+             :name="field.name"
+             :id="field.id"
+             :type="field.type"
+             :class="['form-control', {'is-invalid': displayValidations && errors[field.name]}]"
+             :required="field.required"
+             :disabled="field.disabled === true || processing"
+             :readonly="field.readonly"
+             :aria-invalid="!!errors[field.name]"
+             :aria-describedby="(errors[field.name] || []).map((error, index) => field.id + 'InvalidFeedback' + index)">
+      <label :for="field.id" class="form-label">{{ field.label }}</label>
+      <div v-for="(error, index) in errors[field.name]"
+           :id="field.id + 'InvalidFeedback' + index"
+           class="invalid-feedback">
+        {{ error.message }}
+      </div>
     </div>
   </template>
   
   <button type="submit"
-          class="btn btn-primary mt-3"
+          class="btn btn-primary mt-1"
           :disabled="processing">
     <span v-if="processing" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
     {{ submitText }}
@@ -130,9 +133,3 @@ export default {
   }
 }
 </script>
-
-<style scoped>
-.invalid-feedback {
-  outline: none;
-}
-</style>
