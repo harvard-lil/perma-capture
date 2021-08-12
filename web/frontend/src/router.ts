@@ -6,7 +6,6 @@ import TheSignUpPage from './components/TheSignUpPage.vue'
 import TheLoginPage from './components/TheLoginPage.vue'
 import TheLoggedOutPage from './components/TheLoggedOutPage.vue'
 import TheAccountSettingsPage from './components/TheAccountSettingsPage.vue'
-import ThePasswordChangePage from './components/ThePasswordChangePage.vue'
 import ThePasswordResetPage from './components/ThePasswordResetPage.vue'
 
 const routes = [
@@ -16,8 +15,9 @@ const routes = [
   { path: '/user/login/', name: 'login', component: TheLoginPage },
   { path: '/user/logout/', name: 'logout', component: TheLoggedOutPage },
   { path: '/user/account/', name: 'account', component: TheAccountSettingsPage },
-  { path: '/user/password_change/', name: 'password_change', component: ThePasswordChangePage },
-  { path: '/user/password_reset/', name: 'password_reset', component: ThePasswordResetPage }
+  { path: '/user/password_reset/', name: 'password_reset', component: ThePasswordResetPage },
+  { path: '/user/password_change/', redirect: { name: 'account' } },
+  { path: '/user/password_change/done/', redirect: { name: 'account' } },
 ]
 
 export default createRouter({

@@ -1,6 +1,11 @@
 <template>
 <form class="base-form" @submit.prevent="submit" novalidate>
-  <h1 v-if="title" class="mb-1">{{ title }}</h1>
+  <div v-if="title"
+      role="heading"
+      :aria-level="headingLevel"
+      :class="['form-heading mb-1', 'h'+headingLevel]">
+    {{ title }}
+  </div>
 
   <div v-if="displayValidations && errorCount"
        ref="errorsHeader"
@@ -30,7 +35,7 @@
              :name="field.name"
              :id="field.id"
              :type="field.type"
-             :class="['form-control', {'is-invalid': displayValidations && errors[field.name]}]"
+             :class="['form-control', {'is-invalid': displayValidations && errors[field.name], 'form-control-plaintext': field.readonly}]"
              :required="field.required"
              :disabled="field.disabled === true || processing"
              :readonly="field.readonly"
@@ -67,6 +72,10 @@ export default {
     },
     action: Function,
     title: String,
+    headingLevel: {
+      type: Number,
+      default: 1
+    }
   },
   data: () => ({
     processing: false,

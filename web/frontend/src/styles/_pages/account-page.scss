@@ -1,10 +1,5 @@
 .account-page-container {
   background-color: $color-gray-light-medium;
-  @include media-breakpoint-down(sm) {
-    .api-info {
-      margin-top: 2em;
-    }
-  }
 }
 
 .account-info {
@@ -13,9 +8,4 @@
 
 .api-info {
   grid-area: col2;
-}
-
-.base-form {
-  padding: 0;
-  margin-bottom: 0;
 }

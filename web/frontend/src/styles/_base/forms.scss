@@ -2,21 +2,16 @@
   border-radius: 0;
 }
 
-.form-control::placeholder {
-  color: $color-gray;
-  font-weight: 400;
-}
-
 .form-control:disabled, .form-control[readonly] {
-  background-color: $color-gray-light-darker;
+  background-color: $color-white;
 }
 
 .base-form {
-  background-color: $color-gray-light-medium;
+  background-color: $color-white;
   padding: 1em;
   margin-bottom: 1.5em;
 
-  h1 {
+  .form-heading {
     color: $color-blue;
   }
 
