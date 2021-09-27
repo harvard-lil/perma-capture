@@ -1,7 +1,7 @@
 $display-font-weight: 900;
 
 $container-max-widths: (
-        xxl: 1200px
+  xxl: 1200px
 );
 
 // colors
@@ -20,3 +20,19 @@ $color-gray-medium: #646464;
 $color-gray-dark: #454545;
 $color-black: #2f2f2f;
 
+// bootstrap overrides
+$form-feedback-invalid-color: $color-red;
+
+$danger: $color-red;
+// $primary: $color-blue;
+// $secondary: $color-orange;
+// $success
+// $info
+// $warning
+// $light
+// $dark
+
+$input-padding-x: 0;
+$form-floating-label-opacity: 0.9;
+$form-floating-input-padding-t: 2.5rem;
+$form-floating-input-padding-b: 1rem;

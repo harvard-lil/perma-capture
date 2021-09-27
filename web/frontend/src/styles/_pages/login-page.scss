@@ -16,18 +16,12 @@
   .base-form {
     background-color: $color-white;
     padding: 1em;
-    margin-bottom: 1.5em;
-    h1 {
-      color: $color-blue;
-    }
-    input {
-      border: 0;
-      border-bottom: 1px solid $color-gray;
-    }
+    margin-bottom: 1em;
   }
 
   .small {
     color: $color-gray-medium;
+    margin-bottom: 0.25rem;
   }
 
 

@@ -1,6 +1,9 @@
 <template>
 <BaseForm :fields="fields"
-          :action="update"/>
+          :action="update"
+          title="Profile"
+          headingLevel="2"
+          submitText="Update profile"/>
 </template>
 
 <script lang="ts">

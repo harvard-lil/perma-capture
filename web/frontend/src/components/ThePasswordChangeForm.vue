@@ -1,11 +1,9 @@
 <template>
-  <div class="container-full two-col login-page-container ">
-    <div class="enter-container">
-      <BaseForm :title="'Password change'"
-                :fields="fields"
-                :action="changePassword"/>
-    </div>
-  </div>
+  <BaseForm title="Change password"
+            headingLevel="2"
+            :fields="fields"
+            :action="changePassword"
+            submitText="Change password"/>
 </template>
 
 <script lang="ts">
@@ -31,8 +29,3 @@ export default {
   }
 }
 </script>
-
-<style lang="scss">
-@import "../styles/styles.scss";
-@import "../styles/_pages/login-page";
-</style>

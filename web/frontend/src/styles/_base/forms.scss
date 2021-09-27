@@ -2,25 +2,56 @@
   border-radius: 0;
 }
 
-.form-control::placeholder {
-  color: $color-gray;
-  font-weight: 400;
-}
-
 .form-control:disabled, .form-control[readonly] {
-  background-color: $color-gray-light-darker;
+  background-color: $color-white;
 }
 
 .base-form {
-  background-color: $color-gray-light-medium;
+  background-color: $color-white;
   padding: 1em;
   margin-bottom: 1.5em;
 
-  h1 {
+  .form-heading {
     color: $color-blue;
+  }
+
+  label {
+    color: $color-gray;
   }
 
   input {
     border: 0;
+    border-bottom: 1px solid $color-gray;
+  }
+
+  .form-floating {
+    & > label {
+      padding: 1.5rem 0;
+    }
+
+    .form-control:focus ~ label,
+    .form-control:not(:placeholder-shown) ~ label {
+      padding: 1rem 0;
+    }
+
+    .form-control:focus {
+      border: none;
+      border-bottom: 2px solid $color-blue;
+      box-shadow: none;
+    }
+  }
+
+  .invalid-field-summary {
+    margin-bottom: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .invalid-field-list {
+    margin-bottom: 0;
+    list-style: none;
+  }
+
+  .was-validated .form-control:invalid, .form-control.is-invalid {
+    background-position: right calc(0.375em + 0.1875rem) bottom 0.65rem;
   }
 }
