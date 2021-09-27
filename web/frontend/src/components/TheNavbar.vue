@@ -3,7 +3,7 @@
     <div class="container-fluid">
       <router-link :to="{name: 'root'}" class="navbar-brand">
         <img alt="Perma logo" title="Perma logo" src="../assets/img/perma-logo.svg">
-        Perma Captures
+        <span class="wordmark">Perma Captures</span>
       </router-link>
       <TheMainNav/>
     </div>
