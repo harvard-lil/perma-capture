@@ -3,7 +3,6 @@ import datetime
 from functools import wraps
 import humps
 from pytz import timezone as tz
-import re
 import redis
 import requests
 import uuid
@@ -30,7 +29,7 @@ from .forms import SignupForm, UserForm, PasswordResetForm
 from .models import User, WebhookSubscription
 from .serializers import WebhookSubscriptionSerializer, ArchiveSerializer
 from .utils import (generate_hmac_signing_key, sign_data, is_valid_signature,
-    get_file_hash, query_capture_service, override_access_url_netloc)
+    get_file_hash, override_access_url_netloc)
 
 from test.test_helpers import check_response
 from .test.test_permissions_helpers import no_perms_test, perms_test
@@ -64,178 +63,33 @@ def user_passes_test_or_403(test_func):
 ###
 ### Views
 ###
+COMING_SOON = {'message': 'This alpha service is no longer available. Beta service with an improved API and additional features coming soon!'}
 
 class CaptureListView(APIView):
 
-    @method_decorator(perms_test({'results': {200: ['user'], 401: [None]}, 'extra_fixtures': ['mock_list_captures']}))
+    @method_decorator(perms_test({'results': {410: ['user'], 401: [None]}, 'extra_fixtures': ['mock_list_captures']}))
     def get(self, request):
         """
         List capture jobs for the authenticated user.
-
-        Given:
-        >>> user, client, mock_list_captures, django_settings = [getfixture(f) for f in ['user', 'client', 'mock_list_captures', 'settings']]
-        >>> url = reverse('captures')
-
-        We call out to the capture service using the authenticated user's ID.
-        >>> response = client.get(url, as_user=user)
-        >>> check_response(response)
-        >>> assert mock_list_captures.call_args[1]['params'].get('userid') == user.id
-
-        If this application is configured to override and correct the netloc of the WACZ files (see settings_base.py),
-        it is corrected before the response is returned to the user.
-        >>> django_settings.OVERRIDE_ACCESS_URL_NETLOC = {'internal': 'host.docker.internal:9000', 'external': 'localhost:9000'}
-        >>> overridden_response = client.get(url, as_user=user)
-        >>> check_response(overridden_response)
-        >>> for job in overridden_response.data['jobs']:
-        ...     if job['status'] == 'Complete':
-        ...         assert re.compile(f"https?://{django_settings.OVERRIDE_ACCESS_URL_NETLOC['external']}").match(job['access_url'])
-        ...     else:
-        ...         assert job['access_url'] is None
-        >>> for job in response.data['jobs']:
-        ...     if job['status'] == 'Complete':
-        ...         assert not re.compile(f"https?://{django_settings.OVERRIDE_ACCESS_URL_NETLOC['external']}").match(job['access_url'])
-        ...     else:
-        ...         assert job['access_url'] is None
         """
-        response, data = query_capture_service(
-            method='get',
-            path='/captures',
-            params={'userid': request.user.id},
-            valid_if=lambda code, data: code == 200 and 'jobs' in data
-        )
-        if settings.OVERRIDE_ACCESS_URL_NETLOC:
-            for job in data['jobs']:
-                if job['access_url']:
-                    job['access_url'] = override_access_url_netloc(job['access_url'])
-        return ApiResponse(data)
+        return ApiResponse(COMING_SOON, status=status.HTTP_410_GONE)
 
-    @method_decorator(perms_test({'results': {400: ['user'], 401: [None]}, 'extra_fixtures': ['mock_create_captures']}))
+    @method_decorator(perms_test({'results': {410: ['user'], 401: [None]}, 'extra_fixtures': ['mock_create_captures']}))
     def post(self, request):
         """
         Launch capture jobs for the authenticated user.
-
-        Given:
-        >>> user, webhook_subscription, client, mock_create_captures, django_settings = [getfixture(f) for f in ['user', 'webhook_subscription', 'client', 'mock_create_captures', 'settings']]
-        >>> url = reverse('captures')
-
-        POST a list of URLs to capture...
-        >>> check_response(client.post(url, as_user=user), status_code=400, content_includes="'urls' is required")
-        >>> check_response(client.post(url, {'urls': 'http://example.com'}, content_type='application/json', as_user=user), status_code=400, content_includes="must be a list")
-
-        and...receive back the count of launched capture jobs ('urls') and a list of their IDs ('jobids').
-        >>> response = client.post(url, {'urls': ['http://example.com']}, content_type='application/json', as_user=user)
-        >>> check_response(response, status_code=201)
-        >>> assert all(key in response.data for key in {'urls', 'jobids'})
-
-        We request a callback when the capture is complete:
-        >>> [hook] =  mock_create_captures.call_args[1]['json']['webhooks']
-        >>> assert hook['signingKeyAlgorithm'] is None
-        >>> assert not hook['signingKey']
-        >>> assert hook['callbackUrl'] and hook['userDataField']
-        >>> assert isinstance(hook['signingKey'], str) and isinstance(hook['callbackUrl'], str) and isinstance(hook['userDataField'], str)
-
-        and...include callback info for any user webhook subscriptions...
-        >>> response = client.post(url, {'urls': ['http://example.com']}, content_type='application/json', as_user=webhook_subscription.user)
-        >>> assert len(mock_create_captures.call_args[1]['json']['webhooks']) == 2
-
-        and... include the user_data_field as a string, if supplied.
-        >>> response = client.post(url, {'urls': ['http://example.com'], 'user_data_field': 'slack_message=141414'}, content_type='application/json', as_user=webhook_subscription.user)
-        >>> assert len(mock_create_captures.call_args[1]['json']['webhooks']) == 2
-        >>> assert 'slack_message=141414' in mock_create_captures.call_args[1]['json']['webhooks'][1].values()
-        >>> response = client.post(url, {'urls': ['http://example.com'], 'user_data_field': 141414}, content_type='application/json', as_user=webhook_subscription.user)
-        >>> assert len(mock_create_captures.call_args[1]['json']['webhooks']) == 2
-        >>> assert '141414' in mock_create_captures.call_args[1]['json']['webhooks'][1].values()
-
-        The capture service accepts other parameters: 'tag' and 'embeds'. See our API docs for details.
-        We ensure these optional values are cast to the expected types and pass them along, if they are supplied.
-        >>> response = client.post(url, {'urls': ['http://example.com'], 'tag': 9, 'embeds': 'yes'}, content_type='application/json', as_user=user)
-        >>> assert mock_create_captures.call_args[1]['json']['tag'] == '9'
-        >>> assert mock_create_captures.call_args[1]['json']['embeds'] is True
         """
-
-        try:
-            data = {
-                'userid': request.user.id,
-                'urls': request.data['urls'],
-                'tag': str(request.data.get('tag', '')),
-                'embeds': bool(request.data.get('embeds')) or False
-            }
-        except KeyError:
-            raise serializers.ValidationError("Key 'urls' is required.")
-        if not isinstance(data['urls'], list):
-            raise serializers.ValidationError("'urls' must be a list.")
-
-        if settings.SEND_WEBHOOK_DATA_TO_CAPTURE_SERVICE:
-            # our callback
-            if settings.CALLBACK_PREFIX:
-                url = f"{settings.CALLBACK_PREFIX}{reverse('archived_callback')}"
-            else:
-                url = request.build_absolute_uri(reverse('archived_callback'))
-            data['webhooks'] = [{
-                'callback_url': url,
-                'signing_key': settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY,
-                'signing_key_algorithm': settings.CAPTURE_SERVICE_WEBHOOK_SIGNING_KEY_ALGORITHM,
-                'user_data_field': str(timezone.now().timestamp())
-            }]
-            # user callbacks
-            webhook_subscriptions = WebhookSubscription.objects.filter(
-                user=request.user,
-                event_type=WebhookSubscription.EventType.ARCHIVE_CREATED
-            )
-            if webhook_subscriptions:
-                for subscription in webhook_subscriptions:
-                    data['webhooks'].append({
-                        'callback_url': subscription.callback_url,
-                        'signing_key': subscription.signing_key,
-                        'signing_key_algorithm': subscription.signing_key_algorithm,
-                        'user_data_field': str(request.data.get('user_data_field', ''))
-                    })
-
-        response, data = query_capture_service(
-            method='post',
-            path='/captures',
-            json=data,
-            valid_if=lambda code, data: code == 201 and all(key in data for key in {'urls', 'jobids'})
-        )
-        return ApiResponse(data, status=response.status_code)
+        return ApiResponse(COMING_SOON, status=status.HTTP_410_GONE)
 
 
 class CaptureDetailView(APIView):
 
-    @method_decorator(perms_test({'args': ['capture_job_data.jobid'], 'results': {204: ['user'], 401: [None]}, 'extra_fixtures': ['mock_delete_capture']}))
+    @method_decorator(perms_test({'args': ['capture_job_data.jobid'], 'results': {410: ['user'], 401: [None]}, 'extra_fixtures': ['mock_delete_capture']}))
     def delete(self, request, jobid):
         """
         Delete a capture job belonging to the authenticated user.
-
-        Given:
-        >>> capture_job_data, client, mock_delete_capture = [getfixture(f) for f in ['capture_job_data', 'client', 'mock_delete_capture']]
-        >>> url = reverse('delete_capture', args=[capture_job_data['jobid']])
-        >>> user = User.objects.get(id=capture_job_data['userid'])
-
-        We call out to the capture service using the authenticated user's ID.
-        >>> response = client.delete(url, as_user=user)
-        >>> check_response(response, status_code=204)
-        >>> assert mock_delete_capture.call_args[1]['params'].get('userid') == user.id
-
-        Capture job IDs must be valid UUIDs. This application validates and returns
-        404 if passed an invalid job ID; if we pass it on to the capture service, we
-        should expect a 400.
-
-        If the job doesn't exist, or has already been deleted, we should expect a 404.
-
-        If the job doesn't belong to the user, we should expect a 403.
-
-        (If we wish to delete a job with admin-level privileges, we should omit the
-        userid param from our API call.)
         """
-        logger.info(f"Deleting job {jobid} for user {request.user.id}")
-        response, data = query_capture_service(
-            method='delete',
-            path=f"/capture/{jobid}",
-            params={'userid': request.user.id},
-            valid_if=lambda code, data: code in [204, 403, 404]
-        )
-        return ApiResponse(data or None, status=response.status_code)
+        return ApiResponse(COMING_SOON, status=status.HTTP_410_GONE)
 
 
 class WebhookSubscriptionListView(APIView):
