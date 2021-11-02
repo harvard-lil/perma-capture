@@ -3,7 +3,6 @@ import datetime
 from functools import wraps
 import humps
 from pytz import timezone as tz
-import re
 import redis
 import requests
 import uuid
@@ -30,7 +29,7 @@ from .forms import SignupForm, UserForm, PasswordResetForm
 from .models import User, WebhookSubscription
 from .serializers import WebhookSubscriptionSerializer, ArchiveSerializer
 from .utils import (generate_hmac_signing_key, sign_data, is_valid_signature,
-    get_file_hash, query_capture_service, override_access_url_netloc)
+    get_file_hash, override_access_url_netloc)
 
 from test.test_helpers import check_response
 from .test.test_permissions_helpers import no_perms_test, perms_test
