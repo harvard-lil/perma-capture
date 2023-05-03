@@ -241,7 +241,7 @@ class Job(TimestampedModel):
     def capture_time(self):
         try:
             delta = self.capture_end_time - self.capture_start_time
-            return delta.seconds
+            return delta.total_seconds()
         except TypeError:
             return None
     capture_time.short_description = 'capture time (s)'
