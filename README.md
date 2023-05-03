@@ -29,9 +29,15 @@ Migrate the database:
 
     # ./manage.py migrate
 
+Install the node dependencies:
+
+    # cd frontend
+    # yarn install
+    # cd ../
+
 Spin up the development server:
 
-    # fab run
+    # fab run_fullstack
 
 Create a test admin user (follow the prompts, then log in using those credentials):
 
