@@ -3,6 +3,7 @@ from celery.exceptions import MaxRetriesExceededError, SoftTimeLimitExceeded, Re
 from celery.signals import task_failure
 from datetime import timedelta
 import docker
+import re
 import requests
 import socket
 import threading
@@ -84,7 +85,7 @@ class HaltCaptureException(Exception):
     pass
 
 
-class BrowsertrixLifeCycleThread(threading.Thread):
+class ScoopLifeCycleThread(threading.Thread):
     """
     """
     def __init__(self, container, timeout, *args, **kwargs):
@@ -119,37 +120,31 @@ class BrowsertrixLifeCycleThread(threading.Thread):
             self.status = self.container.status
 
 
-PUPPETEER_ESCAPE_SEQUENCES = [
-    ''.join(chr(c) for c in [27, 91, 55, 65]),
-    ''.join(chr(c) for c in [27, 91, 56, 65]),
-    ''.join(chr(c) for c in [27, 91, 56, 66]),
-    ''.join(chr(c) for c in [27, 91, 56]),
-    ''.join(chr(c) for c in [27, 91, 75])
-]
-def handle_browsertrix_msg(capture_job, msg, milestones='', info_events=''):
+def handle_scoop_msg(capture_job, msg, milestones='', info_events=''):
     """
-    Reformat a logline from Browsertrix and log at the desired level, incrementing
+    Reformat a logline from Scoop and log at the desired level, incrementing
     the process of the capture job if a "milestone" has been reached.
     """
+    def tidy_message(message):
+        cleaned = message
+        remove_patterns = [
+            r'^\[.*?\]',
+            r'\s*INFO\s*',
+            r'\s*STEP \[.*?\]:\s*'
+        ]
+        for pattern in remove_patterns:
+            cleaned = re.sub(pattern, '', cleaned)
+        return cleaned
+
     # the docker library returns stdout as bytes
     msg = str(msg, 'utf-8')
-
-    # handle puppeteer-cluster's fancy log output
-    for sequence in PUPPETEER_ESCAPE_SEQUENCES:
-        if msg.startswith(sequence):
-            msg = msg[len(sequence):]
-
-    # ensure there's still a meaningful message left
-    msg = msg.strip('=# \n')
-    if msg.startswith('behavior debug'):
-        msg = msg[len('behavior debug: '):].strip('"!')
     if msg:
         if any(milestone in msg for milestone in milestones):
-            inc_progress(capture_job, 1, f"Browsertrix: {msg}.")
+            inc_progress(capture_job, 1, f"[Scoop] {tidy_message(msg)}.")
         elif any(event in msg for event in info_events):
-            logger.info(f"{capture_job} Browsertrix {msg}")
+            logger.info(f"{capture_job}: [Scoop] {tidy_message(msg)}")
         else:
-            logger.debug(msg)
+            logger.debug(tidy_message(msg))
 
 
 def inc_progress(capture_job, inc, description):
@@ -311,7 +306,7 @@ def run_next_capture():
     # Basic Setup
     client = None
     container = None
-    browsertrix_life_cycle_thread = None
+    scoop_life_cycle_thread = None
 
     try:
         inc_progress(capture_job, 0, "Validating.")
@@ -325,67 +320,56 @@ def run_next_capture():
         inc_progress(capture_job, 1, "Connecting to Docker.")
         client = docker.from_env()
 
-        inc_progress(capture_job, 1, "Creating Browsertrix container.")
-        profile = None
-        if capture_job.log_in_if_supported:
-            profile = Profile.for_url(capture_job.validated_url, capture_job.headless)
-        archive = Archive(capture_job=capture_job, created_with_profile=profile)
-        collection_name = archive.filename[:-5]
-        browsertrix_output_filename = f'{collection_name}.wacz'
-        browsertrix_output_path = f'/tmp/collections/{collection_name}/{browsertrix_output_filename}'
+        inc_progress(capture_job, 1, "Creating Scoop container.")
+        archive = Archive(capture_job=capture_job, created_with_profile=None)
+        scoop_output_filename = archive.filename
+        scoop_output_full_path = f'/tmp/{scoop_output_filename}'
         container = client.containers.create(
-            settings.BROWSERTRIX_IMAGE,
+            settings.SCOOP_IMAGE,
             cap_add=['NET_ADMIN', 'SYS_ADMIN'],
             shm_size='1GB',
-            command=f'crawl --logging "stats,behaviors-debug" --generateWACZ --limit 1 --cwd /tmp --collection {collection_name} --url {capture_job.validated_url} {"--profile /tmp/profile.tar.gz" if profile else ""}',
+            init=True,
+            command=f'npx scoop "{capture_job.validated_url}" -f wacz -o {scoop_output_full_path} --log-level trace --capture-timeout {settings.SCOOP_CAPTURE_TIMEOUT_MILLISECONDS}',
             detach=True,
-            network=settings.BROWSERTRIX_DOCKER_NETWORK or ''
+            network=settings.SCOOP_DOCKER_NETWORK or ''
         )
 
-        if profile:
-            inc_progress(capture_job, 1, "Transferring browser profile.")
-            if not copy_file_to_container(profile.profile, '/tmp', 'profile.tar.gz', container):
-                capture_job.mark_failed('Transfer of browser profile to container failed.')
-                raise HaltCaptureException
-
-        inc_progress(capture_job, 1, "Starting Browsertrix.")
+        inc_progress(capture_job, 1, "Starting Scoop.")
         container.start()
-        browsertrix_life_cycle_thread = BrowsertrixLifeCycleThread(container, settings.BROWSERTRIX_TIMEOUT_SECONDS, name="browsertrix")
-        browsertrix_life_cycle_thread.start()
+        scoop_life_cycle_thread = ScoopLifeCycleThread(container, settings.SCOOP_FATAL_TIMEOUT_SECONDS, name="scoop")
+        scoop_life_cycle_thread.start()
         stdout_stream = container.logs(stderr=False, stream=True)
         for msg in stdout_stream:
-            # we should look into whether the browsertrix container needs init, and whether it passes signals correctly, etc.
-            # see also https://github.com/moby/moby/issues/37663.
-            handle_browsertrix_msg(capture_job, msg,
+            handle_scoop_msg(capture_job, msg,
                 milestones=(
-                    'Text Extraction: Disabled',
-                    'Waiting for behaviors to finish',
-                    'Waiting to ensure pending data is written',
-                    'Generating WACZ',
-                    'Validating passed pages.jsonl file',
-                    'Reading and Indexing All WARCs',
-                    'Writing archives',
-                    'Generating page index',
-                    'Generating datapackage.json',
-                    'Generating datapackage-digest.json',
+                    'STEP',
+                    'Exporting capture',
+                    'saved to disk'
                 ),
                 info_events=(
-                    'Sys. load',
+                    'WARN',
+                    'ERROR',
+                    'User Agent'
+                    'captureTimeout',
+                    'Indexing WARCS',
+                    'Writing',
+                    'Finalizing WACZ',
+                    'WACZ was finalized',
                 )
             )
 
-        browsertrix_life_cycle_thread.join()
-        if browsertrix_life_cycle_thread.exit_code != 0:
+        scoop_life_cycle_thread.join()
+        if scoop_life_cycle_thread.exit_code != 0:
             # this is NOT how we want to handle the verbose output of stderr. What's the best way to log?
             # send a special error email?
-            logger.error(f"Browsertrix exited with {browsertrix_life_cycle_thread.exit_code}: {browsertrix_life_cycle_thread.stderr}")
+            logger.error(f"Scoop exited with {scoop_life_cycle_thread.exit_code}: {scoop_life_cycle_thread.stderr}")
             raise HaltCaptureException
 
     except HaltCaptureException:
         logger.info("HaltCaptureException thrown.")
     except SoftTimeLimitExceeded:
         logger.warning(f"Soft timeout while capturing job {capture_job.id}.")
-        # might include code here for politely asking Browsertrix to stop recording.
+        # might include code here for politely asking Scoop to stop recording.
     except:  # noqa
         logger.exception(f"Exception while capturing job {capture_job.id}:")
     finally:
@@ -396,7 +380,7 @@ def run_next_capture():
                 container.stop()
 
                 try:
-                    with extract_file_from_container(browsertrix_output_filename, browsertrix_output_path, container) as file:
+                    with extract_file_from_container(scoop_output_filename, scoop_output_full_path, container) as file:
                         # should probably make sure its a valid wacz?
                         # unlike a truncated warc, I don't think a truncated wacz can be played back
 

@@ -242,10 +242,10 @@ CELERY_RESOURCE_LIMITS = [
 #
 # It remains to be determined whether they will prove appropriate here.
 #
-# If a task is running longer than five minutes, ask it to shut down
-CELERY_TASK_SOFT_TIME_LIMIT=300
+# If a task is running longer than six minutes, ask it to shut down
+CELERY_TASK_SOFT_TIME_LIMIT = 60 * 6
 # If a task is running longer than seven minutes, kill it
-CELERY_TASK_TIME_LIMIT = 420
+CELERY_TASK_TIME_LIMIT = 60 * 7
 
 # Control whether Celery tasks should be run asynchronously in a background worker
 # process or synchronously in the main thread of the calling script / Django request.
@@ -273,7 +273,8 @@ TEMPLATE_VISIBLE_SETTINGS = (
     'ACCESSIBILITY_POLICY_URL',
     'PASSWORD_RESET_TIMEOUT',
     'VITE_ENTRY_PATH',
-    'VITE_USE_MANIFEST'
+    'VITE_USE_MANIFEST',
+    'RWP_BASE_URL'
 )
 
 DEFAULT_FROM_EMAIL = 'info@perma.cc'
@@ -302,10 +303,11 @@ DEFAULT_S3_STORAGE = {
 }
 OVERRIDE_STORAGE_NETLOC = None
 
-# Browsertrix
-BROWSERTRIX_IMAGE = 'registry.lil.tools/webrecorder/browsertrix-crawler:0.4.3'
-BROWSERTRIX_DOCKER_NETWORK = None
-BROWSERTRIX_TIMEOUT_SECONDS = 270
+# Scoop
+SCOOP_IMAGE = 'scoop:0.2.6-1'
+SCOOP_DOCKER_NETWORK = None
+SCOOP_CAPTURE_TIMEOUT_MILLISECONDS = 60 * 4 * 1000
+SCOOP_FATAL_TIMEOUT_SECONDS = 60 * 5
 
 LAUNCH_CAPTURE_JOBS = True
 
@@ -316,7 +318,7 @@ WEBHOOK_MAX_RETRIES = 11
 EXPOSE_WEBHOOK_TEST_ROUTE = False
 
 # Playback
-RWP_BASE_URL = "https://cdn.jsdelivr.net/npm/replaywebpage@1.3.9"
+RWP_BASE_URL = 'https://cdn.jsdelivr.net/npm/replaywebpage@1.7.14'
 
 # Vite/Vue frontend
 VITE_MANIFEST_PATH = "main/static/manifest.json"

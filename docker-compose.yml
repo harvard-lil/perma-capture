@@ -48,6 +48,11 @@ services:
     depends_on:
       - db
       - minio
+  scoop:
+    build:
+      context: ./docker/scoop/
+    image: scoop:0.2.6-1
+    command: "echo Ready to scoop!"
   nginx:
     image: registry.lil.tools/harvardlil/nginx:0.03
     ports:

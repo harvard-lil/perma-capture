@@ -13,6 +13,9 @@ import CaptureList from './CaptureList.vue'
 import CaptureDetail from './CaptureDetail.vue'
 import {debounce} from '../lib/helpers';
 
+import { createNamespacedHelpers } from 'vuex'
+const {mapState} = createNamespacedHelpers('globals')
+
 export default {
   components: {
     CaptureForm,
@@ -25,7 +28,10 @@ export default {
     },
     displayedCapture() {
       return this.$store.getters.displayedCapture;
-    }
+    },
+    ...mapState({
+      rwp_base_url: 'rwp_base_url'
+    })
   },
 
   mounted() {
@@ -39,7 +45,7 @@ export default {
       );
     });
     const replay = document.createElement('script')
-    replay.setAttribute('src', 'https://cdn.jsdelivr.net/npm/replaywebpage@1.3.9/ui.js')
+    replay.setAttribute('src', this.rwp_base_url + '/ui.js')
     document.head.appendChild(replay)
   }
 }
