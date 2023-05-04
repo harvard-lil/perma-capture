@@ -25,7 +25,7 @@ from django.utils import timezone
 from django.db.backends import utils as django_db_utils
 
 from main.models import User, WebhookSubscription, Archive, CaptureJob, Profile, ProfileCaptureJob
-
+from fabfile import prepare_scoop
 
 # This file defines test fixtures available to all tests.
 # To see available fixtures run pytest --fixtures
@@ -234,9 +234,8 @@ def celery_config():
 
 @pytest.fixture(scope='session')
 def docker_client():
-    image_details = settings.BROWSERTRIX_IMAGE.split(':')
     client = docker.from_env()
-    client.images.pull(image_details[0], tag=image_details[1] if len(image_details) == 2 else None)
+    prepare_scoop(client, settings.SCOOP_BUILD_CONTEXT, settings.SCOOP_IMAGE, testing=True)
     yield client
     client.close()
 

@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+import docker
 from functools import wraps
 import os
 import signal
@@ -9,6 +10,9 @@ from fabric.decorators import task
 from fabric.operations import local
 
 import django
+
+import logging
+logger = logging.getLogger(__name__)
 
 ### Helpers ###
 
@@ -55,6 +59,40 @@ def pip_compile(args=''):
     subprocess.check_call(command, env=dict(os.environ, CUSTOM_COMPILE_COMMAND='fab pip-compile'))
 
 
+def prepare_scoop(docker_client, path, tag, testing=False):
+    def print_or_log(msg):
+        """
+        Unexpected print statements cause our doctests to fail,
+        but are preferred in other contexts.
+        """
+        if testing:
+            logger.info(msg)
+        else:
+            print(msg)
+
+    try:
+        docker_client.images.get(tag)
+    except docker.errors.ImageNotFound:
+        try:
+            print_or_log(f"\n\n!!!! Attempting to pull {tag} from registry: may take a minute or two !!!\n\n")
+            docker_client.images.pull("registry.lil.tools", tag=tag)
+        except docker.errors.APIError:
+            print_or_log(f"\n\n!!!! Pull unsuccessful. Building {tag}: may take a minute or two !!!\n\n")
+            _image, _build_logs = docker_client.images.build(
+                path=path,
+                tag=tag,
+                forcerm=True
+            )
+            print_or_log(f"\n\nFinished building {tag}.\n\n")
+
+
+@task()
+def set_up_scoop(path, tag, testing=False):
+    docker_client = docker.from_env()
+    prepare_scoop(docker_client, path, tag, testing)
+    docker_client.close()
+
+
 @task(alias='run')
 @setup_django
 def run_django(port=None):  # pragma: no cover
@@ -62,6 +100,9 @@ def run_django(port=None):  # pragma: no cover
         port = "0.0.0.0:8000" if os.environ.get('DOCKERIZED') else "127.0.0.1:8000"
 
     from django.conf import settings
+
+    set_up_scoop(settings.SCOOP_BUILD_CONTEXT, settings.SCOOP_IMAGE)
+
     if settings.CELERY_TASK_ALWAYS_EAGER:
         local(f'python manage.py runserver {port}')
     else:

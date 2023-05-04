@@ -40,19 +40,15 @@ services:
       - TEST_CAPTURE_TARGET_DOMAINS=capture-target-1.test,capture-target-2.test,capture-target-3.test,capture-target-4.test
     volumes:
       - ./web:/app/web:delegated
-      # Grant the container access to your host's Docker daemon, so that it can launch browsertrix.
+      # Grant the container access to your host's Docker daemon, so that it can build and launch Scoop.
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./docker/scoop:/app/docker/scoop:delegated
     ports:
       - "127.0.0.1:8000:8000"
       - "127.0.0.1:3000:3000"
     depends_on:
       - db
       - minio
-  scoop:
-    build:
-      context: ./docker/scoop/
-    image: scoop:0.2.6-1
-    command: "echo Ready to scoop!"
   nginx:
     image: registry.lil.tools/harvardlil/nginx:0.03
     ports:

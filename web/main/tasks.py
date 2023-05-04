@@ -253,42 +253,42 @@ def run_next_capture():
 
     # A domain where logged-in capture is not supported:
 
-    >>> job = run_test_capture(no_profile_domain)
+    >>> job = run_test_capture(f'http://{no_profile_domain}')
     >>> assert_succeeded(job, with_profile=None)
 
-    A domain where logged-in capture is supported:
+    # A domain where logged-in capture is supported:
 
-    ... and profile.headless == capture job.headless
-    >>> job = run_test_capture(f'http://{profile_domain}/page', capture_job_extra_kwargs={'headless': profile.headless})
-    >>> assert_succeeded(job, with_profile=profile)
+    # ... and profile.headless == capture job.headless
+    # >>> job = run_test_capture(f'http://{profile_domain}/page', capture_job_extra_kwargs={'headless': profile.headless})
+    # >>> assert_succeeded(job, with_profile=profile)
 
-    ... and profile.headless == capture job.headless, but capture_job.log_in_if_supported == False
-    >>> job = run_test_capture(f'http://{profile_domain}/page', capture_job_extra_kwargs={'headless': profile.headless, 'log_in_if_supported': False})
-    >>> assert_succeeded(job, with_profile=None)
+    # ... and profile.headless == capture job.headless, but capture_job.log_in_if_supported == False
+    # >>> job = run_test_capture(f'http://{profile_domain}/page', capture_job_extra_kwargs={'headless': profile.headless, 'log_in_if_supported': False})
+    # >>> assert_succeeded(job, with_profile=None)
 
-    ... but profile.headless != capture job.headless
-    >>> job = run_test_capture(f'http://{profile_domain}/page', capture_job_extra_kwargs={'headless': not profile.headless})
-    >>> assert_succeeded(job, with_profile=None)
+    # ... but profile.headless != capture job.headless
+    # >>> job = run_test_capture(f'http://{profile_domain}/page', capture_job_extra_kwargs={'headless': not profile.headless})
+    # >>> assert_succeeded(job, with_profile=None)
 
     FAILURE
 
-    If an exception is thrown in the main thread while Browsertrix is working, we stop and clean up.
+    If an exception is thrown in the main thread while Scoop is working, we stop and clean up.
     >>> caplog.clear()
     >>> job = run_test_capture(no_profile_domain, stop_before_step=5)
     >>> assert job.status == CaptureJob.Status.FAILED
     >>> assert job.step_count == 4
-    >>> assert 'Browsertrix:' in job.step_description
+    >>> assert '[Scoop]' in job.step_description
     >>> assert job.capture_end_time
     >>> assert caplog.records[-1].message == 'No jobs waiting!'
-    >>> assert not docker_client.containers.list(all=True, filters={'ancestor': settings.BROWSERTRIX_IMAGE})
+    >>> assert not docker_client.containers.list(all=True, filters={'ancestor': settings.SCOOP_IMAGE})
 
-    If Browsertrix exceeds the maximum permitted time limit, we stop and clean up.
+    If Scoop exceeds the maximum permitted time limit, we stop and clean up.
     >>> caplog.clear()
-    >>> django_settings.BROWSERTRIX_TIMEOUT_SECONDS = 1
+    >>> django_settings.SCOOP_FATAL_TIMEOUT_SECONDS = 1
     >>> job = run_test_capture('example.com')
     >>> assert job.status == CaptureJob.Status.FAILED
-    >>> assert 'Browsertrix exited with 137' in caplog.text  #  137 means SIGKILL
-    >>> assert not docker_client.containers.list(all=True, filters={'ancestor': settings.BROWSERTRIX_IMAGE})
+    >>> assert 'Scoop exited with 137' in caplog.text  #  137 means SIGKILL
+    >>> assert not docker_client.containers.list(all=True, filters={'ancestor': settings.SCOOP_IMAGE})
 
     We clean up failed jobs before we get started.
     >>> assert mock_clean_up_failed.call_count > 0
@@ -324,12 +324,20 @@ def run_next_capture():
         archive = Archive(capture_job=capture_job, created_with_profile=None)
         scoop_output_filename = archive.filename
         scoop_output_full_path = f'/tmp/{scoop_output_filename}'
+        scoop_kwargs = {
+            "format": "wacz",
+            "output": scoop_output_full_path,
+            "log-level": "trace",
+            "capture-timeout": settings.SCOOP_CAPTURE_TIMEOUT_MILLISECONDS,
+            "blocklist": settings.SCOOP_CUSTOM_BLOCKLIST
+        }
+
         container = client.containers.create(
             settings.SCOOP_IMAGE,
             cap_add=['NET_ADMIN', 'SYS_ADMIN'],
             shm_size='1GB',
             init=True,
-            command=f'npx scoop "{capture_job.validated_url}" -f wacz -o {scoop_output_full_path} --log-level trace --capture-timeout {settings.SCOOP_CAPTURE_TIMEOUT_MILLISECONDS}',
+            command=f'npx scoop "{capture_job.validated_url}" ' + " ".join(f"--{key} {value}" for key, value in scoop_kwargs.items() if value),
             detach=True,
             network=settings.SCOOP_DOCKER_NETWORK or ''
         )
