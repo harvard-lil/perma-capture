@@ -336,8 +336,8 @@ def run_next_capture():
 
         container = client.containers.create(
             settings.SCOOP_IMAGE,
-            cap_add=['NET_ADMIN', 'SYS_ADMIN'],
-            shm_size='1GB',
+            # shm_size='1GB',
+            mem_limit='4GB',
             init=True,
             command=command,
             detach=True,
