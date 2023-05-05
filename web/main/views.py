@@ -121,7 +121,7 @@ class CaptureListView(APIView):
         OrderingFilter        # can be ordered by order_by= if ordering_fields is set
     )
     filterset_class = CaptureJobFilter
-    ordering_fields = ('created_at', 'url', 'requested_url', 'label', 'status', 'capture_oembed_view')      # lock down order_by fields -- security risk if unlimited
+    ordering_fields = ('created_at', 'url', 'requested_url', 'label', 'status',)      # lock down order_by fields -- security risk if unlimited
 
     def filter_queryset(self, queryset):
         """
@@ -235,13 +235,12 @@ class CaptureListView(APIView):
         >>> assert response.data['status'] == 'pending'
 
         ...or a list of independent capture requests.
-        >>> response = client.post(url, [{'requested_url': 'http://example.com/1'}, {'requested_url': 'http://example.com/2', 'capture_oembed_view': True}], content_type='application/json', as_user=user)
+        >>> response = client.post(url, [{'requested_url': 'http://example.com/1'}, {'requested_url': 'http://example.com/2'}], content_type='application/json', as_user=user)
         >>> check_response(response, status_code=201)
-        >>> assert not response.data[0]['capture_oembed_view'] and response.data[1]['capture_oembed_view']
+        >>> assert len(response.data) == 2
 
         In addition to specifying the URL, your request can optionally include configuration options:
         - whether we should use a headless or 'headful' browser to make the capture;
-        - whether you would like the standard web view or the oEmbed snippet view of the target;
         - a label you would like associated with the job, for your convenience;
         - a data string you would like passed along to your webhook callbacks, when the capture is complete;
         - and, finally, "human": an indicator that a human is actively waiting for the result of the capture
@@ -249,7 +248,6 @@ class CaptureListView(APIView):
           opposed to, for instance, a large batch of URLs that can stand a few seconds of queuing.
         >>> configurable_fields = {
         ...     'requested_url': 'https://twitter.com/permacc/status/1039225277119954944',
-        ...     'capture_oembed_view': True,
         ...     'headless': True,
         ...     'label': 'article-1-url-3',
         ...     'webhook_data': 'foo=bar&boo=baz',

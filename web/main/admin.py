@@ -7,7 +7,7 @@ from django.contrib.auth.models import Group
 from django.urls import reverse
 from django.utils.html import format_html
 
-from .models import User, WebhookSubscription, CaptureJob, Archive, ProfileCaptureJob, Profile
+from .models import User, WebhookSubscription, CaptureJob, Archive
 
 #
 # Filters
@@ -123,44 +123,6 @@ class ArchiveDownloadableFilter(admin.SimpleListFilter):
         return queryset.filter(download_url__isnull=True)
 
 
-class VerifiedProfileFilter(admin.SimpleListFilter):
-    parameter_name = 'verified_profile'
-    title = 'verified profile'
-
-    def lookups(self, request, model_admin):
-        return (
-            ('True', 'True'),
-            ('False', 'False'),
-        )
-
-    def queryset(self, request, queryset):
-        value = self.value()
-        if value == 'True':
-            return queryset.filter(profile__verified=True)
-        elif value == 'False':
-            return queryset.exclude(profile__verified=True)
-        return queryset
-
-
-class ActiveProfileFilter(admin.SimpleListFilter):
-    parameter_name = 'active_profile'
-    title = 'active profile'
-
-    def lookups(self, request, model_admin):
-        return (
-            ('True', 'True'),
-            ('False', 'False'),
-        )
-
-    def queryset(self, request, queryset):
-        value = self.value()
-        if value == 'True':
-            return queryset.filter(profile__verified=True, profile__marked_obsolete__isnull=True)
-        elif value == 'False':
-            return queryset.exclude(profile__verified=True, profile__marked_obsolete__isnull=True)
-        return queryset
-
-
 #
 # Forms
 #
@@ -182,28 +144,8 @@ class UserAddForm(UserCreationForm):
 
 class ArchiveInline(admin.StackedInline):
     model = Archive
-    fields = readonly_fields = ('hash', 'hash_algorithm', 'warc_size', 'download_expiration_timestamp', 'download_url', 'profile_link', 'created_at', 'updated_at')
+    fields = readonly_fields = ('hash', 'hash_algorithm', 'warc_size', 'download_expiration_timestamp', 'download_url', 'created_at', 'updated_at')
     can_delete = False
-
-    def profile_link(self, obj):
-        if obj.created_with_profile_id:
-            url = reverse('admin:main_profile_change', args=(obj.created_with_profile_id,))
-            return format_html('<a href="{}">{}</a>', url, obj.created_with_profile_id)
-    profile_link.short_description = 'created with profile'
-
-
-class ProfileInline(admin.TabularInline):
-    model = Profile
-    fields = ('username', 'created_at', 'updated_at', 'verified', 'marked_obsolete')
-    readonly_fields = ('username', 'created_at', 'updated_at')
-    can_delete = False
-    extra = 0
-
-    def has_add_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
 
 
 #
@@ -275,9 +217,7 @@ class CaptureJobAdmin(admin.ModelAdmin):
         'id',
         'user_link',
         'requested_url',
-        'capture_oembed_view',
         'headless',
-        'log_in_if_supported',
         'label',
         'status',
         'message',
@@ -287,12 +227,12 @@ class CaptureJobAdmin(admin.ModelAdmin):
         'queue_time',
         'capture_time'
     )
-    list_filter = [UserEmailFilter, UserIDFilter, RequestedURLFilter, 'status', 'capture_oembed_view', 'headless', 'human']
+    list_filter = [UserEmailFilter, UserIDFilter, RequestedURLFilter, 'status', 'headless', 'human']
     fieldsets = (
-        (None, {'fields': ('user_link', 'requested_url', 'capture_oembed_view', 'headless', 'log_in_if_supported', 'human', 'label')}),
+        (None, {'fields': ('user_link', 'requested_url', 'headless', 'human', 'label')}),
         ('Progress', {'fields': ( 'status', 'message', 'order', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')})
     )
-    readonly_fields = ('user_link', 'requested_url', 'capture_oembed_view', 'headless', 'log_in_if_supported', 'human', 'label', 'status', 'message', 'order', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')
+    readonly_fields = ('user_link', 'requested_url', 'headless', 'human', 'label', 'status', 'message', 'order', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')
     inlines = [ArchiveInline]
 
     def get_queryset(self, request):
@@ -313,15 +253,14 @@ class ArchiveAdmin(admin.ModelAdmin):
         'warc_size',
         'download_expiration_timestamp',
         'download_url',
-        'profile_link',
         'created_at',
         'updated_at'
     )
     list_filter = [ArchiveDownloadableFilter, CaptureJobUserEmailFilter, CaptureJobUserIDFilter]
-    fields = readonly_fields = ('capture_job_link', 'user_link', 'hash', 'hash_algorithm', 'warc_size', 'download_url', 'download_expiration_timestamp', 'profile_link', 'created_at', 'updated_at')
+    fields = readonly_fields = ('capture_job_link', 'user_link', 'hash', 'hash_algorithm', 'warc_size', 'download_url', 'download_expiration_timestamp', 'created_at', 'updated_at')
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('capture_job__user', 'created_with_profile')
+        return super().get_queryset(request).select_related('capture_job__user')
 
     def user_link(self, obj):
         url = reverse('admin:main_user_change', args=(obj.capture_job.user.pk,))
@@ -332,95 +271,6 @@ class ArchiveAdmin(admin.ModelAdmin):
         url = reverse('admin:main_capturejob_change', args=(obj.capture_job_id,))
         return format_html('<a href="{}">{}</a>', url, obj.capture_job_id)
     capture_job_link.short_description = 'capture job'
-
-    def profile_link(self, obj):
-        if obj.created_with_profile_id:
-            url = reverse('admin:main_profile_change', args=(obj.created_with_profile_id,))
-            return format_html('<a href="{}">{}</a>', url, obj.created_with_profile_id)
-    profile_link.short_description = 'created with profile'
-
-
-class ProfileCaptureJobForm(forms.ModelForm):
-    """
-    Restrict netloc to the currently configured options.
-    """
-    netloc = forms.ChoiceField(choices=[(netloc, netloc) for netloc in settings.PROFILE_SECRETS])
-
-
-@admin.register(ProfileCaptureJob)
-class ProfileCaptureJobAdmin(admin.ModelAdmin):
-    list_display = (
-        'id',
-        'netloc',
-        'headless',
-        'status',
-        'message',
-        'created_at',
-        'updated_at',
-        'queue_time',
-        'capture_time',
-        'verified_profile',
-        'active_profile'
-    )
-    list_filter = ['status', 'netloc', 'headless', VerifiedProfileFilter, ActiveProfileFilter]
-    readonly_fields = ('status', 'message', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')
-    form = ProfileCaptureJobForm
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related('profile')
-
-    def get_readonly_fields(self, request, obj=None):
-        if obj:
-            return self.readonly_fields + ('netloc', 'headless')
-        return self.readonly_fields
-
-    def get_fieldsets(self, request, obj=None):
-        if obj is None:
-            return ((None, {'fields': ('netloc', 'headless')}),)
-        return(
-            (None, {'fields': ('netloc', 'headless')}),
-            ('Progress', {'fields': ( 'status', 'message', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')})
-        )
-
-    def get_inlines(self, request, obj=None):
-        if obj:
-            yield ProfileInline
-
-    def verified_profile(self, obj):
-        try:
-            return obj.profile.verified
-        except Profile.DoesNotExist:
-            return False
-    verified_profile.boolean = True
-
-    def active_profile(self, obj):
-        try:
-            return obj.profile.verified and not obj.profile.marked_obsolete
-        except Profile.DoesNotExist:
-            return False
-    active_profile.boolean = True
-
-
-@admin.register(Profile)
-class ProfileAdmin(admin.ModelAdmin):
-    list_display = (
-        'id',
-        'netloc',
-        'headless',
-        'username',
-        'verified',
-        'marked_obsolete',
-        'created_at',
-        'updated_at'
-    )
-    list_filter = ['netloc', 'headless', 'verified', 'marked_obsolete']
-    fields = readonly_fields = ('capture_job_link', 'netloc', 'headless', 'username', 'verified', 'marked_obsolete', 'created_at', 'updated_at')
-
-
-    def capture_job_link(self, obj):
-        url = reverse('admin:main_profilecapturejob_change', args=(obj.profile_capture_job_id,))
-        return format_html('<a href="{}">{}</a>', url, obj.profile_capture_job_id)
-    capture_job_link.short_description = 'profile capture job'
 
 
 admin.site.unregister(Group)

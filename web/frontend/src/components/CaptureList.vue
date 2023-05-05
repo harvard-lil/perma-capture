@@ -35,7 +35,6 @@ export default {
       status: 'Status',
       url: 'URL',
       label: 'Label',
-      capture_oembed_view: 'Embedded Version',
       created_at: 'Created At'
     },
     scrollable: false,

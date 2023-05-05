@@ -24,7 +24,7 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from django.db.backends import utils as django_db_utils
 
-from main.models import User, WebhookSubscription, Archive, CaptureJob, Profile, ProfileCaptureJob
+from main.models import User, WebhookSubscription, Archive, CaptureJob
 from fabfile import prepare_scoop
 
 # This file defines test fixtures available to all tests.
@@ -407,7 +407,6 @@ class ArchiveFactory(factory.DjangoModelFactory):
             lambda o: f"https://our-cloud-storage.com/{factory.Faker('uuid4').generate()}.wacz?params=for-presigned-download"
         )
     )
-    created_with_profile = None
 
 
 @register_factory
@@ -485,202 +484,13 @@ def user_with_capture_jobs_factory(db):
     return func
 
 
-@register_factory
-@factory.django.mute_signals(signals.post_save)  # mute so that, if a profile capture job is created, the job isn't launched!
-class ProfileFactory(factory.DjangoModelFactory):
-    class Meta:
-        model = Profile
-        exclude = ('create_capture_job', 'obsolete')
-
-    netloc = factory.LazyFunction(
-        lambda: random.choice(list(settings.PROFILE_SECRETS.keys()))
-    )
-    headless = factory.Faker('boolean', chance_of_getting_true=50)
-    username = factory.LazyAttribute(
-        lambda o: settings.PROFILE_SECRETS[o.netloc]['user']
-    )
-    verified = factory.Faker('boolean', chance_of_getting_true=50)
-    obsolete = False
-    marked_obsolete = factory.Maybe(
-        'obsolete',
-        yes_declaration=factory.LazyFunction(
-            lambda:  timezone.now() - timedelta(minutes=factory.Faker('random_int', min=1, max=60).generate())
-        ),
-        no_declaration=None
-    )
-    profile = factory.django.FileField(
-        filename='profile.tar.gz',
-        from_path=os.path.abspath(os.path.join(TEST_FILE_DIR, 'example-profile.tar.gz'))
-    )
-    create_capture_job = True
-    profile_capture_job = factory.Maybe(
-        'create_capture_job',
-        yes_declaration=factory.SubFactory(
-            'conftest.CompletedProfileCaptureJobFactory',
-            netloc=factory.SelfAttribute('..netloc'),
-            headless=factory.SelfAttribute('..headless'),
-            profile__create_new=False
-        ),
-        no_declaration=None
-    )
-
-
-@register_factory
-class UnverifiedProfileFactory(ProfileFactory):
-    verified = False
-    obsolete = False
-
-
-@register_factory
-class ActiveProfileFactory(ProfileFactory):
-    verified = True
-    obsolete = False
-
-
-@register_factory
-class ObsoleteProfileFactory(ProfileFactory):
-    verified = True
-    obsolete = True
-
-
 @pytest.fixture()
 def target_domains(settings, db):
     assert len(settings.TEST_CAPTURE_TARGET_DOMAINS) == 4
-    for domain in settings.TEST_CAPTURE_TARGET_DOMAINS[1:]:
-        settings.PROFILE_SECRETS[domain] = {
-            'log_in_url': '',
-            'user': fake.user_name(),
-            'password': fake.password(length=12),
-        }
     return {
-        'no_profile': settings.TEST_CAPTURE_TARGET_DOMAINS[0],
-        'unverified_profile': (settings.TEST_CAPTURE_TARGET_DOMAINS[1], UnverifiedProfileFactory(netloc=settings.TEST_CAPTURE_TARGET_DOMAINS[1])),
-        'active_profile': (settings.TEST_CAPTURE_TARGET_DOMAINS[2], ActiveProfileFactory(netloc=settings.TEST_CAPTURE_TARGET_DOMAINS[2])),
-        'obsolete_profile': (settings.TEST_CAPTURE_TARGET_DOMAINS[3], ObsoleteProfileFactory(netloc=settings.TEST_CAPTURE_TARGET_DOMAINS[3])),
+        'basic_domain': settings.TEST_CAPTURE_TARGET_DOMAINS[0],
+        'special_domain_1': settings.TEST_CAPTURE_TARGET_DOMAINS[1],
+        'special_domain_2': settings.TEST_CAPTURE_TARGET_DOMAINS[2],
+        'special_domain_3': settings.TEST_CAPTURE_TARGET_DOMAINS[3],
     }
 
-
-@register_factory
-@factory.django.mute_signals(signals.post_save)  # mute so that the job isn't launched!
-class ProfileCaptureJobFactory(factory.DjangoModelFactory):
-    class Meta:
-        model = ProfileCaptureJob
-        exclude = ('has_screenshot',)
-
-    netloc = factory.LazyFunction(
-        lambda: random.choice(list(settings.PROFILE_SECRETS.keys()))
-    )
-    headless = factory.Faker('boolean', chance_of_getting_true=50)
-    has_screenshot = False
-
-
-@register_factory
-class PendingProfileCaptureJobFactory(ProfileCaptureJobFactory):
-    status = CaptureJob.Status.PENDING
-
-
-@register_factory
-class InProgressProfileCaptureJobFactory(ProfileCaptureJobFactory):
-    status = CaptureJob.Status.IN_PROGRESS
-    capture_start_time = factory.Faker('future_datetime', end_date='+1m', tzinfo=tz.utc)
-    step_count = factory.Faker('pyfloat', min_value=1, max_value=10)
-    step_description = factory.Faker('text', max_nb_chars=15)
-
-
-@register_factory
-class CompletedProfileCaptureJobFactory(InProgressProfileCaptureJobFactory):
-    status = CaptureJob.Status.COMPLETED
-    capture_end_time = factory.LazyAttribute(
-        lambda o: o.capture_start_time + timedelta(seconds=factory.Faker('random_int', min=0, max=settings.CELERY_TASK_TIME_LIMIT).generate())
-    )
-    has_screenshot = factory.Faker('boolean', chance_of_getting_true=90)
-    screenshot = factory.Maybe(
-        'has_screenshot ',
-        yes_declaration=factory.django.FileField(
-            filename='screenshot.png',
-            # 1 pixel transparent PNG
-            data=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=')
-        ),
-        no_declaration=None
-    )
-
-    @factory.post_generation
-    def profile(self, create, extracted, **kwargs):
-        """
-        Create profiles as a post-generation hook instead of a RelatedFactory so that the CaptureJob
-        always exists in the actual DB before the Profile is generated, working around some weirdness
-        otherwise encountered by Factory Boy apropos of the FileField and profile_job_directory.
-        """
-
-        if not create:
-            # Simple build, do nothing.
-            return
-
-        # Use a passed-in profile, if passed in,
-        # Otherwise, check to see if a profile is required, and create as necessary.
-        self.refresh_from_db()
-        if extracted:
-            self.profile = extracted
-        if 'create_new' not in kwargs or kwargs.get('create_new'):
-            try:
-                self.profile
-            except ObjectDoesNotExist:
-                ProfileFactory(
-                    profile_capture_job_id=self.id,
-                    create_capture_job=False,
-                    obsolete=factory.Faker('boolean', chance_of_getting_true=70)
-                )
-        self.refresh_from_db()
-
-@register_factory
-class FailedProfileCaptureJobFactory(CompletedProfileCaptureJobFactory):
-    status = CaptureJob.Status.FAILED
-    message = {'error': ['Failed during capture.']}
-    profile = None
-
-
-# I'm defining this at the top-level scope so that it can be imported and used
-# outside of the contexts of tests, for instance, in local development.
-def create_profile_capture_job(status=None, **kwargs):
-    if status is None:
-        status = random.choices([status for status in ProfileCaptureJob.Status.values if status != 'invalid'])[0]
-    if status not in ProfileCaptureJob.Status.values:
-        raise ValueError(f"Status must be one of {ProfileCaptureJob.Status.values}")
-    return globals()[f"{humps.pascalize(status)}ProfileCaptureJobFactory"](**kwargs)
-
-
-@pytest.fixture
-def profile_capture_job_factory(target_domains):
-    """
-    Return a factory function that makes a profile capture job.
-
-    Given:
-    >>> [profile_capture_job_factory] = [getfixture(f) for f in ['profile_capture_job_factory']]
-
-    You can create a capture job with a specific status...
-    >>> cj1 = profile_capture_job_factory(status='in_progress')
-    >>> cj2 = profile_capture_job_factory(status='failed')
-    >>> cj3 = profile_capture_job_factory(status='completed')
-    >>> assert cj1.status == CaptureJob.Status.IN_PROGRESS
-    >>> assert cj2.status == CaptureJob.Status.FAILED
-    >>> assert cj3.status == CaptureJob.Status.COMPLETED
-
-    ...or, just let the code pick a random status.
-    >>> cj4 = profile_capture_job_factory()
-    >>> assert cj4.status
-
-    The capture jobs all target supported domains:
-    >>> try:
-    ...     cj1.full_clean() and cj2.full_clean() and cj3.full_clean()
-    ... except ValidationError:
-    ...     assert False
-
-    Only successful jobs have associated profile objects.
-    >>> for job in (cj1, cj2):
-    ...     with pytest.raises(ObjectDoesNotExist):
-    ...         job.profile
-    >>> assert cj3.profile
-    """
-    def func(status=None, **kwargs):
-        return create_profile_capture_job(status, **kwargs)
-    return func

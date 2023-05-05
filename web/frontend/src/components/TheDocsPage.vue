@@ -13,7 +13,6 @@
             </li>
             <li><a href="#capturing-advanced-features">Advanced Features</a>
               <ul>
-                <li><a href="#capturing-oembed">oEmbed Captures</a></li>
                 <li><a href="#webhook-notifications">Webhooks</a></li>
                 <li><a href="#zapier-integration">Zapier Integration</a></li>
               </ul>
@@ -152,24 +151,6 @@
         <p>Read more about other options under <a href="#capturing-advanced-features">advanced features</a> and <a href="#capturing-under-development">features in development</a>.</p>
 
         <h3 id="capturing-advanced-features">Advanced Features</h3>
-
-        <h4 id="capturing-oembed">Capture of "Embeddable" Views</h4>
-
-        <p>Many websites offer an easily-embeddable "<a href="https://oembed.com/">oEmbed</a>" view of snippets of their content. For example, Twitter provides the following embeddable view of the Tweet at <a href="https://twitter.com/permacc/status/1039225277119954944">https://twitter.com/permacc/status/1039225277119954944</a>:</p>
-
-        <blockquote class="twitter-tweet"><p lang="en" dir="ltr">Are you someone who cites to the internet a lot? The web&#39;s a wonderful resource but can be more fragile than you think. Anyone working in
-          <a href="https://twitter.com/hashtag/academia?src=hash&amp;ref_src=twsrc%5Etfw">#academia</a>,
-          <a href="https://twitter.com/hashtag/journalism?src=hash&amp;ref_src=twsrc%5Etfw">#journalism</a>,
-          <a href="https://twitter.com/hashtag/legaltech?src=hash&amp;ref_src=twsrc%5Etfw">#legaltech</a>
-          - any industry that depends on reliable citations should be on the offense against <a href="https://twitter.com/hashtag/linkrot?src=hash&amp;ref_src=twsrc%5Etfw">#linkrot</a>, Perma can help!
-          <a href="https://t.co/XVwEwa2zEA">pic.twitter.com/XVwEwa2zEA</a></p>&mdash; Perma.cc (@permacc) <a href="https://twitter.com/permacc/status/1039225277119954944?ref_src=twsrc%5Etfw">September 10, 2018</a>
-        </blockquote>
-
-        <p>When submitting URLs for capture, you may indicate that when a target website provides support for an "oEmbed" view, the web archive should include a capture of that view, along with the standard web view.</p>
-
-        <p>Using the web interface: check the "Archive Embedded Version" box. Using the API: include <code>"embeds": true</code> in your <code>POST</code> data.</p>
-
-        <p>Capture via oEmbed is currently supported for Twitter, Instagram, Facebook, YouTube, and SlideShare. Additional domains may be supported in the future; an up-to-date list of <a href="https://github.com/ikreymer/permafact-backend/blob/master/driver/embeds.json">supported domains and URL patterns</a> is available on Github.</p>
 
         <h4 id="webhook-notifications">Webhook Notifications</h4>
 

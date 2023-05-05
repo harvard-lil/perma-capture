@@ -17,7 +17,6 @@ from django.utils import timezone
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
-from .storages import get_profile_storage, profile_job_directory
 from .utils import send_template_email, generate_hmac_signing_key
 
 from pytest import raises as assert_raises
@@ -252,9 +251,7 @@ class CaptureJob(Job):
     Metadata about capture jobs requested by a user.
     """
     requested_url = models.CharField(max_length=2100, db_index=True, blank=True, null=False, default='')
-    capture_oembed_view = models.BooleanField(default=False)
     headless = models.BooleanField(default=True)
-    log_in_if_supported = models.BooleanField(default=True)
     label = models.CharField(max_length=255, blank=True, null=True, db_index=True)
     webhook_data = models.CharField(max_length=255, blank=True, null=True,
         help_text="This string will be included, verbatim, in any webhook \
@@ -402,118 +399,12 @@ class Archive(TimestampedModel):
         on_delete=models.CASCADE,
         related_name='archive'
     )
-    created_with_profile = models.ForeignKey(
-        'Profile',
-        on_delete=models.PROTECT,
-        related_name='archives',
-        null=True,
-        blank=True
-    )
 
     objects = ArchiveQuerySet.as_manager()
 
     @property
     def filename(self):
         return f"job-{self.capture_job.id}-{urllib.parse.urlparse(self.capture_job.validated_url).netloc.replace('.', '-')}.wacz"
-
-
-def validate_profile_netloc(value):
-    if value not in settings.PROFILE_SECRETS:
-        raise ValidationError(f"We don't currently support the creation of profiles for {value}.")
-    return value
-
-
-class ProfileCaptureJob(Job):
-    """
-    Metadata about attempts to create browser profiles.
-    """
-    netloc = models.CharField(max_length=255, validators=[validate_profile_netloc])
-    headless = models.BooleanField(default=False)
-    screenshot = models.FileField(
-        storage=get_profile_storage,
-        upload_to=profile_job_directory,
-        blank=True,
-        null=True
-    )
-
-    def __str__(self):
-        return f"ProfileCaptureJob {self.pk}"
-
-    def save(self, *args, **kwargs):
-        if self.status == ProfileCaptureJob.Status.INVALID:
-            raise ValidationError("We don't presently allow invalid ProfileCaptureJobs")
-        super().save(*args, **kwargs)
-
-    def get_job_id(self):
-        """
-        A method for use by the storage helper `profile_job_directory`. Must be defined on both ProfileCaptureJob and Profile.
-        """
-        return self.id
-
-    @classmethod
-    def get_job(cls, pk):
-        job = cls.objects.get(id=pk)
-        job.status = cls.Status.IN_PROGRESS
-        job.capture_start_time = Now()
-        job.save()
-
-        # load up-to-date time from database
-        job.refresh_from_db()
-
-        return job
-
-    @property
-    def has_profile(self):
-        try:
-            self.profile
-        except ObjectDoesNotExist:
-            return False
-        return True
-
-
-
-class Profile(TimestampedModel):
-    """
-    Browser profile
-    https://support.mozilla.org/en-US/kb/profiles-where-firefox-stores-user-data#w_what-information-is-stored-in-my-profile
-    """
-    netloc = models.CharField(max_length=255)  # denormalized for easier lookups
-    headless = models.BooleanField(default=False)  # denormalized for easier lookups
-    username = models.CharField(max_length=255)
-    verified = models.BooleanField(default=False)
-    marked_obsolete = models.DateTimeField(blank=True, null=True)
-    profile = models.FileField(storage=get_profile_storage, upload_to=profile_job_directory)
-    profile_capture_job = models.OneToOneField(
-        'ProfileCaptureJob',
-        on_delete=models.CASCADE,
-        related_name='profile'
-    )
-
-    class Meta:
-        indexes = [
-            models.Index(fields=['netloc', 'headless', 'verified', 'marked_obsolete'])
-        ]
-
-    @classmethod
-    def for_url(cls, url, headless):
-        profile = cls.objects.filter(
-            netloc=urllib.parse.urlparse(url).netloc,
-            headless=headless,
-            verified=True,
-            marked_obsolete__isnull=True
-        ).first()
-
-        if profile:
-            return profile
-
-    def __str__(self):
-        return f"Profile {self.pk}: {self.username} at {self.netloc}"
-
-    def get_job_id(self):
-        """
-        A method for use by the storage helper `profile_job_directory`. Must be defined on both ProfileCaptureJob and Profile.
-        """
-        return self.profile_capture_job_id
 
 
 class UserManager(BaseUserManager):

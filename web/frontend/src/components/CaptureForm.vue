@@ -34,7 +34,6 @@ const {mapActions} = createNamespacedHelpers('captures')
 export default {
   data: () => ({
     requested_urls: '',
-    capture_oembed_view: false,
     label: ''
   }),
   computed: {
@@ -47,7 +46,6 @@ export default {
     submit() {
       this.eagerCreateAndUpdate(this.formatted_urls.map(url => ({
         requested_url: url,
-        capture_oembed_view: this.capture_oembed_view,
         label: this.label,
         created_at: new Date().toISOString()
       })))

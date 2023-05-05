@@ -325,15 +325,3 @@ RWP_BASE_URL = 'https://cdn.jsdelivr.net/npm/replaywebpage@1.7.14'
 # Vite/Vue frontend
 VITE_MANIFEST_PATH = "main/static/manifest.json"
 VITE_ENTRY_PATH = "src/main.ts"
-
-# Credentials for the creation of logged-in browser profiles.
-# Name includes 'SECRET' so that Django excludes from logs and debug info.
-# Format:
-# PROFILE_SECRETS = {
-#     'twitter.com': {
-#         'log_in_url': 'https://twitter.com/login',
-#         'user': 'username',
-#         'password': 'password',
-#     },
-# }
-PROFILE_SECRETS = {}
