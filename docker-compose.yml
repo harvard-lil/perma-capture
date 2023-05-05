@@ -37,6 +37,7 @@ services:
     environment:
       - DOCKERIZED=true
       - HOST_DIRECTORY=${HOST_DIRECTORY:-perma-capture}
+      - SCOOP_PROXY_PORT=9900
       - TEST_CAPTURE_TARGET_DOMAINS=capture-target-1.test,capture-target-2.test,capture-target-3.test,capture-target-4.test
     volumes:
       - ./web:/app/web:delegated

@@ -329,6 +329,7 @@ def run_next_capture():
             "headless": capture_job.headless if settings.SCOOP_ALLOW_HEADFUL else "true",
             "user-agent-suffix": settings.SCOOP_USER_AGENT_SUFFIX,
             "blocklist": settings.SCOOP_CUSTOM_BLOCKLIST,
+            "proxy-port": settings.SCOOP_PROXY_PORT,
             "log-level": settings.SCOOP_LOG_LEVEL
         }
         command = f'npx scoop "{capture_job.validated_url}" ' + " ".join(f"--{key} {format_scoop_option(value)}" for key, value in scoop_kwargs.items() if value)

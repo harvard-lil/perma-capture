@@ -307,6 +307,7 @@ OVERRIDE_STORAGE_NETLOC = None
 SCOOP_BUILD_CONTEXT = os.path.abspath(os.path.join(BASE_DIR, '../../docker/scoop'))
 SCOOP_IMAGE = 'scoop:0.2.7-1'
 SCOOP_DOCKER_NETWORK = None
+SCOOP_PROXY_PORT = os.environ.get('SCOOP_PROXY_PORT') or '9999'
 
 SCOOP_FATAL_TIMEOUT_SECONDS = 60 * 5
 
