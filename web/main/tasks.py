@@ -17,9 +17,9 @@ from django.utils import timezone
 from .models import CaptureJob, Archive, WebhookSubscription
 from .serializers import ReadOnlyCaptureJobSerializer, SimpleWebhookSubscriptionSerializer
 from .storages import get_archive_storage
-from .utils import (validate_and_clean_url, copy_file_to_container, extract_file_from_container,
-    get_file_hash, parse_querystring, datetime_from_timestamp, sign_data, is_valid_signature,
-    send_template_email
+from .utils import (validate_and_clean_url, extract_file_from_container,
+    get_file_hash, parse_querystring, datetime_from_timestamp, format_scoop_option, sign_data,
+    is_valid_signature, send_template_email
 )
 
 from pytest import raises as assert_raises
@@ -265,7 +265,7 @@ def run_next_capture():
     >>> django_settings.SCOOP_FATAL_TIMEOUT_SECONDS = 1
     >>> job = run_test_capture('example.com')
     >>> assert job.status == CaptureJob.Status.FAILED
-    >>> assert 'Scoop exited with 137' in caplog.text  #  137 means SIGKILL
+    >>> assert 'Scoop exited with 137' or 'Scoop exited with 143' in caplog.text  #  137 means SIGKILL, 143 means SIGTERM
     >>> assert not docker_client.containers.list(all=True, filters={'ancestor': settings.SCOOP_IMAGE})
 
     We clean up failed jobs before we get started.
@@ -303,14 +303,14 @@ def run_next_capture():
         scoop_output_filename = archive.filename
         scoop_output_full_path = f'/tmp/{scoop_output_filename}'
         scoop_kwargs = {
-            "format": settings.SCOOP_DEFAULT_FORMAT,
             "output": scoop_output_full_path,
             "json-summary-output": None,  # file path and name to save to
-            "screenshot": "true",
-            "pdf-snapshot": "false",
-            "dom-snapshot": "false",
-            "capture-video-as-attachment": "true" if settings.SCOOP_ALLOW_VIDEO_AS_ATTACHMENT else "false",
-            "capture-certificates-as-attachment": "true",
+            "format": "wacz-with-raw" if capture_job.include_raw_exchanges else "wacz",
+            "screenshot": capture_job.include_screenshot,
+            "pdf-snapshot": capture_job.include_pdf_snapshot,
+            "dom-snapshot": capture_job.include_dom_snapshot,
+            "capture-video-as-attachment": capture_job.include_videos_as_attachment if settings.SCOOP_ALLOW_VIDEO_AS_ATTACHMENT else "false",
+            "capture-certificates-as-attachment": capture_job.include_certificates_as_attachment,
             "provenance-summary": "true",
             "attachments-bypass-limits": "true",  # under discussion: splitting this into metadata attachments (always allowed) and contentful attachments (can be disallowed)
             "capture-timeout": settings.SCOOP_MAX_RECORDING_MILLISECONDS or "60000",
@@ -325,22 +325,21 @@ def run_next_capture():
             "auto-scroll": "true",
             "auto-play-media": "true",
             "grab-secondary-resources": "true",
-            "run-site-specific-behaviors": "true" if settings.SCCOP_DEFAULT_RUN_BROWSER_BEHAVIORS else "false",
-            "headless": "false" if settings.SCOOP_ALLOW_HEADFUL else "true",
+            "run-site-specific-behaviors": capture_job.run_site_specific_behaviors,
+            "headless": capture_job.headless if settings.SCOOP_ALLOW_HEADFUL else "true",
             "user-agent-suffix": settings.SCOOP_USER_AGENT_SUFFIX,
             "blocklist": settings.SCOOP_CUSTOM_BLOCKLIST,
             "log-level": settings.SCOOP_LOG_LEVEL
         }
-
-
-
+        command = f'npx scoop "{capture_job.validated_url}" ' + " ".join(f"--{key} {format_scoop_option(value)}" for key, value in scoop_kwargs.items() if value)
+        logger.info(f"Scoop command: '{command}'")
 
         container = client.containers.create(
             settings.SCOOP_IMAGE,
             cap_add=['NET_ADMIN', 'SYS_ADMIN'],
             shm_size='1GB',
             init=True,
-            command=f'npx scoop "{capture_job.validated_url}" ' + " ".join(f"--{key} {value}" for key, value in scoop_kwargs.items() if value),
+            command=command,
             detach=True,
             network=settings.SCOOP_DOCKER_NETWORK or ''
         )

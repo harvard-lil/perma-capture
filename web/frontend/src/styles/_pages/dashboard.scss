@@ -80,10 +80,28 @@
       margin: 1em 0;
     }
 
-    .form-control, .btn, .warning-text {
+
+    .form-control, .btn, .accordion-button {
       font-size: 0.9rem;
-      @include media-breakpoint-up(lg) {
-        font-size: 1rem;
+      padding: 0.375rem;
+    }
+
+    .warning-text {
+      font-size: 0.8em;
+      text-align: right;
+      margin-top: 0.5rem;
+    }
+
+    #advanced-options {
+      padding-top: 0.5em;
+      padding-bottom: 0.5em;
+      line-height: 2.5;
+      font-size: 0.8em;
+      label {
+        margin-left: 6px;
+      }
+      input {
+        vertical-align: text-bottom;
       }
     }
   }
@@ -232,16 +250,8 @@
 .btn-create {
   grid-area: btn-create;
   margin-right: 1em;
-  @include media-breakpoint-down(xl) {
-    grid-column: auto / span 2;
-    margin-right: 0;
-  }
-}
-
-.warning-text {
-  @include media-breakpoint-down(xl) {
-    margin-top: 0.5rem;
-  }
+  grid-column: auto / span 2;
+  margin-right: 0;
 }
 
 // LIST ITEM GRID

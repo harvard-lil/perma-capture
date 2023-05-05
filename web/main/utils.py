@@ -207,6 +207,12 @@ def datetime_from_timestamp(ts):
     return datetime.datetime.fromtimestamp(float(ts), tz(settings.TIME_ZONE))
 
 
+def format_scoop_option(option):
+    if isinstance(option, bool):
+        return str(option).lower()
+    else:
+        return option
+
 #
 # Webhook signatures
 #

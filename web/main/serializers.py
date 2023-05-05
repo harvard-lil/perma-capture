@@ -25,14 +25,64 @@ class CaptureJobSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CaptureJob
-        fields =  ('id', 'requested_url', 'validated_url', 'headless', 'human', 'label', 'webhook_data', 'status', 'message', 'queue_position', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time', 'archive')
+        fields =  (
+            'id',
+            'requested_url',
+            'validated_url',
+            'human',
+            'include_raw_exchanges',
+            'include_screenshot',
+            'include_pdf_snapshot',
+            'include_dom_snapshot',
+            'include_videos_as_attachment',
+            'include_certificates_as_attachment',
+            'run_site_specific_behaviors',
+            'headless',
+            'label',
+            'webhook_data',
+            'status',
+            'message',
+            'queue_position',
+            'step_count',
+            'step_description',
+            'created_at',
+            'updated_at',
+            'capture_start_time',
+            'capture_end_time',
+            'archive'
+        )
         read_only_fields =  ('user', 'id', 'status', 'message', 'queue_position', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')
 
 
 class ReadOnlyCaptureJobSerializer(CaptureJobSerializer):
 
     class Meta(CaptureJobSerializer.Meta):
-        read_only_fields =  ('user', 'id', 'requested_url', 'validated_url', 'headless', 'human', 'label', 'webhook_data', 'status', 'message', 'queue_position', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')
+        read_only_fields =  (
+            'user',
+            'id',
+            'requested_url',
+            'validated_url',
+            'include_raw_exchanges',
+            'include_screenshot',
+            'include_pdf_snapshot',
+            'include_dom_snapshot',
+            'include_videos_as_attachment',
+            'include_certificates_as_attachment',
+            'run_site_specific_behaviors',
+            'headless',
+            'human',
+            'label',
+            'webhook_data',
+            'status',
+            'message',
+            'queue_position',
+            'step_count',
+            'step_description',
+            'created_at',
+            'updated_at',
+            'capture_start_time',
+            'capture_end_time'
+        )
 
 
 class WebhookSubscriptionSerializer(serializers.ModelSerializer):

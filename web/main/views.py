@@ -240,7 +240,15 @@ class CaptureListView(APIView):
         >>> assert len(response.data) == 2
 
         In addition to specifying the URL, your request can optionally include configuration options:
-        - whether we should use a headless or 'headful' browser to make the capture;
+        - lots of configuration options for the capture itself:
+            * whether to include raw exchanges in the WACZ
+            * whether to include a screenshot in the WACZ
+            * whether to include a PDF snapshot in the WACZ
+            * whether to include DOM snapshot in the WACZ
+            * whether to include videos as attachments in the WACZ
+            * whether to include certificates as attachments in the WACZ
+            * whether to run site-specific behaviors during the capture process
+            * whether to use a headless browser or a headful browser for the capture process
         - a label you would like associated with the job, for your convenience;
         - a data string you would like passed along to your webhook callbacks, when the capture is complete;
         - and, finally, "human": an indicator that a human is actively waiting for the result of the capture
@@ -248,7 +256,14 @@ class CaptureListView(APIView):
           opposed to, for instance, a large batch of URLs that can stand a few seconds of queuing.
         >>> configurable_fields = {
         ...     'requested_url': 'https://twitter.com/permacc/status/1039225277119954944',
-        ...     'headless': True,
+        ...     'include_raw_exchanges': True,
+        ...     'include_screenshot': False,
+        ...     'include_pdf_snapshot': True,
+        ...     'include_dom_snapshot': True,
+        ...     'include_videos_as_attachment': False,
+        ...     'include_certificates_as_attachment': False,
+        ...     'run_site_specific_behaviors': False,
+        ...     'headless': False,
         ...     'label': 'article-1-url-3',
         ...     'webhook_data': 'foo=bar&boo=baz',
         ...     'human': True

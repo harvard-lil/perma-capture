@@ -215,6 +215,13 @@ class CaptureJobAdmin(admin.ModelAdmin):
         'id',
         'user_link',
         'requested_url',
+        'include_raw_exchanges',
+        'include_screenshot',
+        'include_pdf_snapshot',
+        'include_dom_snapshot',
+        'include_videos_as_attachment',
+        'include_certificates_as_attachment',
+        'run_site_specific_behaviors',
         'headless',
         'label',
         'status',
@@ -225,12 +232,59 @@ class CaptureJobAdmin(admin.ModelAdmin):
         'queue_time',
         'capture_time'
     )
-    list_filter = [UserEmailFilter, UserIDFilter, RequestedURLFilter, 'status', 'headless', 'human']
+    list_filter = [
+        UserEmailFilter,
+        UserIDFilter,
+        RequestedURLFilter,
+        'status',
+        'headless',
+        'include_raw_exchanges',
+        'include_screenshot',
+        'include_pdf_snapshot',
+        'include_dom_snapshot',
+        'include_videos_as_attachment',
+        'include_certificates_as_attachment',
+        'run_site_specific_behaviors',
+        'human'
+    ]
     fieldsets = (
-        (None, {'fields': ('user_link', 'requested_url', 'headless', 'human', 'label')}),
+        (None, {'fields': ('user_link', 'requested_url', 'label', 'human')}),
+        ('Options', {'fields': (
+                'include_raw_exchanges',
+                'include_screenshot',
+                'include_pdf_snapshot',
+                'include_dom_snapshot',
+                'include_videos_as_attachment',
+                'include_certificates_as_attachment',
+                'run_site_specific_behaviors',
+                'headless'
+            )}
+        ),
         ('Progress', {'fields': ( 'status', 'message', 'order', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')})
     )
-    readonly_fields = ('user_link', 'requested_url', 'headless', 'human', 'label', 'status', 'message', 'order', 'step_count', 'step_description', 'created_at', 'updated_at', 'capture_start_time', 'capture_end_time')
+    readonly_fields = (
+        'user_link',
+        'requested_url',
+        'include_raw_exchanges',
+        'include_screenshot',
+        'include_pdf_snapshot',
+        'include_dom_snapshot',
+        'include_videos_as_attachment',
+        'include_certificates_as_attachment',
+        'run_site_specific_behaviors',
+        'headless',
+        'human',
+        'label',
+        'status',
+        'message',
+        'order',
+        'step_count',
+        'step_description',
+        'created_at',
+        'updated_at',
+        'capture_start_time',
+        'capture_end_time'
+    )
     inlines = [ArchiveInline]
 
     def get_queryset(self, request):

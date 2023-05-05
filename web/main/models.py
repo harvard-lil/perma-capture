@@ -262,6 +262,19 @@ class CaptureJob(Job):
     human = models.BooleanField(default=False)
     order = models.FloatField(db_index=True)
 
+    # Options
+    include_raw_exchanges = models.BooleanField(default=False)
+    include_screenshot = models.BooleanField(default=True)
+    include_pdf_snapshot = models.BooleanField(default=False)
+    include_dom_snapshot = models.BooleanField(default=False)
+    include_videos_as_attachment = models.BooleanField(default=True)
+    include_certificates_as_attachment = models.BooleanField(default=True)
+    run_site_specific_behaviors = models.BooleanField(default=True)
+    headless = models.BooleanField(default=True)
+    # custom_user_agent_suffix = models.CharField(max_length=2100, blank=True, null=True, default=None)
+    # capture-window-x
+    # capture-window-y
+
     user = models.ForeignKey(
         'User',
         on_delete=models.PROTECT,
