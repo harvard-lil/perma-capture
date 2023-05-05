@@ -1,4 +1,3 @@
-import base64
 import boto3
 from collections import defaultdict
 from contextlib import contextmanager
@@ -16,7 +15,6 @@ import requests
 import re
 
 from django.conf import settings
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import connections
 from django.db.backends.base.base import BaseDatabaseWrapper
 from django.db.models import signals

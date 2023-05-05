@@ -11,10 +11,8 @@ from time import sleep
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.files import File
 from django.core.mail import mail_admins
 from django.utils import timezone
-from django.views.decorators.debug import sensitive_variables
 
 from .models import CaptureJob, Archive, WebhookSubscription
 from .serializers import ReadOnlyCaptureJobSerializer, SimpleWebhookSubscriptionSerializer

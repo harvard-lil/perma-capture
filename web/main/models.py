@@ -8,7 +8,7 @@ from rest_framework.settings import api_settings
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.contrib.auth.tokens import default_token_generator
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.db.models.functions import Now
 from django.db.models.query import QuerySet
@@ -251,7 +251,6 @@ class CaptureJob(Job):
     Metadata about capture jobs requested by a user.
     """
     requested_url = models.CharField(max_length=2100, db_index=True, blank=True, null=False, default='')
-    headless = models.BooleanField(default=True)
     label = models.CharField(max_length=255, blank=True, null=True, db_index=True)
     webhook_data = models.CharField(max_length=255, blank=True, null=True,
         help_text="This string will be included, verbatim, in any webhook \
