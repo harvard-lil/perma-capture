@@ -305,33 +305,33 @@ def run_next_capture():
         scoop_output_filename = archive.filename
         scoop_output_full_path = f'/tmp/{scoop_output_filename}'
         scoop_kwargs = {
-            "format": "wacz",  # "wacz-with-raw"
+            "format": settings.SCOOP_DEFAULT_FORMAT,
             "output": scoop_output_full_path,
             "json-summary-output": None,  # file path and name to save to
             "screenshot": "true",
             "pdf-snapshot": "false",
             "dom-snapshot": "false",
-            "capture-video-as-attachment": "true",
+            "capture-video-as-attachment": "true" if settings.SCOOP_ALLOW_VIDEO_AS_ATTACHMENT else "false",
             "capture-certificates-as-attachment": "true",
             "provenance-summary": "true",
-            "attachments-bypass-limits": "true",  # this is intricate; RLC needs to study more to understand what is at stake
-            "capture-timeout": settings.SCOOP_CAPTURE_TIMEOUT_MILLISECONDS or "60000",
-            "load-timeout": "20000",
-            "network-idle-timeout": "20000",
-            "behaviors-timeout": "20000",
-            "capture-video-as-attachment-timeout": "30000",
-            "capture-certificates-as-attachment-timeout": "10000",
+            "attachments-bypass-limits": "true",  # under discussion: splitting this into metadata attachments (always allowed) and contentful attachments (can be disallowed)
+            "capture-timeout": settings.SCOOP_MAX_RECORDING_MILLISECONDS or "60000",
+            "load-timeout": settings.SCOOP_MAX_PAGE_LOAD_MILLISECONDS or "20000",
+            "network-idle-timeout": settings.SCOOP_MAX_NETWORK_IDLE_MILLISECONDS or "20000",
+            "behaviors-timeout": settings.SCOOP_MAX_BROWSER_BEHAVIORS_MILLISECONDS or "20000",
+            "capture-video-as-attachment-timeout": settings.SCOOP_MAX_VIDEO_AS_ATTACHMENT_MILLISECONDS or "30000",
+            "capture-certificates-as-attachment-timeout": settings.SCOOP_MAX_CERTS_AS_ATTACHMENT_MILLISECONDS or "10000",
             "capture-window-x": "1600",
             "capture-window-y": "900",
-            "max-capture-size": "209715200",
+            "max-capture-size": settings.SCOOP_MAX_RECORDING_SIZE or "209715200",
             "auto-scroll": "true",
             "auto-play-media": "true",
             "grab-secondary-resources": "true",
-            "run-site-specific-behaviors": "true",
-            "headless": "true",  # headful not yet supported in this context
-            "user-agent-suffix": None,
+            "run-site-specific-behaviors": "true" if settings.SCCOP_DEFAULT_RUN_BROWSER_BEHAVIORS else "false",
+            "headless": "false" if settings.SCOOP_ALLOW_HEADFUL else "true",
+            "user-agent-suffix": settings.SCOOP_USER_AGENT_SUFFIX,
             "blocklist": settings.SCOOP_CUSTOM_BLOCKLIST,
-            "log-level": "trace"
+            "log-level": settings.SCOOP_LOG_LEVEL
         }
 
 
