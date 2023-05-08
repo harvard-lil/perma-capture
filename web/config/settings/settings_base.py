@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'rest_framework',
     'rest_framework.authtoken',
+    'django_json_widget',
 
     # built-in
     'django.contrib.admin',

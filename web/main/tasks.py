@@ -3,6 +3,7 @@ from celery.exceptions import MaxRetriesExceededError, SoftTimeLimitExceeded, Re
 from celery.signals import task_failure
 from datetime import timedelta
 import docker
+import json
 import re
 import requests
 import socket
@@ -17,7 +18,7 @@ from django.utils import timezone
 from .models import CaptureJob, Archive, WebhookSubscription
 from .serializers import ReadOnlyCaptureJobSerializer, SimpleWebhookSubscriptionSerializer
 from .storages import get_archive_storage
-from .utils import (validate_and_clean_url, extract_file_from_container,
+from .utils import (validate_and_clean_url, extract_files_from_container,
     get_file_hash, parse_querystring, datetime_from_timestamp, format_scoop_option, sign_data,
     is_valid_signature, send_template_email
 )
@@ -300,11 +301,14 @@ def run_next_capture():
 
         inc_progress(capture_job, 1, "Creating Scoop container.")
         archive = Archive(capture_job=capture_job)
-        scoop_output_filename = archive.filename
-        scoop_output_full_path = f'/tmp/{scoop_output_filename}'
+        scoop_output_directory = "/tmp"
+        scoop_capture_filename = archive.filename
+        scoop_capture_full_path = f'/tmp/{scoop_capture_filename}'
+        scoop_summary_filename = "summary.json"
+        scoop_summary_full_path = f'/tmp/{scoop_summary_filename}'
         scoop_kwargs = {
-            "output": scoop_output_full_path,
-            "json-summary-output": None,  # file path and name to save to
+            "output": scoop_capture_full_path,
+            "json-summary-output": scoop_summary_full_path,
             "format": "wacz-with-raw" if capture_job.include_raw_exchanges else "wacz",
             "screenshot": capture_job.include_screenshot,
             "pdf-snapshot": capture_job.include_pdf_snapshot,
@@ -391,19 +395,23 @@ def run_next_capture():
                 container.stop()
 
                 try:
-                    with extract_file_from_container(scoop_output_filename, scoop_output_full_path, container) as file:
+                    to_extract = [scoop_capture_filename, scoop_summary_filename]
+                    with extract_files_from_container(to_extract, scoop_output_directory, container) as file_handles:
+
+                        archive_file = file_handles[scoop_capture_filename]
+                        summary_file = file_handles[scoop_summary_filename]
+
+                        inc_progress(capture_job, 1, "Processing archive.")
+                        archive.hash, archive.hash_algorithm = get_file_hash(archive_file)
+                        assert not archive_file.read()
+                        archive.warc_size = archive_file.tell()
                         # should probably make sure its a valid wacz?
                         # unlike a truncated warc, I don't think a truncated wacz can be played back
 
-                        inc_progress(capture_job, 1, "Processing archive.")
-                        archive.hash, archive.hash_algorithm = get_file_hash(file)
-                        assert not file.read()
-                        archive.warc_size = file.tell()
-
                         inc_progress(capture_job, 1, "Saving archive.")
-                        file.seek(0)
+                        archive_file.seek(0)
                         storage = get_archive_storage()
-                        real_filename = storage.save(archive.filename, file)
+                        real_filename = storage.save(archive.filename, archive_file)
                         try:
                             assert real_filename == archive.filename
                         except AssertionError:
@@ -411,6 +419,9 @@ def run_next_capture():
                             # shouldn't happen, since we include the capture job id. But, if it does, we'll
                             # want to know about it, so we can manually clean up the file after it expires.
                             logger.error(f'The archive for capture job {capture_job.id} has been saved as {real_filename}, not {archive.filename}.')
+
+                        inc_progress(capture_job, 1, "Saving summary metadata.")
+                        archive.summary = json.load(summary_file)
 
                     archive.download_url = storage.url(real_filename)
                     archive.download_expiration_timestamp = datetime_from_timestamp(parse_querystring(archive.download_url)['Expires'][0])

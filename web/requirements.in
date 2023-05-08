@@ -17,6 +17,7 @@ psycopg2            # postgres connector
 django
 django-extensions
 django-filter
+django-json-widget  # fancy editor for JSON fields in the Django admin
 djangorestframework
 django-storages
 boto3               # required for django-storages to use s3 backend

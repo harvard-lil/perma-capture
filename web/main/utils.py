@@ -180,6 +180,26 @@ def extract_file_from_container(name, path, container):
             tar.close()
 
 
+@contextmanager
+def extract_files_from_container(filenames, directory, container):
+    # mode set to 'ab+' as a workaround for https://bugs.python.org/issue25341
+    with tempfile.TemporaryFile('ab+') as tmpfile:
+        stream, _ = container.get_archive(directory)
+        for chunk in stream:
+            tmpfile.write(chunk)
+        tmpfile.seek(0)
+        tar = tarfile.open(fileobj=tmpfile)
+        file_handles = {}
+        for file in filenames:
+            file_handles[file] = tar.extractfile(f"{directory}/{file}".lstrip("/"))
+        try:
+            yield file_handles
+        finally:
+            for file in file_handles.values():
+                file.close()
+            tar.close()
+
+
 def get_file_hash(handle, chunk_size=1024, algorithm='sha256'):
     """
     Calculate the file's hash.

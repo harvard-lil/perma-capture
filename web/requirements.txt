@@ -171,6 +171,9 @@ django-filter==2.4.0 \
     --hash=sha256:84e9d5bb93f237e451db814ed422a3a625751cbc9968b484ecc74964a8696b06 \
     --hash=sha256:e00d32cebdb3d54273c48f4f878f898dced8d5dfaad009438fe61ebdf535ace1
     # via -r requirements.in
+django-json-widget==1.1.1 \
+    --hash=sha256:ec948a4c379687f9c854748ba540fdbeb1b1730846ca953f186818521de7e696
+    # via -r requirements.in
 django-storages==1.11.1 \
     --hash=sha256:c823dbf56c9e35b0999a13d7e05062b837bae36c518a40255d522fbe3750fbb4 \
     --hash=sha256:f28765826d507a0309cfaa849bd084894bc71d81bf0d09479168d44785396f80
@@ -216,6 +219,9 @@ flower==0.9.5 \
     --hash=sha256:56916d1d2892e25453d6023437427fc04706a1308e0bd4822321da34e1643f9c \
     --hash=sha256:71be02bff7b2f56b0a07bd947fb3c748acba7f44f80ae88125d8954ce1a89697
     # via -r requirements.in
+future==0.18.3 \
+    --hash=sha256:34a17436ed1e96697a86f9de3d15a3b0be01d8bc8de9c1dffd59fb8234ed5307
+    # via django-json-widget
 humanize==2.5.0 \
     --hash=sha256:89062c6db8601693b7d223443d0d7529aa9577df43a1387ddd4b9c273abb4a51 \
     --hash=sha256:8a68bd9bccb899fd9bfb1e6d96c1e84e4475551cc9a5b5bdbd69b9b1cfd19c80

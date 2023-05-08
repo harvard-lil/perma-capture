@@ -37,6 +37,10 @@
       <h3 class="h6">Capture size</h3>
       <p>{{ size }}MB</p>
     </div>
+    <div v-if="summary" class="data-group">
+      <h3 class="h6">Summary</h3>
+      <pre>{{ summary }}</pre>
+    </div>
   </div>
 </template>
 
@@ -59,6 +63,9 @@ export default {
     },
     succeeded() {
       return snakeToPascal(this.displayedCapture.status || 'pending') in SuccessStates
+    },
+    summary() {
+      return this.displayedCapture.archive ? this.displayedCapture.archive.summary : null
     },
     isMobile() {
       return this.$store.getters.isMobile;

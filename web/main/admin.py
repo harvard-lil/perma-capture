@@ -1,9 +1,12 @@
+from django import forms
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import Group
+from django.db.models import JSONField
 from django.urls import reverse
 from django.utils.html import format_html
+from django_json_widget.widgets import JSONEditorWidget
 
 from .models import User, WebhookSubscription, CaptureJob, Archive
 
@@ -296,8 +299,29 @@ class CaptureJobAdmin(admin.ModelAdmin):
     user_link.short_description = 'user'
 
 
+
+class ArchiveForm(forms.ModelForm):
+    """
+    Override to so that summary metadata displays with a view-only JSON widget.
+    See https://github.com/harvard-lil/h2o/issues/1441 for discussion of technique.
+    """
+
+    class Meta:
+        model = Archive
+        fields = '__all__'
+        widgets = {
+            'summary': JSONEditorWidget(options={'mode': 'view', 'modes': ['view']}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields.get('summary').disabled = True
+
+
 @admin.register(Archive)
 class ArchiveAdmin(admin.ModelAdmin):
+    form = ArchiveForm
+
     list_display = (
         'id',
         'user_link',
@@ -309,7 +333,13 @@ class ArchiveAdmin(admin.ModelAdmin):
         'updated_at'
     )
     list_filter = [ArchiveDownloadableFilter, CaptureJobUserEmailFilter, CaptureJobUserIDFilter]
-    fields = readonly_fields = ('capture_job_link', 'user_link', 'hash', 'hash_algorithm', 'warc_size', 'download_url', 'download_expiration_timestamp', 'created_at', 'updated_at')
+    readonly_fields = ('capture_job_link', 'user_link', 'hash', 'hash_algorithm', 'warc_size', 'download_url', 'download_expiration_timestamp', 'created_at', 'updated_at')
+    fields = readonly_fields + ('summary',)
+
+
+    formfield_overrides = {
+        JSONField: {"widget": JSONEditorWidget},
+    }
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('capture_job__user')

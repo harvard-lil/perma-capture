@@ -401,10 +401,8 @@ class Archive(TimestampedModel):
     download_url = models.URLField(max_length=2100, null=True)
     download_expiration_timestamp = models.DateTimeField(null=True)
 
-    # maybe? not sure
-    # content_type = models.CharField(max_length=255, null=False, default='', help_text="HTTP Content-type header.")
-    # contains_screenshot = models.BooleanField(default=False)
-    # Potentially robots.txt / <meta name="robots" content="noarchive"> / X-Robots-Tag Directives
+    summary = models.JSONField(null=True)
+    # maybe? not sure: state, content type, noArchiveUrls (but with reason), exchangeURLs
 
     capture_job = models.OneToOneField(
         'CaptureJob',
