@@ -207,7 +207,7 @@ def run_next_capture():
 
     >>> def assert_succeeded(job):
     ...     assert job.status == CaptureJob.Status.COMPLETED
-    ...     assert job.step_description == 'Saving summary metadata.'
+    ...     assert job.step_description == 'Saving screenshot.'
     ...     assert job.capture_end_time
     ...     assert job.archive.size
     ...     assert job.archive.hash and job.archive.hash_algorithm
