@@ -60,7 +60,7 @@ export default {
       return this.displayedCapture.archive ? this.displayedCapture.archive.download_url : null
     },
     size() {
-      return this.displayedCapture.archive ? Number((this.displayedCapture.archive.warc_size / (1024 * 1024)).toFixed(2)) : 0
+      return this.displayedCapture.archive ? Number((this.displayedCapture.archive.size / (1024 * 1024)).toFixed(2)) : 0
     },
     expiresAt() {
       return this.displayedCapture.archive ? new Date(this.displayedCapture.archive.download_expiration_timestamp) : null

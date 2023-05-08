@@ -209,7 +209,7 @@ def run_next_capture():
     ...     assert job.status == CaptureJob.Status.COMPLETED
     ...     assert job.step_description == 'Saving summary metadata.'
     ...     assert job.capture_end_time
-    ...     assert job.archive.warc_size
+    ...     assert job.archive.size
     ...     assert job.archive.hash and job.archive.hash_algorithm
     ...     assert requests.get(job.archive.download_url).status_code == 200
 
@@ -412,7 +412,7 @@ def run_next_capture():
                         inc_progress(capture_job, 1, "Processing archive.")
                         archive.hash, archive.hash_algorithm = get_file_hash(archive_file)
                         assert not archive_file.read()
-                        archive.warc_size = archive_file.tell()
+                        archive.size = archive_file.tell()
                         # should probably make sure its a valid wacz?
                         # unlike a truncated warc, I don't think a truncated wacz can be played back
 

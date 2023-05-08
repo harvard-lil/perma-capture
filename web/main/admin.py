@@ -145,7 +145,7 @@ class UserAddForm(UserCreationForm):
 
 class ArchiveInline(admin.StackedInline):
     model = Archive
-    fields = readonly_fields = ('hash', 'hash_algorithm', 'warc_size', 'download_expiration_timestamp', 'download_url', 'created_at', 'updated_at')
+    fields = readonly_fields = ('hash', 'hash_algorithm', 'size', 'download_expiration_timestamp', 'download_url', 'created_at', 'updated_at')
     can_delete = False
 
 
@@ -326,14 +326,14 @@ class ArchiveAdmin(admin.ModelAdmin):
         'id',
         'user_link',
         'hash_algorithm',
-        'warc_size',
+        'size',
         'download_expiration_timestamp',
         'download_url',
         'created_at',
         'updated_at'
     )
     list_filter = [ArchiveDownloadableFilter, CaptureJobUserEmailFilter, CaptureJobUserIDFilter]
-    readonly_fields = ('capture_job_link', 'user_link', 'hash', 'hash_algorithm', 'warc_size', 'download_url', 'download_expiration_timestamp', 'created_at', 'updated_at')
+    readonly_fields = ('capture_job_link', 'user_link', 'hash', 'hash_algorithm', 'size', 'download_url', 'download_expiration_timestamp', 'created_at', 'updated_at')
     fields = readonly_fields + ('summary',)
 
 

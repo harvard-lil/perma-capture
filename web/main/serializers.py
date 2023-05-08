@@ -13,7 +13,7 @@ class ArchiveSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Archive
-        read_only_fields = fields = ('id', 'hash', 'hash_algorithm', 'warc_size', 'download_url', 'download_expiration_timestamp', 'created_at', 'updated_at', 'summary', 'screenshot_url')
+        read_only_fields = fields = ('id', 'hash', 'hash_algorithm', 'size', 'download_url', 'download_expiration_timestamp', 'created_at', 'updated_at', 'summary', 'screenshot_url')
 
     def get_download_url(self, archive):
         if archive.download_url:

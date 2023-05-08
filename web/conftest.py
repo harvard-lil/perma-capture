@@ -388,7 +388,7 @@ class ArchiveFactory(factory.DjangoModelFactory):
     expired = False
     hash_algorithm = 'sha256'
     hash = factory.Faker('sha256')
-    warc_size = factory.Faker('random_int', min=5000, max=200000000)
+    size = factory.Faker('random_int', min=5000, max=200000000)
     download_expiration_timestamp = factory.Maybe(
         'expired',
         yes_declaration= factory.LazyFunction(

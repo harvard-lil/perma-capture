@@ -398,7 +398,7 @@ class Archive(TimestampedModel):
     """
     hash = models.CharField(max_length=256)
     hash_algorithm = models.CharField(max_length=32)
-    warc_size = models.IntegerField(blank=True, null=True)
+    size = models.IntegerField(blank=True, null=True)
     download_url = models.URLField(max_length=2100, null=True)
     download_expiration_timestamp = models.DateTimeField(null=True)
 
