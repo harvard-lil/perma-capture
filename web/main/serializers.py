@@ -9,14 +9,19 @@ from .utils import override_storage_netloc
 class ArchiveSerializer(serializers.ModelSerializer):
 
     download_url = serializers.SerializerMethodField()
+    screenshot_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Archive
-        read_only_fields = fields = ('id', 'hash', 'hash_algorithm', 'warc_size', 'download_url', 'download_expiration_timestamp', 'created_at', 'updated_at', 'summary')
+        read_only_fields = fields = ('id', 'hash', 'hash_algorithm', 'warc_size', 'download_url', 'download_expiration_timestamp', 'created_at', 'updated_at', 'summary', 'screenshot_url')
 
     def get_download_url(self, archive):
         if archive.download_url:
             return override_storage_netloc(archive.download_url) if settings.OVERRIDE_STORAGE_NETLOC else archive.download_url
+
+    def get_screenshot_url(self, archive):
+        if archive.screenshot:
+            return override_storage_netloc(archive.screenshot.url) if settings.OVERRIDE_STORAGE_NETLOC else archive.screenshot
 
 
 class CaptureJobSerializer(serializers.ModelSerializer):

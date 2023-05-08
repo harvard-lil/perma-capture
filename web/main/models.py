@@ -17,6 +17,7 @@ from django.utils import timezone
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
+from .storages import get_screenshot_storage, screenshot_directory
 from .utils import send_template_email, generate_hmac_signing_key
 
 from pytest import raises as assert_raises
@@ -402,7 +403,14 @@ class Archive(TimestampedModel):
     download_expiration_timestamp = models.DateTimeField(null=True)
 
     summary = models.JSONField(null=True)
+    screenshot = models.FileField(
+        storage=get_screenshot_storage,
+        upload_to=screenshot_directory,
+        blank=True,
+        null=True
+    )
     # maybe? not sure: state, content type, noArchiveUrls (but with reason), exchangeURLs
+
 
     capture_job = models.OneToOneField(
         'CaptureJob',

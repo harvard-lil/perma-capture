@@ -37,3 +37,17 @@ def get_archive_storage():
         querystring_expire=settings.ARCHIVE_EXPIRES_AFTER_MINUTES * 60,
         **settings.DEFAULT_S3_STORAGE
     )
+
+
+class ScreenshotStorage(PrivateS3Storage):
+    location = 'screenshots'
+
+
+def get_screenshot_storage():
+    # For now, configure this way rather than by configuring default storage
+    return ScreenshotStorage(**settings.DEFAULT_S3_STORAGE)
+
+
+def screenshot_directory(instance, filename):
+    return f'archive_{instance.id}/{filename}'
+

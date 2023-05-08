@@ -41,6 +41,10 @@
       <h3 class="h6">Summary</h3>
       <pre>{{ summary }}</pre>
     </div>
+    <div v-if="screenshotURL" class="data-group">
+      <h3 class="h6">Screenshot</h3>
+      <img class="screenshot" :src="screenshotURL">
+    </div>
   </div>
 </template>
 
@@ -66,6 +70,9 @@ export default {
     },
     summary() {
       return this.displayedCapture.archive ? this.displayedCapture.archive.summary : null
+    },
+    screenshotURL() {
+      return this.displayedCapture.archive ? this.displayedCapture.archive.screenshot_url : null
     },
     isMobile() {
       return this.$store.getters.isMobile;

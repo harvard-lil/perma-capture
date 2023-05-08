@@ -12,13 +12,14 @@ from time import sleep
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.files import File
 from django.core.mail import mail_admins
 from django.utils import timezone
 
 from .models import CaptureJob, Archive, WebhookSubscription
 from .serializers import ReadOnlyCaptureJobSerializer, SimpleWebhookSubscriptionSerializer
 from .storages import get_archive_storage
-from .utils import (validate_and_clean_url, extract_files_from_container,
+from .utils import (validate_and_clean_url, extract_file_from_container, extract_files_from_container,
     get_file_hash, parse_querystring, datetime_from_timestamp, format_scoop_option, sign_data,
     is_valid_signature, send_template_email
 )
@@ -81,6 +82,9 @@ class HaltCaptureException(Exception):
     """
     An exception we can trigger to halt capture and release all involved resources.
     """
+    pass
+
+class NoArchiveProduced(Exception):
     pass
 
 
@@ -309,6 +313,7 @@ def run_next_capture():
         scoop_kwargs = {
             "output": scoop_capture_full_path,
             "json-summary-output": scoop_summary_full_path,
+            "export-attachments-output": scoop_output_directory,
             "format": "wacz-with-raw" if capture_job.include_raw_exchanges else "wacz",
             "screenshot": capture_job.include_screenshot,
             "pdf-snapshot": capture_job.include_pdf_snapshot,
@@ -402,7 +407,7 @@ def run_next_capture():
                         summary_file = file_handles[scoop_summary_filename]
 
                         if not archive_file:
-                            raise docker.errors.NotFound(f"{scoop_capture_filename} not found.")
+                            raise NoArchiveProduced(f"{scoop_capture_filename} not found.")
 
                         inc_progress(capture_job, 1, "Processing archive.")
                         archive.hash, archive.hash_algorithm = get_file_hash(archive_file)
@@ -429,9 +434,24 @@ def run_next_capture():
                     archive.download_url = storage.url(real_filename)
                     archive.download_expiration_timestamp = datetime_from_timestamp(parse_querystring(archive.download_url)['Expires'][0])
                     archive.save()
+
+                    if capture_job.include_screenshot:
+                        inc_progress(capture_job, 1, "Saving screenshot.")
+                        screenshot_filename = archive.summary["attachments"].get("screenshot")
+                        if screenshot_filename:
+                            try:
+                                with extract_file_from_container(screenshot_filename, f"{scoop_output_directory}/{screenshot_filename}", container) as screenshot_file:
+                                    screenshot_file.seek(0)
+                                    archive.screenshot = File(screenshot_file, screenshot_filename)
+                                    archive.save(update_fields=["screenshot"])
+                            except docker.errors.NotFound:
+                                logger.info("No screenshot available.")
+                        else:
+                            logger.info("No screenshot available.")
+
                     capture_job.mark_completed()
                     logger.info("Capture succeeded.")
-                except docker.errors.NotFound:
+                except NoArchiveProduced:
                     logger.info("Capture failed.")
 
                 container.remove(force=True)
