@@ -203,7 +203,7 @@ def run_next_capture():
 
     >>> def assert_succeeded(job):
     ...     assert job.status == CaptureJob.Status.COMPLETED
-    ...     assert job.step_description == 'Saving archive.'
+    ...     assert job.step_description == 'Saving summary metadata.'
     ...     assert job.capture_end_time
     ...     assert job.archive.warc_size
     ...     assert job.archive.hash and job.archive.hash_algorithm
@@ -244,7 +244,7 @@ def run_next_capture():
 
     SUCCESS
 
-    # A domain where logged-in capture is not supported:
+    A domain where logged-in capture is not supported:
 
     >>> job = run_test_capture(f'http://{basic_domain}')
     >>> assert_succeeded(job)
@@ -400,6 +400,9 @@ def run_next_capture():
 
                         archive_file = file_handles[scoop_capture_filename]
                         summary_file = file_handles[scoop_summary_filename]
+
+                        if not archive_file:
+                            raise docker.errors.NotFound(f"{scoop_capture_filename} not found.")
 
                         inc_progress(capture_job, 1, "Processing archive.")
                         archive.hash, archive.hash_algorithm = get_file_hash(archive_file)

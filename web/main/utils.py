@@ -191,12 +191,16 @@ def extract_files_from_container(filenames, directory, container):
         tar = tarfile.open(fileobj=tmpfile)
         file_handles = {}
         for file in filenames:
-            file_handles[file] = tar.extractfile(f"{directory}/{file}".lstrip("/"))
+            try:
+                file_handles[file] = tar.extractfile(f"{directory}/{file}".lstrip("/"))
+            except KeyError:
+                file_handles[file] = None
         try:
             yield file_handles
         finally:
             for file in file_handles.values():
-                file.close()
+                if file:
+                    file.close()
             tar.close()
 
 
