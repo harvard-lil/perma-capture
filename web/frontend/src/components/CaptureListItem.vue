@@ -3,7 +3,7 @@
       class="capture-list-item">
     <div class="content">
       <div class="favicon" aria-hidden="true">🔗</div>
-      <h3 class="h6 capture-title">{{ title }}</h3>
+      <h3 class="h6 capture-title">{{ get_title }}</h3>
       <div class="btn-group spinner">
         <span v-if="isProcessing"
               class="status-icon spinner spinner-border spinner-border-sm"
@@ -57,7 +57,7 @@ export default {
     succeeded() {
       return this.statusOrDefault in SuccessStates
     },
-    title() {
+    get_title() {
       let title;
       switch(this.statusOrDefault) {
         case 'Invalid':
@@ -70,7 +70,7 @@ export default {
           title = 'Capture Failed';
           break;
         case 'Completed':
-          title = 'Lorem Ipsum title';
+          title = this.capture?.archive.title || 'Capture Completed';
           break;
         default:
           title = 'Capture Pending';

@@ -214,6 +214,8 @@
 
 .replay-toggle {
   grid-area: arrow;
+  top: -10px;
+  position: relative;
 }
 
 .bi-download.download-button {

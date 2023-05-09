@@ -310,11 +310,13 @@ class ArchiveForm(forms.ModelForm):
         model = Archive
         fields = '__all__'
         widgets = {
+            'datapackage': JSONEditorWidget(options={'mode': 'view', 'modes': ['view']}),
             'summary': JSONEditorWidget(options={'mode': 'view', 'modes': ['view']}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields.get('datapackage').disabled = True
         self.fields.get('summary').disabled = True
 
 
@@ -333,8 +335,8 @@ class ArchiveAdmin(admin.ModelAdmin):
         'updated_at'
     )
     list_filter = [ArchiveDownloadableFilter, CaptureJobUserEmailFilter, CaptureJobUserIDFilter]
-    readonly_fields = ('capture_job_link', 'user_link', 'hash', 'hash_algorithm', 'size', 'download_url', 'download_expiration_timestamp', 'created_at', 'updated_at')
-    fields = readonly_fields + ('summary',)
+    readonly_fields = ('capture_job_link', 'user_link', 'hash', 'hash_algorithm', 'size', 'download_url', 'download_expiration_timestamp', 'created_at', 'updated_at', 'datapackage_digest')
+    fields = readonly_fields + ('datapackage', 'summary',)
 
 
     formfield_overrides = {

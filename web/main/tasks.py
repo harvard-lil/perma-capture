@@ -9,6 +9,7 @@ import requests
 import socket
 import threading
 from time import sleep
+import zipfile
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -413,8 +414,19 @@ def run_next_capture():
                         archive.hash, archive.hash_algorithm = get_file_hash(archive_file)
                         assert not archive_file.read()
                         archive.size = archive_file.tell()
-                        # should probably make sure its a valid wacz?
-                        # unlike a truncated warc, I don't think a truncated wacz can be played back
+                        # Should we do validity checks of any kind? Save regardless? TBD.
+                        archive_file.seek(0)
+                        assert zipfile.is_zipfile(archive_file), f"Invalid WACZ"
+                        wacz = zipfile.ZipFile(archive_file)
+                        with wacz.open('datapackage.json') as datapackage:
+                            metadata = json.load(datapackage)
+                            library = metadata['extras']['provenanceInfo']['software']
+                            version = metadata['extras']['provenanceInfo']['version']
+                            archive.datapackage = metadata
+                            archive.capture_software = f"{library}: {version}"
+                        with wacz.open('datapackage-digest.json') as datapackage_digest:
+                            metadata = json.load(datapackage_digest)
+                            archive.datapackage_digest = metadata['hash']
 
                         inc_progress(capture_job, 1, "Saving archive.")
                         archive_file.seek(0)
@@ -430,6 +442,13 @@ def run_next_capture():
 
                         inc_progress(capture_job, 1, "Saving summary metadata.")
                         archive.summary = json.load(summary_file)
+                        scoop_state = archive.summary['states'][archive.summary['state']]
+                        if scoop_state == 'COMPLETE':
+                            archive.partial_capture = False
+                        elif scoop_state == 'PARTIAL':
+                            archive.partial_capture = True
+                        else:
+                            logger.error(f"Capture Job {capture_job.id} produced artifacts but reports state '{scoop_state}': how did we find ourselves here?")
 
                     archive.download_url = storage.url(real_filename)
                     archive.download_expiration_timestamp = datetime_from_timestamp(parse_querystring(archive.download_url)['Expires'][0])

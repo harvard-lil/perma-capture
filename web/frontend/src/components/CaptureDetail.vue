@@ -2,12 +2,12 @@
   <div class="capture-detail-container" v-if="displayedCapture">
     <div v-if="isMobile" class="data-group">
       <span>Submitted {{ getDate(displayedCapture.created_at) }}</span><br>
-      <span v-if="downloadUrl">Expires {{ getDate(expiresAt) }}</span>
+      <span v-if="getArchiveAttribute('download_url')">Expires {{ getDate(expiresAt) }}</span>
       <span v-else-if="succeeded">Expired {{ getDate(expiresAt) }}</span>
     </div>
     <div v-else class="data-group download-button-group">
       <span class="float-end">
-        <a v-if="downloadUrl" class="btn bi bi-download download-button" :href="downloadUrl"></a>
+        <a v-if="getArchiveAttribute('download_url')" class="btn bi bi-download download-button" :href="getArchiveAttribute('download_url')"></a>
       </span>
     </div>
     <div class="data-group">
@@ -24,10 +24,14 @@
         <div class="alert alert-danger">{{ displayedCapture.message }}</div>
       </div>
     </div>
-    <div v-if="downloadUrl" class="data-group">
-      <h3 class="h6">Preview</h3>
+    <div v-if="getArchiveAttribute('screenshot_url') && !getArchiveAttribute('download_url')" class="data-group">
+      <h3 class="h6">Screenshot</h3>
+      <img class="screenshot" :src="getArchiveAttribute('screenshot_url')">
+    </div>
+    <div v-if="getArchiveAttribute('download_url')" class="data-group">
+      <h3 class="h6">Replay</h3>
       <div class="iframe-container">
-        <replay-web-page :source="downloadUrl"
+        <replay-web-page :source="getArchiveAttribute('download_url')"
                          :url="displayedCapture.validated_url"
                          replaybase="/replay/"
                          class="replay contextItem"/>
@@ -37,13 +41,21 @@
       <h3 class="h6">Capture size</h3>
       <p>{{ size }}MB</p>
     </div>
-    <div v-if="summary" class="data-group">
-      <h3 class="h6">Summary</h3>
-      <pre>{{ summary }}</pre>
+    <div v-if="getArchiveAttribute('title')" class="data-group">
+      <h3 class="h6">Title</h3>
+      <p>{{ getArchiveAttribute('title')  }}</p>
     </div>
-    <div v-if="screenshotURL" class="data-group">
-      <h3 class="h6">Screenshot</h3>
-      <img class="screenshot" :src="screenshotURL">
+    <div v-if="getArchiveAttribute('description')" class="data-group">
+      <h3 class="h6">Description</h3>
+      <p>{{ getArchiveAttribute('description') }}</p>
+    </div>
+    <div v-if="getArchiveAttribute('target_url_content_type')" class="data-group">
+      <h3 class="h6">Content Type</h3>
+      <p>{{ getArchiveAttribute('target_url_content_type') }}</p>
+    </div>
+    <div v-if="getArchiveAttribute('summary')" class="data-group">
+      <h3 class="h6">Summary</h3>
+      <pre>{{ getArchiveAttribute('summary') }}</pre>
     </div>
   </div>
 </template>
@@ -56,9 +68,6 @@ export default {
   name: "CaptureDetail",
 
   computed: {
-    downloadUrl() {
-      return this.displayedCapture.archive ? this.displayedCapture.archive.download_url : null
-    },
     size() {
       return this.displayedCapture.archive ? Number((this.displayedCapture.archive.size / (1024 * 1024)).toFixed(2)) : 0
     },
@@ -67,12 +76,6 @@ export default {
     },
     succeeded() {
       return snakeToPascal(this.displayedCapture.status || 'pending') in SuccessStates
-    },
-    summary() {
-      return this.displayedCapture.archive ? this.displayedCapture.archive.summary : null
-    },
-    screenshotURL() {
-      return this.displayedCapture.archive ? this.displayedCapture.archive.screenshot_url : null
     },
     isMobile() {
       return this.$store.getters.isMobile;
@@ -85,6 +88,9 @@ export default {
     getDate(date) {
       return formatDate(date);
     },
+    getArchiveAttribute(attribute) {
+      return this.displayedCapture?.archive[attribute]
+    }
   }
 }
 </script>

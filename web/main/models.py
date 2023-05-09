@@ -402,15 +402,17 @@ class Archive(TimestampedModel):
     download_url = models.URLField(max_length=2100, null=True)
     download_expiration_timestamp = models.DateTimeField(null=True)
 
-    summary = models.JSONField(null=True)
+    datapackage = models.JSONField()
+    datapackage_digest = models.CharField(max_length=256)
+    summary = models.JSONField()
+    capture_software = models.CharField(max_length=256)
+    partial_capture = models.BooleanField()
     screenshot = models.FileField(
         storage=get_screenshot_storage,
         upload_to=screenshot_directory,
         blank=True,
         null=True
     )
-    # maybe? not sure: state, content type, noArchiveUrls (but with reason), exchangeURLs
-
 
     capture_job = models.OneToOneField(
         'CaptureJob',
