@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 import docker
+from fabric.context_managers import shell_env
 from functools import wraps
 import os
 import signal
@@ -147,6 +148,7 @@ def run_fullstack(django_port=None):
     from django.conf import settings
     frontend_proc = subprocess.Popen(f'yarn && yarn dev --port {settings.VITE_PORT}', cwd="./frontend", shell=True, stdout=sys.stdout, stderr=sys.stderr)
     try:
-        run_django(django_port)
+        with shell_env(VITE_DONT_USE_MANIFEST='true'):
+            run_django(django_port)
     finally:
         os.kill(frontend_proc.pid, signal.SIGKILL)
