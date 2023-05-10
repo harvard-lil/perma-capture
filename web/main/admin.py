@@ -335,7 +335,7 @@ class ArchiveAdmin(admin.ModelAdmin):
         'updated_at'
     )
     list_filter = [ArchiveDownloadableFilter, CaptureJobUserEmailFilter, CaptureJobUserIDFilter]
-    readonly_fields = ('capture_job_link', 'user_link', 'hash', 'hash_algorithm', 'size', 'download_url', 'download_expiration_timestamp', 'created_at', 'updated_at', 'datapackage_digest')
+    readonly_fields = ('capture_job_link', 'user_link', 'hash', 'hash_algorithm', 'size', 'download_url', 'download_expiration_timestamp', 'created_at', 'updated_at', 'partial_capture', 'capture_software', 'datapackage_digest')
     fields = readonly_fields + ('datapackage', 'summary',)
 
 

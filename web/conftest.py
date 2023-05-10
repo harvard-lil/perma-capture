@@ -405,6 +405,58 @@ class ArchiveFactory(factory.DjangoModelFactory):
             lambda o: f"https://our-cloud-storage.com/{factory.Faker('uuid4').generate()}.wacz?params=for-presigned-download"
         )
     )
+    datapackage = {
+        "title": "Example Domain",
+        "description": "Captured by Scoop on 2023-05-10T17:36:46.344Z",
+        "extras": {
+        "provenanceInfo": {
+            "osName": "Debian",
+            "osType": "Linux",
+            "options": {
+                "thereAre": "many"
+            },
+            "version": "0.3.1",
+            "software": "Scoop @ Harvard Library Innovation Lab",
+            "osVersion": "11.7",
+            "cpuArchitecture": "aarch64"
+            }
+        },
+        "software": "@harvard-lil/js-wacz 0.0.11",
+        "wacz_version": "1.1.1",
+        "thereAre": "manyMoreKeys"
+    }
+    datapackage_digest = factory.LazyFunction(
+        lambda:  "sha256:" + factory.Faker('sha256').generate()
+    )
+    summary = {
+        "state": 3,
+        "states": [
+            "INIT",
+            "SETUP",
+            "CAPTURE",
+            "COMPLETE",
+            "PARTIAL",
+            "FAILED",
+            "RECONSTRUCTED"
+        ],
+        "options": {
+            "thereAre": "many"
+        },
+        "attachments": {
+            "screenshot": "screenshot.png",
+            "provenanceSummary": "provenance-summary.html"
+        },
+        "exchangeUrls": [
+            "http://example.com/",
+            "file:///screenshot.png",
+            "file:///provenance-summary.html"
+        ],
+        "noArchiveUrls": [],
+        "targetUrlContentType": "text/html; charset=UTF-8",
+        "thereAre": "manyMoreKeys"
+    }
+    capture_software = 'Scoop @ Harvard Library Innovation Lab: x.x.x'
+    partial_capture = factory.Faker('boolean', chance_of_getting_true=50)
 
 
 @register_factory
