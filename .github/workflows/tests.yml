@@ -50,7 +50,7 @@ jobs:
           set -x
           if [[ `git status web/main/static/ --porcelain` ]] ; then
                 git config user.email "lil@law.harvard.edu"
-                git config user.name "Circle CI"
+                git config user.name "GitHub Actions"
                 git add web/main/static/
                 git commit -m 'Add built JS [skip ci]'
                 git push origin HEAD || exit 1
