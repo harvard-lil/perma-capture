@@ -416,7 +416,7 @@ def run_next_capture():
                         archive.size = archive_file.tell()
                         # Should we do validity checks of any kind? Save regardless? TBD.
                         archive_file.seek(0)
-                        assert zipfile.is_zipfile(archive_file), f"Invalid WACZ"
+                        assert zipfile.is_zipfile(archive_file), "Invalid WACZ"
                         wacz = zipfile.ZipFile(archive_file)
                         with wacz.open('datapackage.json') as datapackage:
                             metadata = json.load(datapackage)
