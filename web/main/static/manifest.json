@@ -1,6 +1,6 @@
 {
   "src/main.ts": {
-    "file": "vite/main.69ffb044.js",
+    "file": "vite/main.569a5516.js",
     "src": "src/main.ts",
     "isEntry": true,
     "imports": [
@@ -11,9 +11,8 @@
     ],
     "assets": [
       "vite/perma-logo.6b161a6e.svg",
-      "vite/preview.e6fb6c31.svg",
-      "vite/download.8d047fcf.svg",
-      "vite/dashboard-screenshot.fe6ece90.png",
+      "vite/dashboard-screenshot-expand.589bdefb.png",
+      "vite/dashboard-screenshot-download.4710f6aa.png",
       "vite/slack-screenshot.46ab25e6.png",
       "vite/welcome-graphic.bc1da09f.svg",
       "vite/bootstrap-icons.856b3f9e.woff2",
