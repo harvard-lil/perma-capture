@@ -89,7 +89,9 @@ export default {
       return formatDate(date);
     },
     getArchiveAttribute(attribute) {
-      return this.displayedCapture?.archive[attribute]
+      if (this.displayedCapture.archive){
+        return this.displayedCapture.archive[attribute]
+      }
     }
   }
 }
