@@ -21,13 +21,30 @@ Then log into the main Docker container:
 
 (Commands from here on out that start with `#` are being run in Docker.)
 
-### Run Django
-
-You should now have a working installation!
+### Get the database ready
 
 Migrate the database:
 
     # ./manage.py migrate
+
+Create an admin user (you will be prompted for a placeholder email address, name, and password):
+
+    # ./manage.py createsuperuser
+
+### Option one: run Django with pre-compiled JS and CSS
+
+(runs faster)
+
+Spin up the development server:
+
+    # fab run
+
+The first time this runs it will build the Scoop image, which may take a minute
+or two. (After the first time, it should only take 1-3 seconds.)
+
+### Option two: run Django and re-compile JS and CSS on the fly
+
+(tighter development loop during front-end development)
 
 Install the node dependencies:
 
@@ -39,19 +56,18 @@ Spin up the development server:
 
     # fab run_fullstack
 
-Create a test admin user (follow the prompts, then log in using those credentials):
+The first time this runs it will build the Scoop image, which may take a minute
+or two. (After the first time, it should be faster, but still takes a bit to
+start up, and takes a bit again when you first load a page.)
 
-    # ./manage.py createsuperuser
+### Log in and explore
 
-### Optional: load some sample data
+Visit http://localhost:8000 in your browser. You should be able to log in using
+the admin credentials you created earlier.
 
-To more fully explore the UI, you may want to load some sample data.
+To test the API directly, first visit http://localhost:8000/user/account/ to find your API key.
 
-    # fab load_sample_capture_jobs
-
-See [fabfile.py](https://github.com/harvard-lil/perma-capture/blob/develop/web/fabfile.py#L71)
-for a fuller discussion of options.
-
+Check out the User Guide at /docs/ for more info.
 
 ### Stop
 
