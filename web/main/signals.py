@@ -16,8 +16,8 @@ def dispatch_webhook_receiver(sender, **kwargs):
     Upon the creation of a new Archive, we send one webhook notification to each callback.
     >>> archive = archive_factory(user=webhook_subscription1.user)
     >>> assert dispatch_webhook.mock_calls == [
-    ...    call.apply_async(args=[webhook_subscription2.id, archive.capture_job.id]),
-    ...    call.apply_async(args=[webhook_subscription1.id, archive.capture_job.id])
+    ...    call.apply_async(args=[webhook_subscription1.id, archive.capture_job.id]),
+    ...    call.apply_async(args=[webhook_subscription2.id, archive.capture_job.id])
     ... ]
 
     We do NOT send a duplicate notification if the Archive is subsequently updated.

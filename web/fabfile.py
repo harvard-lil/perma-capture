@@ -107,7 +107,7 @@ def run_django(port=None):  # pragma: no cover
     if settings.CELERY_TASK_ALWAYS_EAGER:
         local(f'python manage.py runserver {port}')
     else:
-        with open_subprocess("watchmedo auto-restart -d ./ -p '*.py' -R -- celery worker --app config.celery.app --loglevel=info -Q celery,background -B -n w1@%h"):
+        with open_subprocess("watchmedo auto-restart -d ./ -p '*.py' -R -- celery -A config.celery.app worker --loglevel=info -Q celery,background -B -n w1@%h"):
             local(f'python manage.py runserver {port}')
 
 @task()

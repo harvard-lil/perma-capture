@@ -5,7 +5,7 @@ services:
     volumes:
       - redis_data:/data:delegated
   db:
-    image: registry.lil.tools/library/postgres:11.9
+    image: registry.lil.tools/library/postgres:12.11
     environment:
       POSTGRES_PASSWORD: password
     volumes:
@@ -31,7 +31,7 @@ services:
     build:
       context: .
       dockerfile: ./docker/web/Dockerfile
-    image: perma-capture:0.12
+    image: perma-capture:0.14
     tty: true
     command: bash
     environment:

@@ -5,7 +5,8 @@ from datetime import timezone as tz, timedelta
 from distutils.sysconfig import get_python_lib
 import docker
 import factory
-from faker import Faker
+from factory.django import DjangoModelFactory
+from factory.faker import faker
 import humps
 import inspect
 import os
@@ -30,7 +31,7 @@ from fabfile import prepare_scoop
 
 TEST_FILE_DIR = os.path.abspath(os.path.join(settings.BASE_DIR, '../main/test/files'))
 
-fake = Faker()
+generator = faker.Faker()
 
 ### pytest configuration ###
 
@@ -241,7 +242,7 @@ def docker_client():
 ### model factories ###
 
 @register_factory
-class UserFactory(factory.DjangoModelFactory):
+class UserFactory(DjangoModelFactory):
     class Meta:
         model = User
 
@@ -271,7 +272,7 @@ class AdminUserFactory(UserFactory):
 
 
 @register_factory
-class WebhookSubscriptionFactory(factory.DjangoModelFactory):
+class WebhookSubscriptionFactory(DjangoModelFactory):
     class Meta:
         model = WebhookSubscription
 
@@ -306,7 +307,7 @@ def webhook_callback_factory(db, requests_mock):
 
 
 @register_factory
-class CaptureJobFactory(factory.DjangoModelFactory):
+class CaptureJobFactory(DjangoModelFactory):
     class Meta:
         model = CaptureJob
         exclude = ('create_archive',)
@@ -343,7 +344,7 @@ class InProgressCaptureJobFactory(PendingCaptureJobFactory):
 class CompletedCaptureJobFactory(InProgressCaptureJobFactory):
     status = CaptureJob.Status.COMPLETED
     capture_end_time = factory.LazyAttribute(
-        lambda o: o.capture_start_time + timedelta(seconds=factory.Faker('random_int', min=0, max=settings.CELERY_TASK_TIME_LIMIT).generate())
+        lambda o: o.capture_start_time + timedelta(seconds=generator.random_int(min=0, max=settings.CELERY_TASK_TIME_LIMIT))
     )
     archive = factory.Maybe(
         'create_archive',
@@ -365,7 +366,7 @@ class FailedCaptureJobFactory(CompletedCaptureJobFactory):
 
 
 @register_factory
-class ArchiveFactory(factory.DjangoModelFactory):
+class ArchiveFactory(DjangoModelFactory):
     class Meta:
         model = Archive
         exclude = ('create_capture_job', 'user', 'expired')
@@ -392,7 +393,7 @@ class ArchiveFactory(factory.DjangoModelFactory):
     download_expiration_timestamp = factory.Maybe(
         'expired',
         yes_declaration= factory.LazyFunction(
-            lambda:  timezone.now() - timedelta(minutes=factory.Faker('random_int', min=1, max=60).generate())
+            lambda:  timezone.now() - timedelta(minutes=generator.random_int(min=1, max=60))
         ),
         no_declaration=factory.LazyFunction(
             lambda:  timezone.now() + timedelta(minutes=settings.ARCHIVE_EXPIRES_AFTER_MINUTES)
@@ -402,7 +403,7 @@ class ArchiveFactory(factory.DjangoModelFactory):
         'expired',
         yes_declaration=None,
         no_declaration=factory.LazyAttribute(
-            lambda o: f"https://our-cloud-storage.com/{factory.Faker('uuid4').generate()}.wacz?params=for-presigned-download"
+            lambda o: f"https://our-cloud-storage.com/{generator.uuid4()}.wacz?params=for-presigned-download"
         )
     )
     datapackage = {
@@ -426,7 +427,7 @@ class ArchiveFactory(factory.DjangoModelFactory):
         "thereAre": "manyMoreKeys"
     }
     datapackage_digest = factory.LazyFunction(
-        lambda:  "sha256:" + factory.Faker('sha256').generate()
+        lambda:  "sha256:" + generator.sha256()
     )
     summary = {
         "state": 3,
@@ -475,7 +476,8 @@ def create_capture_job(status=None, **kwargs):
         status = random.choices(CaptureJob.Status.values)[0]
     if status not in CaptureJob.Status.values:
         raise ValueError(f"Status must be one of {CaptureJob.Status.values}")
-    return globals()[f"{humps.pascalize(status)}CaptureJobFactory"](**kwargs)
+    job =  globals()[f"{humps.pascalize(status)}CaptureJobFactory"](**kwargs)
+    return job
 
 
 @pytest.fixture
@@ -527,7 +529,7 @@ def user_with_capture_jobs_factory(db):
         if user is None:
             user = UserFactory()
         if job_count is None:
-            job_count = factory.Faker('random_int', min=3, max=15).generate()
+            job_count = generator.random_int(min=3, max=15)
         for _ in range(job_count):
             create_capture_job(user=user, **kwargs)
         return user

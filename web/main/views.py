@@ -1,4 +1,4 @@
-from celery.task.control import inspect as celery_inspect
+import celery
 from functools import wraps
 import redis
 
@@ -207,14 +207,13 @@ class CaptureListView(APIView):
         >>> assert response.data['count'] == len(response.data['results']) == 5
 
         ## Sorting
-
-        You can order by pk, and ?should we do any timestamps?
+        (no tests yet)
         """
         queryset = self.filter_queryset(CaptureJob.objects.filter(
             user=request.user
         ).annotate(
             url=Coalesce('validated_url', 'requested_url')
-        ))
+        )).order_by('-id')
         paginator = Paginator()
         items = paginator.paginate_queryset(queryset, request, view=self)
         serializer = ReadOnlyCaptureJobSerializer(items, many=True)
@@ -784,7 +783,7 @@ def celery_queue_status(request):
     ...     'class="finished">main.tasks.demo_scheduled_task:'
     ... )
     """
-    inspector = celery_inspect()
+    inspector = celery.current_app.control.inspect()
     active = inspector.active()
     reserved = inspector.reserved()
     stats = inspector.stats()

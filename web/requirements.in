@@ -4,7 +4,7 @@ fabric3             # project automation
 tqdm                # script progress bars
 
 # Celery
-celery[redis]       # task queue
+celery[redis, pytest]  # task queue
 flower              # monitoring
 watchdog            # restart celery in dev (via 'watchmedo' command)
 argh                # needed by watchdog
@@ -31,7 +31,7 @@ ua-parser           # user-agent parsing
 # Testing
 flake8
 pytest
-pytest-django
+pytest-django~=3.10  # pinning so that the reset_sequences fixtures works as expected
 pytest-cov          # record code coverage
 pytest-mock         # mocking
 requests-mock       # mock the requests library
