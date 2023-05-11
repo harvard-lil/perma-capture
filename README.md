@@ -1,6 +1,6 @@
 # Perma-Capture
 
-[![CircleCI](https://circleci.com/gh/harvard-lil/perma-capture.svg?style=svg)](https://circleci.com/gh/harvard-lil/perma-capture)
+[![test status](https://github.com/harvard-lil/perma-capture/actions/workflows/tests.yml/badge.svg)](https://github.com/harvard-lil/cperma-capture/actions)
 [![codecov](https://codecov.io/gh/harvard-lil/perma-capture/branch/develop/graph/badge.svg)](https://codecov.io/gh/harvard-lil/perma-capture)
 
 ## Development
